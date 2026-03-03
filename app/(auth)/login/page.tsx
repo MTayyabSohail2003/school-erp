@@ -7,8 +7,8 @@ export const metadata = {
 
 export default function LoginPage() {
     return (
-        <div className="flex items-center justify-center min-vh-[100dvh] bg-slate-50 relative py-20 min-h-screen">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="flex items-center justify-center min-vh-[100dvh] bg-muted/20 relative py-20 min-h-screen">
+            <div className="absolute inset-0 z-0 bg-grid-slate-200/50 [mask-image:linear-gradient(to_bottom,white_20%,transparent_100%)] dark:bg-grid-slate-800/50 dark:[mask-image:linear-gradient(to_bottom,black_20%,transparent_100%)]"></div>
             <div className="z-10 w-full px-4">
                 <LoginForm />
             </div>

@@ -43,84 +43,183 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* =====================================================================
+   LIGHT MODE — Clean slate with emerald green accents
+   ===================================================================== */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --radius: 0.75rem;
+
+  --background: oklch(0.97 0.005 220);
+  --foreground: oklch(0.15 0.02 220);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.15 0.02 220);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.15 0.02 220);
+
+  /* Primary — Emerald Green */
+  --primary: oklch(0.62 0.19 160);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.95 0.03 160);
+  --secondary-foreground: oklch(0.3 0.1 160);
+
+  --muted: oklch(0.95 0.005 220);
+  --muted-foreground: oklch(0.52 0.03 220);
+
+  --accent: oklch(0.93 0.06 160);
+  --accent-foreground: oklch(0.3 0.12 160);
+
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --border: oklch(0.9 0.01 220);
+  --input: oklch(0.92 0.01 220);
+  --ring: oklch(0.62 0.19 160);
+
+  --chart-1: oklch(0.62 0.19 160);
+  --chart-2: oklch(0.65 0.16 200);
+  --chart-3: oklch(0.7 0.14 260);
+  --chart-4: oklch(0.72 0.16 85);
+  --chart-5: oklch(0.65 0.2 30);
+
+  /* Sidebar Light — matches the white navbar */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.2 0.02 220);
+  --sidebar-primary: oklch(0.62 0.19 160);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.04 160);
+  --sidebar-accent-foreground: oklch(0.3 0.1 160);
+  --sidebar-border: oklch(0.9 0.01 220);
+  --sidebar-ring: oklch(0.62 0.19 160);
 }
 
+/* =====================================================================
+   DARK MODE — Medium dark slate with emerald green accents
+   ===================================================================== */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Base — medium dark slate (not near-black) */
+  --background: oklch(0.22 0.018 230);
+  --foreground: oklch(0.98 0 0);
+
+  /* Cards — slightly lighter than bg */
+  --card: oklch(0.26 0.02 228);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.26 0.02 228);
+  --popover-foreground: oklch(0.98 0 0);
+
+  /* Primary — Bright Emerald Green */
+  --primary: oklch(0.68 0.2 160);
+  --primary-foreground: oklch(0.1 0.02 160);
+
+  --secondary: oklch(0.3 0.03 225);
+  --secondary-foreground: oklch(0.98 0 0);
+
+  --muted: oklch(0.28 0.02 225);
+  --muted-foreground: oklch(0.65 0 0);
+
+  --accent: oklch(0.32 0.06 160);
+  --accent-foreground: oklch(0.78 0.14 160);
+
+  --destructive: oklch(0.65 0.23 22);
+
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 11%);
+  --ring: oklch(0.68 0.2 160);
+
+  /* Charts */
+  --chart-1: oklch(0.68 0.2 160);
+  --chart-2: oklch(0.65 0.16 200);
+  --chart-3: oklch(0.7 0.14 260);
+  --chart-4: oklch(0.75 0.16 85);
+  --chart-5: oklch(0.7 0.22 30);
+
+  /* Sidebar dark — one shade lighter than the page */
+  --sidebar: oklch(0.2 0.02 228);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.68 0.2 160);
+  --sidebar-primary-foreground: oklch(0.1 0.02 160);
+  --sidebar-accent: oklch(0.28 0.04 220);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.68 0.2 160);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* =====================================================================
+   GLOBAL UTILITIES
+   ===================================================================== */
+@layer utilities {
+
+  /* Emerald gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, oklch(0.62 0.19 160), oklch(0.65 0.16 200));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .dark .gradient-text {
+    background: linear-gradient(135deg, oklch(0.75 0.2 160), oklch(0.72 0.16 190));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glassmorphism — works great on the dark navy theme */
+  .glass-card {
+    background: oklch(1 0 0 / 60%);
+    backdrop-filter: blur(14px);
+    border: 1px solid oklch(0.9 0.01 220 / 50%);
+  }
+
+  .dark .glass-card {
+    background: oklch(0.2 0.04 225 / 65%);
+    backdrop-filter: blur(14px);
+    border: 1px solid oklch(1 0 0 / 7%);
+  }
+
+  /* Stat card gradient borders / backgrounds */
+  .stat-gradient-green {
+    background: linear-gradient(135deg, oklch(0.62 0.19 160 / 12%), oklch(0.62 0.19 160 / 4%));
+    border-color: oklch(0.62 0.19 160 / 25%);
+  }
+
+  .stat-gradient-blue {
+    background: linear-gradient(135deg, oklch(0.55 0.18 240 / 12%), oklch(0.55 0.18 240 / 4%));
+    border-color: oklch(0.55 0.18 240 / 25%);
+  }
+
+  .stat-gradient-teal {
+    background: linear-gradient(135deg, oklch(0.6 0.16 195 / 12%), oklch(0.6 0.16 195 / 4%));
+    border-color: oklch(0.6 0.16 195 / 25%);
+  }
+
+  .stat-gradient-orange {
+    background: linear-gradient(135deg, oklch(0.65 0.18 45 / 12%), oklch(0.65 0.18 45 / 4%));
+    border-color: oklch(0.65 0.18 45 / 25%);
+  }
+
+  /* Green glow shadow for primary elements */
+  .glow-green {
+    box-shadow: 0 0 20px oklch(0.68 0.2 160 / 30%), 0 4px 12px oklch(0 0 0 / 25%);
+  }
+
+  /* Active nav pill with green glow */
+  .nav-active {
+    background: oklch(0.68 0.2 160);
+    box-shadow: 0 2px 10px oklch(0.68 0.2 160 / 40%);
+    color: oklch(0.1 0.02 160);
   }
 }

@@ -10,6 +10,10 @@ export const ROUTES = {
     LOGIN: '/login',
     DASHBOARD: '/dashboard',
     STUDENTS: '/dashboard/students',
+    STAFF: '/dashboard/staff',
     FEES: '/dashboard/fees',
     EXAMS: '/dashboard/exams',
+    ATTENDANCE: '/dashboard/attendance',
+    MARKS: '/dashboard/marks',
+    SETTINGS_CLASSES: '/settings/classes',
 } as const;
