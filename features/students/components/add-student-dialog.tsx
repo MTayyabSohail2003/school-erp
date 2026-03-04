@@ -40,6 +40,7 @@ export function AddStudentDialog() {
         defaultValues: {
             roll_number: '',
             full_name: '',
+            guardian_name: '',
             date_of_birth: '',
             class_id: '',
             b_form_url: null,
@@ -79,8 +80,8 @@ export function AddStudentDialog() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <Plus className="w-4 h-4 mr-2 cursor-pointer" />
+                <Button className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-md border-0">
+                    <Plus className="w-4 h-4 mr-2" />
                     Add New Student
                 </Button>
             </DialogTrigger>
@@ -131,6 +132,20 @@ export function AddStudentDialog() {
                                     <FormLabel>Full Name</FormLabel>
                                     <FormControl>
                                         <Input placeholder="John Doe" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="guardian_name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Parent/Guardian Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Ahsan Doe" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

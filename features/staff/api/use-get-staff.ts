@@ -16,9 +16,11 @@ export function useGetStaff() {
                     full_name,
                     phone_number,
                     created_at,
+                    status,
                     teacher_profiles (
                         qualification,
-                        monthly_salary
+                        monthly_salary,
+                        resume_url
                     )
                 `)
                 .eq('role', 'TEACHER')
@@ -41,8 +43,10 @@ export function useGetStaff() {
                     full_name: user.full_name,
                     phone_number: user.phone_number,
                     created_at: user.created_at,
+                    status: user.status || 'ACTIVE',
                     qualification: profile?.qualification || '',
                     monthly_salary: profile?.monthly_salary || 0,
+                    resume_url: profile?.resume_url || null,
                 } as unknown as Staff;
             });
         },

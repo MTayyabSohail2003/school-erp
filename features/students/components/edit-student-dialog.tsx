@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,11 +26,16 @@ import { Button } from '@/components/ui/button';
 
 import { useClasses } from '@/features/classes/hooks/use-classes';
 import { useUpdateStudent } from '../api/use-update-student';
+import { storageApi } from '@/features/storage/api/storage.api';
+import { Loader2, UploadCloud } from 'lucide-react';
 
 // A lightweight schema for the update form (no document re-upload needed here)
 const editStudentSchema = z.object({
     roll_number: z.string().min(1, 'Roll number is required'),
     full_name: z.string().min(2, 'Name must be at least 2 characters'),
+    guardian_name: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER']).optional(),
+    b_form_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
     class_id: z.string().uuid('Select a valid class'),
 });
@@ -43,12 +49,16 @@ type EditStudentProps = {
         id: string;
         roll_number: string;
         full_name: string;
+        guardian_name?: string;
+        status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER';
+        b_form_url?: string | null;
         date_of_birth: string;
         class_id: string;
     } | null;
 };
 
 export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentProps) {
+    const [isUploading, setIsUploading] = useState(false);
     const updateMutation = useUpdateStudent();
     const { data: classes, isLoading: isClassesLoading } = useClasses();
 
@@ -58,12 +68,31 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
         values: {
             roll_number: student?.roll_number || '',
             full_name: student?.full_name || '',
+            guardian_name: student?.guardian_name || '',
+            status: student?.status || 'ACTIVE',
+            b_form_url: student?.b_form_url || null,
             date_of_birth: student?.date_of_birth
                 ? student.date_of_birth.split('T')[0] // strip time component for date input
                 : '',
             class_id: student?.class_id || '',
         },
     });
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploading(true);
+            const url = await storageApi.uploadDocument(file);
+            form.setValue(fieldName, url);
+            toast.success('Document uploaded to vault securely.');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to upload document.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const onSubmit = (data: EditStudentForm) => {
         if (!student?.id) return;
@@ -136,42 +165,104 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
 
                         <FormField
                             control={form.control}
-                            name="class_id"
+                            name="guardian_name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Assign Class</FormLabel>
+                                    <FormLabel>Guardian Name</FormLabel>
                                     <FormControl>
-                                        <select
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                            {...field}
-                                            disabled={isClassesLoading}
-                                        >
-                                            <option value="" disabled>
-                                                {isClassesLoading ? 'Loading classes...' : 'Select a class'}
-                                            </option>
-                                            {classes?.map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.name} - {c.section}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <Input placeholder="Guardian Name" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="class_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Assign Class</FormLabel>
+                                        <FormControl>
+                                            <select
+                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                {...field}
+                                                disabled={isClassesLoading}
+                                            >
+                                                <option value="" disabled>
+                                                    {isClassesLoading ? 'Loading classes...' : 'Select a class'}
+                                                </option>
+                                                {classes?.map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.name} - {c.section}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Account Status</FormLabel>
+                                        <FormControl>
+                                            <select
+                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                {...field}
+                                            >
+                                                <option value="ACTIVE">Active Student</option>
+                                                <option value="INACTIVE">Inactive (Suspended)</option>
+                                                <option value="LEAVER">Leaver (Alumni)</option>
+                                            </select>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Document Vault Upload */}
+                        <div className="border rounded-md p-4 bg-muted/40 space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <UploadCloud className="w-4 h-4 text-primary" />
+                                Update Document Vault (B-Form)
+                            </div>
+                            <Input
+                                type="file"
+                                accept=".pdf,image/*"
+                                onChange={(e) => handleFileUpload(e, 'b_form_url')}
+                                disabled={isUploading}
+                                className="text-xs"
+                            />
+                            {form.watch('b_form_url') && (
+                                <p className="text-xs text-green-600 font-medium tracking-tight">✓ Document securely stored in vault.</p>
+                            )}
+                        </div>
+
                         <div className="flex justify-end gap-3 pt-4">
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => setIsOpen(false)}
-                                disabled={updateMutation.isPending}
+                                disabled={updateMutation.isPending || isUploading}
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={updateMutation.isPending}>
-                                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                            <Button type="submit" disabled={updateMutation.isPending || isUploading}>
+                                {updateMutation.isPending || isUploading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Changes'
+                                )}
                             </Button>
                         </div>
                     </form>

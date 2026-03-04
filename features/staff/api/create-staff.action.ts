@@ -53,6 +53,7 @@ export async function createStaffAction(data: StaffFormData) {
             full_name: parsed.full_name,
             phone_number: parsed.phone_number,
             role: 'TEACHER',
+            status: parsed.status || 'ACTIVE',
         });
 
         if (userError) {
@@ -66,6 +67,7 @@ export async function createStaffAction(data: StaffFormData) {
             user_id: newUserId,
             qualification: parsed.qualification,
             monthly_salary: parsed.monthly_salary,
+            resume_url: parsed.resume_url || null,
         });
 
         if (profileError) {

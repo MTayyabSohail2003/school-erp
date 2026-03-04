@@ -4,6 +4,8 @@ export const studentSchema = z.object({
     id: z.string().uuid().optional(),
     roll_number: z.string().min(1, { message: 'Roll number is required' }),
     full_name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
+    guardian_name: z.string().min(2, { message: 'Guardian name is required' }).optional().or(z.literal('')),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER']).default('ACTIVE').optional(),
     date_of_birth: z.string().refine((date) => !isNaN(Date.parse(date)), {
         message: 'Invalid date format',
     }),

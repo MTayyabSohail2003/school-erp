@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+import { Loader2, UploadCloud } from 'lucide-react';
+import { storageApi } from '@/features/storage/api/storage.api';
 
 import {
     Dialog,
@@ -11,6 +14,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Form,
     FormControl,
@@ -35,10 +45,13 @@ type EditStaffProps = {
         phone_number?: string | null;
         qualification: string;
         monthly_salary: number;
+        status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER';
+        resume_url?: string | null;
     } | null;
 };
 
 export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffProps) {
+    const [isUploading, setIsUploading] = useState(false);
     const updateMutation = useUpdateStaff();
 
     const form = useForm({
@@ -48,8 +61,26 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
             phone_number: staffMember?.phone_number || '',
             qualification: staffMember?.qualification || '',
             monthly_salary: staffMember?.monthly_salary || 0,
+            status: (staffMember?.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE' | 'LEAVER',
+            resume_url: staffMember?.resume_url || null,
         },
     });
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'resume_url') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploading(true);
+            const url = await storageApi.uploadDocument(file);
+            form.setValue(fieldName, url as any);
+            toast.success('Document uploaded to vault securely.');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to upload document.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const onSubmit = (data: StaffUpdateData) => {
         if (!staffMember?.id) return;
@@ -138,17 +169,65 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
                             )}
                         />
 
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value as string}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select status" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="ACTIVE">Active</SelectItem>
+                                            <SelectItem value="INACTIVE">Inactive</SelectItem>
+                                            <SelectItem value="LEAVER">Leaver</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Document Vault Upload */}
+                        <div className="border rounded-md p-4 bg-muted/40 space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <UploadCloud className="w-4 h-4 text-primary" />
+                                Update Document Vault (Resume/CV)
+                            </div>
+                            <Input
+                                type="file"
+                                accept=".pdf,image/*"
+                                onChange={(e) => handleFileUpload(e, 'resume_url')}
+                                disabled={isUploading}
+                                className="text-xs"
+                            />
+                            {form.watch('resume_url') && (
+                                <p className="text-xs text-green-600 font-medium tracking-tight">✓ Document securely stored in vault.</p>
+                            )}
+                        </div>
+
                         <div className="flex justify-end gap-3 pt-4">
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => setIsOpen(false)}
-                                disabled={updateMutation.isPending}
+                                disabled={updateMutation.isPending || isUploading}
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={updateMutation.isPending}>
-                                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                            <Button type="submit" disabled={updateMutation.isPending || isUploading}>
+                                {updateMutation.isPending || isUploading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Changes'
+                                )}
                             </Button>
                         </div>
                     </form>

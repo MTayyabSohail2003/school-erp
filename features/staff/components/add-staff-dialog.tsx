@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, UploadCloud } from 'lucide-react';
+import { storageApi } from '@/features/storage/api/storage.api';
 
 import {
     Dialog,
@@ -30,6 +31,7 @@ import { useCreateStaff } from '../api/use-create-staff';
 
 export function AddStaffDialog() {
     const [open, setOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const createMutation = useCreateStaff();
 
     const form = useForm({
@@ -41,8 +43,25 @@ export function AddStaffDialog() {
             password: '',
             qualification: '',
             monthly_salary: 0,
+            resume_url: null,
         },
     });
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'resume_url') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploading(true);
+            const url = await storageApi.uploadDocument(file);
+            form.setValue(fieldName, url as any);
+            toast.success('Document uploaded to vault securely.');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to upload document.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const onSubmit = (data: StaffFormData) => {
         createMutation.mutate(data, {
@@ -175,19 +194,42 @@ export function AddStaffDialog() {
                             </div>
                         </div>
 
+                        {/* Document Vault Upload */}
+                        <div className="border rounded-md p-4 bg-muted/40 space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <UploadCloud className="w-4 h-4 text-primary" />
+                                Document Vault (Resume/CV)
+                            </div>
+                            <Input
+                                type="file"
+                                accept=".pdf,image/*"
+                                onChange={(e) => handleFileUpload(e, 'resume_url')}
+                                disabled={isUploading}
+                                className="text-xs"
+                            />
+                            {form.watch('resume_url') && (
+                                <p className="text-xs text-green-600 font-medium tracking-tight">✓ Document securely stored in vault.</p>
+                            )}
+                        </div>
+
                         <div className="flex justify-end gap-3 pt-4 border-t">
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={() => handleOpenChange(false)}
+                                disabled={createMutation.isPending || isUploading}
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={createMutation.isPending}>
-                                {createMutation.isPending && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Button type="submit" disabled={createMutation.isPending || isUploading}>
+                                {createMutation.isPending || isUploading ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    'Register Staff'
                                 )}
-                                Register Staff
                             </Button>
                         </div>
                     </form>

@@ -8,6 +8,8 @@ export const staffSchema = z.object({
     phone_number: z.string().optional().nullable(),
     qualification: z.string().min(2, { message: 'Qualification is required' }),
     monthly_salary: z.number().min(0, { message: 'Salary must be a positive number' }),
+    resume_url: z.string().url().optional().nullable(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER']).default('ACTIVE').optional(),
     created_at: z.string().optional(),
 });
 
