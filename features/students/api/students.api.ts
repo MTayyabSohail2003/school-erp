@@ -28,11 +28,10 @@ export const studentsApi = {
                 {
                     roll_number: student.roll_number,
                     full_name: student.full_name,
-                    guardian_name: student.guardian_name || null,
                     status: student.status || 'ACTIVE',
                     date_of_birth: student.date_of_birth,
                     class_id: student.class_id,
-                    b_form_url: student.b_form_url,
+                    parent_id: student.parent_id || null,
                     old_cert_url: student.old_cert_url,
                 }
             ])

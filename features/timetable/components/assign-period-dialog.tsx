@@ -137,7 +137,7 @@ export function AssignPeriodDialog({
                     const err = error as Error;
                     if (err.message.includes('no_teacher_conflict')) {
                         toast.error('Conflict: This teacher is already assigned to a different class during this period.');
-                    } else if (error.message.includes('no_class_conflict')) {
+                    } else if (err.message.includes('no_class_conflict')) {
                         toast.error('Conflict: This class already has an assignment for this period.');
                     } else {
                         toast.error(err.message || 'Failed to assign period.');

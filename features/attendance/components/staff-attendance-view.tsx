@@ -19,12 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const STATUS_CONFIG: Record<AttendanceStatus, { label: string; className: string }> = {
-    PRESENT: { label: 'Present', className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' },
-    ABSENT: { label: 'Absent', className: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30' },
-    LEAVE: { label: 'Leave', className: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30' },
-};
-
 export function StaffAttendanceView() {
     const today = format(new Date(), 'yyyy-MM-dd');
     const [selectedDate, setSelectedDate] = useState(today);
@@ -143,16 +137,31 @@ export function StaffAttendanceView() {
                             <div className="divide-y divide-border">
                                 {staffMembers.length === 0 && <p className="text-center text-muted-foreground py-16 text-sm">No staff registered.</p>}
                                 {staffMembers.map((staff, index) => {
-                                    const currentStatus = statusMap[staff.id] ?? null;
+                                    const currentStatus = staff.id ? statusMap[staff.id] ?? null : null;
                                     return (
                                         <motion.div key={staff.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-muted/30 transition-colors">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <span className="text-sm font-medium truncate">{staff.full_name}</span>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
-                                                {(Object.keys(STATUS_CONFIG) as AttendanceStatus[]).map((status) => (
-                                                    <button key={status} onClick={() => setStatus(staff.id, status)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 cursor-pointer ${currentStatus === status ? STATUS_CONFIG[status].className : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40'}`}>{STATUS_CONFIG[status].label}</button>
-                                                ))}
+                                                <button
+                                                    onClick={() => staff.id && setStatus(staff.id, 'PRESENT')}
+                                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${currentStatus === 'PRESENT' ? 'bg-green-100 border-green-200 text-green-700 dark:bg-green-900/40 dark:border-green-800' : 'bg-transparent border-input hover:bg-muted'}`}
+                                                >
+                                                    P
+                                                </button>
+                                                <button
+                                                    onClick={() => staff.id && setStatus(staff.id, 'ABSENT')}
+                                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${currentStatus === 'ABSENT' ? 'bg-red-100 border-red-200 text-red-700 dark:bg-red-900/40 dark:border-red-800' : 'bg-transparent border-input hover:bg-muted'}`}
+                                                >
+                                                    A
+                                                </button>
+                                                <button
+                                                    onClick={() => staff.id && setStatus(staff.id, 'LEAVE')}
+                                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${currentStatus === 'LEAVE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700 dark:bg-yellow-900/40 dark:border-yellow-800' : 'bg-transparent border-input hover:bg-muted'}`}
+                                                >
+                                                    L
+                                                </button>
                                             </div>
                                         </motion.div>
                                     );

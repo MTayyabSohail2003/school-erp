@@ -29,7 +29,7 @@ export function TimetablePage() {
         setSelectedClassId(classes[0].id);
     }
     if (!selectedTeacherId && teachers && teachers.length > 0) {
-        setSelectedTeacherId(teachers[0].id);
+        setSelectedTeacherId(teachers[0].id || '');
     }
 
     const { data: classTimetable = [] } = useGetClassTimetable(selectedClassId, CURRENT_ACADEMIC_YEAR);
