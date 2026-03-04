@@ -258,8 +258,8 @@ export function StudentsTable() {
             </div>
 
             {/* Data Table */}
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                <Table>
+            <div className="rounded-xl border bg-card shadow-sm overflow-hidden overflow-x-auto max-w-[calc(100vw-32px)] sm:max-w-full">
+                <Table className="min-w-full">
                     <TableHeader className="bg-muted/40">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
@@ -339,7 +339,7 @@ export function StudentsTable() {
             {/* Mobile PWA Drawer for Hidden Details */}
             <Drawer open={!!drawerStudent} onOpenChange={(o) => (!o && setDrawerStudent(null))}>
                 <DrawerContent>
-                    <div className="mx-auto w-full max-w-sm">
+                    <div className="w-full">
                         <DrawerHeader>
                             <DrawerTitle className="text-xl">{drawerStudent?.full_name}</DrawerTitle>
                             <DrawerDescription>Roll No: {drawerStudent?.roll_number}</DrawerDescription>
@@ -371,7 +371,7 @@ export function StudentsTable() {
                                 </div>
                             )}
                         </div>
-                        <DrawerFooter className="flex-row justify-between pt-6">
+                        <DrawerFooter className="flex-col gap-2 pt-6">
                             <Button
                                 variant="outline"
                                 className="w-full"
