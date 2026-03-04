@@ -185,7 +185,12 @@ export function AddStaffDialog() {
                                         <FormItem>
                                             <FormLabel>Monthly Salary ($)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" placeholder="5000" {...field} />
+                                                <Input
+                                                    type="number"
+                                                    placeholder="5000"
+                                                    {...field}
+                                                    onChange={e => field.onChange(e.target.valueAsNumber || 0)}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

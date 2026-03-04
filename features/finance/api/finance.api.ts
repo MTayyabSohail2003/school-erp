@@ -89,8 +89,8 @@ export const financeApi = {
 
         const feeMap = new Map(structures.map(s => [s.class_id, { id: s.id, fee: s.monthly_fee }]));
 
-        // 2. Get all students
-        const { data: students } = await supabase.from('students').select('id, class_id');
+        // 2. Get all active students only
+        const { data: students } = await supabase.from('students').select('id, class_id').eq('status', 'ACTIVE');
         if (!students) throw new Error('No students found');
 
         // 3. Get existing challans for this month to avoid duplicates

@@ -2,23 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import {
-    LayoutDashboard,
-    Users,
-    BookOpen,
-    Settings,
-    Briefcase,
-    GraduationCap,
-    ChevronRight,
-    CalendarDays,
-    ClipboardList,
-    Banknote,
-    FileText,
-    AlertTriangle,
-    Wallet,
-} from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Banknote, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, FileText, CalendarDays, Briefcase } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -37,37 +24,55 @@ const navGroups = [
     {
         label: 'Overview',
         items: [
-            { name: 'Dashboard', href: ROUTES.DASHBOARD, icon: LayoutDashboard, exact: true },
+            { name: 'Dashboard', href: ROUTES.DASHBOARD, icon: LayoutDashboard, exact: true, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
         ],
     },
     {
         label: 'People',
         items: [
-            { name: 'Students', href: ROUTES.STUDENTS, icon: Users, exact: false },
-            { name: 'Staff & Teachers', href: ROUTES.STAFF, icon: Briefcase, exact: false },
+            { name: 'Students', href: ROUTES.STUDENTS, icon: Users, exact: false, roles: ['ADMIN', 'TEACHER'] },
+            { name: 'Staff & Teachers', href: ROUTES.STAFF, icon: Briefcase, exact: false, roles: ['ADMIN'] },
         ],
     },
     {
         label: 'Academics',
         items: [
-            { name: 'Attendance', href: ROUTES.ATTENDANCE, icon: CalendarDays, exact: false },
-            { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false },
-            { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false },
+            { name: 'Attendance', href: ROUTES.ATTENDANCE, icon: CalendarDays, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+            { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
+            { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
         ],
+    },
+    {
+        label: 'Timetable', // Changed from 'title' to 'label'
+        items: [
+            {
+                name: 'Master Schedule', // Changed from 'title' to 'name'
+                href: '/timetable',
+                icon: Calendar,
+                exact: false, // Added exact property for consistency
+                roles: ['ADMIN'], // Moved roles to item level for consistency
+            },
+        ],
+    },
+    {
+        label: 'Academics',
+        items: [
+            { name: 'Subjects', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
+        ]
     },
     {
         label: 'Finance',
         items: [
-            { name: 'Fee Structures', href: ROUTES.FEE_STRUCTURES, icon: Banknote, exact: false },
-            { name: 'Auto Challans', href: ROUTES.CHALLANS, icon: FileText, exact: false },
-            { name: 'Defaulters', href: ROUTES.DEFAULTERS, icon: AlertTriangle, exact: false },
-            { name: 'Staff Payroll', href: ROUTES.PAYROLL, icon: Wallet, exact: false },
+            { name: 'Fee Structures', href: ROUTES.FEE_STRUCTURES, icon: Banknote, exact: false, roles: ['ADMIN'] },
+            { name: 'Auto Challans', href: ROUTES.CHALLANS, icon: FileText, exact: false, roles: ['ADMIN', 'PARENT'] },
+            { name: 'Defaulters', href: ROUTES.DEFAULTERS, icon: AlertTriangle, exact: false, roles: ['ADMIN'] },
+            { name: 'Staff Payroll', href: ROUTES.PAYROLL, icon: Wallet, exact: false, roles: ['ADMIN'] },
         ],
     },
     {
         label: 'Config',
         items: [
-            { name: 'Class Settings', href: ROUTES.SETTINGS_CLASSES, icon: Settings, exact: false },
+            { name: 'Class Settings', href: ROUTES.SETTINGS_CLASSES, icon: Settings, exact: false, roles: ['ADMIN'] },
         ],
     },
 ];
@@ -75,6 +80,7 @@ const navGroups = [
 export default function AppSidebar() {
     const pathname = usePathname();
     const { open } = useSidebar();
+    const { data: profile } = useAuthProfile();
 
     const isActive = (href: string, exact: boolean) =>
         exact ? pathname === href : (pathname === href || pathname.startsWith(`${href}/`));
@@ -118,65 +124,74 @@ export default function AppSidebar() {
 
             {/* ── Navigation ── */}
             <SidebarContent className="py-3 overflow-y-auto">
-                {navGroups.map((group) => (
-                    <SidebarGroup key={group.label} className="px-3 mb-1">
-                        {/* Group label — only shown when expanded */}
-                        {open && (
-                            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-sidebar-foreground/55 px-1 mb-1.5 font-semibold">
-                                {group.label}
-                            </SidebarGroupLabel>
-                        )}
-                        {!open && <div className="h-3" />}
+                {navGroups.map((group) => {
+                    // Filter items based on role
+                    const filteredItems = group.items.filter(item =>
+                        !profile || item.roles.includes(profile.role)
+                    );
 
-                        <SidebarGroupContent>
-                            <SidebarMenu className="gap-1.5">
-                                {group.items.map((item) => {
-                                    const active = isActive(item.href, item.exact);
-                                    return (
-                                        <SidebarMenuItem key={item.href}>
-                                            <SidebarMenuButton
-                                                asChild
-                                                isActive={active}
-                                                tooltip={!open ? item.name : undefined}
-                                                className={cn(
-                                                    'relative w-full rounded-lg transition-all duration-200 h-10',
-                                                    'group/item',
-                                                    active
-                                                        ? 'bg-primary text-primary-foreground font-semibold'
-                                                        : 'text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                                                )}
-                                                style={active ? {
-                                                    boxShadow: '0 2px 12px oklch(0.68 0.2 160 / 40%)'
-                                                } : undefined}
-                                            >
-                                                <Link
-                                                    href={item.href}
+                    if (filteredItems.length === 0) return null;
+
+                    return (
+                        <SidebarGroup key={group.label} className="px-3 mb-1">
+                            {/* Group label — only shown when expanded */}
+                            {open && (
+                                <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-sidebar-foreground/55 px-1 mb-1.5 font-semibold">
+                                    {group.label}
+                                </SidebarGroupLabel>
+                            )}
+                            {!open && <div className="h-3" />}
+
+                            <SidebarGroupContent>
+                                <SidebarMenu className="gap-1.5">
+                                    {filteredItems.map((item) => {
+                                        const active = isActive(item.href, item.exact);
+                                        return (
+                                            <SidebarMenuItem key={item.href}>
+                                                <SidebarMenuButton
+                                                    asChild
+                                                    isActive={active}
+                                                    tooltip={!open ? item.name : undefined}
                                                     className={cn(
-                                                        'flex items-center gap-3 px-3 w-full h-full',
-                                                        !open && 'justify-center px-0'
-                                                    )}
-                                                >
-                                                    <item.icon className={cn(
-                                                        'shrink-0 transition-transform duration-200',
+                                                        'relative w-full rounded-lg transition-all duration-200 h-10',
+                                                        'group/item',
                                                         active
-                                                            ? 'h-[18px] w-[18px]'
-                                                            : 'h-[18px] w-[18px] group-hover/item:scale-110',
-                                                    )} />
-                                                    {open && (
-                                                        <span className="text-sm truncate flex-1">{item.name}</span>
+                                                            ? 'bg-primary text-primary-foreground font-semibold'
+                                                            : 'text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                                                     )}
-                                                    {open && active && (
-                                                        <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 opacity-70" />
-                                                    )}
-                                                </Link>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    );
-                                })}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                ))}
+                                                    style={active ? {
+                                                        boxShadow: '0 2px 12px oklch(0.68 0.2 160 / 40%)'
+                                                    } : undefined}
+                                                >
+                                                    <Link
+                                                        href={item.href}
+                                                        className={cn(
+                                                            'flex items-center gap-3 px-3 w-full h-full',
+                                                            !open && 'justify-center px-0'
+                                                        )}
+                                                    >
+                                                        <item.icon className={cn(
+                                                            'shrink-0 transition-transform duration-200',
+                                                            active
+                                                                ? 'h-[18px] w-[18px]'
+                                                                : 'h-[18px] w-[18px] group-hover/item:scale-110',
+                                                        )} />
+                                                        {open && (
+                                                            <span className="text-sm truncate flex-1">{item.name}</span>
+                                                        )}
+                                                        {open && active && (
+                                                            <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 opacity-70" />
+                                                        )}
+                                                    </Link>
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                        );
+                                    })}
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    )
+                })}
             </SidebarContent>
 
             {/* ── Footer ── */}

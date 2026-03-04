@@ -24,7 +24,7 @@ export function useCreateClass() {
             queryClient.setQueryData<ClassRecord[]>(classKeys.all, (old) => {
                 const optimisticClass: ClassRecord = {
                     ...newClass,
-                    id: Math.random().toString(), // fake id
+                    id: crypto.randomUUID(), // stable temp id for optimistic update
                 };
                 return old ? [...old, optimisticClass].sort((a, b) => a.name.localeCompare(b.name)) : [optimisticClass];
             });
@@ -37,6 +37,17 @@ export function useCreateClass() {
             }
         },
         onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: classKeys.all });
+        },
+    });
+}
+
+export function useDeleteClass() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => classesApi.deleteClass(id),
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: classKeys.all });
         },
     });

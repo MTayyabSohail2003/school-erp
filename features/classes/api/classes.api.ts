@@ -44,5 +44,14 @@ export const classesApi = {
         }
 
         return data;
-    }
+    },
+
+    /**
+     * Soft-deletes a class by ID (hard delete — classes should only be deleted if no students enrolled).
+     */
+    deleteClass: async (id: string): Promise<void> => {
+        const supabase = createClient();
+        const { error } = await supabase.from('classes').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+    },
 };

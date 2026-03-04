@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 import { useClasses } from '@/features/classes/hooks/use-classes';
+import { useGetParents } from '@/features/parents/api/use-get-parents';
 import { useUpdateStudent } from '../api/use-update-student';
 import { storageApi } from '@/features/storage/api/storage.api';
 import { Loader2, UploadCloud } from 'lucide-react';
@@ -33,7 +34,7 @@ import { Loader2, UploadCloud } from 'lucide-react';
 const editStudentSchema = z.object({
     roll_number: z.string().min(1, 'Roll number is required'),
     full_name: z.string().min(2, 'Name must be at least 2 characters'),
-    guardian_name: z.string().optional(),
+    parent_id: z.string().uuid('Select a valid parent').optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER']).optional(),
     b_form_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
@@ -49,7 +50,7 @@ type EditStudentProps = {
         id: string;
         roll_number: string;
         full_name: string;
-        guardian_name?: string;
+        parent_id?: string | null;
         status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER';
         b_form_url?: string | null;
         date_of_birth: string;
@@ -61,6 +62,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
     const [isUploading, setIsUploading] = useState(false);
     const updateMutation = useUpdateStudent();
     const { data: classes, isLoading: isClassesLoading } = useClasses();
+    const { data: parents, isLoading: isParentsLoading } = useGetParents();
 
     const form = useForm<EditStudentForm>({
         resolver: zodResolver(editStudentSchema),
@@ -68,7 +70,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
         values: {
             roll_number: student?.roll_number || '',
             full_name: student?.full_name || '',
-            guardian_name: student?.guardian_name || '',
+            parent_id: student?.parent_id || '',
             status: student?.status || 'ACTIVE',
             b_form_url: student?.b_form_url || null,
             date_of_birth: student?.date_of_birth
@@ -165,12 +167,26 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
 
                         <FormField
                             control={form.control}
-                            name="guardian_name"
+                            name="parent_id"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Guardian Name</FormLabel>
+                                    <FormLabel>Assign Parent</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Guardian Name" {...field} />
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                            {...field}
+                                            value={field.value || ''}
+                                            disabled={isParentsLoading}
+                                        >
+                                            <option value="" disabled>
+                                                {isParentsLoading ? 'Loading parents...' : 'Select a parent'}
+                                            </option>
+                                            {parents?.map((p) => (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.full_name} ({p.email})
+                                                </option>
+                                            ))}
+                                        </select>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

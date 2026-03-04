@@ -10,6 +10,7 @@ export const studentsApi = {
         const { data, error } = await supabase
             .from('students')
             .select('*, classes(name, section)')
+            .eq('status', 'ACTIVE')
             .order('created_at', { ascending: false });
 
         if (error) throw new Error(error.message);

@@ -123,9 +123,10 @@ export function StudentsTable() {
             ),
         },
         {
-            accessorKey: 'guardian_name',
-            header: 'Guardian',
-            cell: ({ row }) => <div className="text-sm hidden md:block">{row.getValue('guardian_name') || '-'}</div>,
+            id: 'parent_name',
+            accessorFn: row => row.users?.full_name || '-',
+            header: 'Parent/Guardian',
+            cell: ({ row }) => <div className="text-sm hidden md:block">{row.original.users?.full_name || '-'}</div>,
         },
         {
             id: 'class_section',
@@ -265,7 +266,7 @@ export function StudentsTable() {
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     // Custom hiding for responsiveness
-                                    const isHiddenOnMobile = ['guardian_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(header.column.id);
+                                    const isHiddenOnMobile = ['parent_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(header.column.id);
 
                                     return (
                                         <TableHead key={header.id} className={isHiddenOnMobile ? 'hidden md:table-cell' : ''}>
@@ -296,7 +297,7 @@ export function StudentsTable() {
                                     className="cursor-pointer md:cursor-default hover:bg-muted/50 transition-colors"
                                 >
                                     {row.getVisibleCells().map((cell) => {
-                                        const isHiddenOnMobile = ['guardian_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(cell.column.id);
+                                        const isHiddenOnMobile = ['parent_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(cell.column.id);
                                         return (
                                             <TableCell key={cell.id} className={isHiddenOnMobile ? 'hidden md:table-cell' : ''}>
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -357,7 +358,7 @@ export function StudentsTable() {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground uppercase font-semibold">Guardian</p>
-                                <p className="font-medium">{drawerStudent?.guardian_name || 'N/A'}</p>
+                                <p className="font-medium">{drawerStudent?.users?.full_name || 'N/A'}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground uppercase font-semibold">DOB</p>

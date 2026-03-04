@@ -11,6 +11,7 @@ import { useGetSubjects } from '@/features/exams/api/use-subjects';
 import { useClasses } from '@/features/classes/hooks/use-classes';
 import { useGetMarks, useUpsertMarks } from '../api/use-marks';
 import { calculateGrade, type MarkEntry } from '../schemas/mark.schema';
+import { useStudentsByClass } from '@/features/students/hooks/use-students-by-class';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,9 +24,6 @@ import {
 import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
-
 // Grade badge colors
 const GRADE_COLORS: Record<string, string> = {
     A: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
@@ -34,24 +32,6 @@ const GRADE_COLORS: Record<string, string> = {
     D: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
     F: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
 };
-
-function useStudentsByClass(classId: string) {
-    return useQuery({
-        queryKey: ['students', 'byClass', classId],
-        queryFn: async () => {
-            if (!classId) return [];
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('students')
-                .select('id, full_name, roll_number')
-                .eq('class_id', classId)
-                .order('roll_number', { ascending: true });
-            if (error) throw new Error(error.message);
-            return data as { id: string; full_name: string; roll_number: string }[];
-        },
-        enabled: Boolean(classId),
-    });
-}
 
 export function MarkSheetPage() {
     const [selectedExamId, setSelectedExamId] = useState('');

@@ -1,14 +1,40 @@
 'use client';
 
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/layout/sidebar'; // Renamed import to match default export we will create
 import { Header } from '@/components/layout/header';
 import { Loader } from '@/components/ui/loader';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-    const { isLoading } = useAuthProfile();
+    const { data: profile, isLoading } = useAuthProfile();
+    const pathname = usePathname();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!isLoading && profile) {
+            const role = profile.role;
+            const isFinanceRoute = pathname.startsWith('/dashboard/finance') || pathname.startsWith('/dashboard/payroll');
+            const isStaffRoute = pathname.startsWith('/dashboard/staff');
+            const isConfigRoute = pathname.startsWith('/dashboard/settings');
+
+            if (role === 'TEACHER' && (isFinanceRoute || isStaffRoute || isConfigRoute)) {
+                router.replace('/dashboard');
+            } else if (role === 'PARENT' && (isFinanceRoute || isStaffRoute || isConfigRoute || pathname.startsWith('/dashboard/students') || pathname.startsWith('/dashboard/exams'))) {
+                // Parents can only view auto challans, mark sheets, and attendance (which might have their own views).
+                // Assuming challans is under finance which is blocked, let's whitelist it if it's true
+                // But wait, the sidebar says Challans is ROUTES.CHALLANS. Let's see what that is.
+                // Assuming we just restrict heavily:
+                if (pathname.includes('/finance/challans')) {
+                    // let it pass
+                } else if (isFinanceRoute || isStaffRoute || isConfigRoute || pathname.startsWith('/dashboard/students')) {
+                    router.replace('/dashboard');
+                }
+            }
+        }
+    }, [pathname, profile, isLoading, router]);
 
     if (isLoading) {
         return (

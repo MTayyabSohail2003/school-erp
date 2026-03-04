@@ -6,7 +6,7 @@ export type StudentUpdateData = {
     full_name: string;
     date_of_birth: string;
     class_id: string;
-    guardian_name?: string;
+    parent_id?: string | null;
     status?: string;
     b_form_url?: string | null;
 };
@@ -22,7 +22,7 @@ export function useUpdateStudent() {
                 .update({
                     roll_number: data.roll_number,
                     full_name: data.full_name,
-                    guardian_name: data.guardian_name,
+                    parent_id: data.parent_id,
                     status: data.status,
                     b_form_url: data.b_form_url,
                     date_of_birth: data.date_of_birth,

@@ -4,15 +4,27 @@ import { type MarkEntry, type MarkWithDetails } from '../schemas/mark.schema';
 export const marksApi = {
     getMarksByExamAndClass: async (examId: string, classId: string): Promise<MarkWithDetails[]> => {
         const supabase = createClient();
+
+        // First, get all student IDs in the given class
+        const { data: classStudents, error: studentsError } = await supabase
+            .from('students')
+            .select('id')
+            .eq('class_id', classId)
+            .eq('status', 'ACTIVE');
+
+        if (studentsError) throw new Error(studentsError.message);
+        const studentIds = (classStudents ?? []).map((s) => s.id);
+        if (studentIds.length === 0) return [];
+
+        // Then fetch marks only for students in this class
         const { data, error } = await supabase
             .from('exam_marks')
             .select('*, students(full_name, roll_number), subjects(name)')
             .eq('exam_id', examId)
+            .in('student_id', studentIds)
             .order('created_at', { ascending: true });
 
         if (error) throw new Error(error.message);
-
-        // Filter to students in the selected class by joining through students
         return (data ?? []) as MarkWithDetails[];
     },
 
