@@ -223,3 +223,46 @@
     color: oklch(0.1 0.02 160);
   }
 }
+
+/* ── Print Styles for Report Cards ── */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: white !important;
+  }
+
+  /* Hide all UI navigation elements */
+  nav,
+  header,
+  aside,
+  .sidebar-container,
+  [data-sidebar="sidebar"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset main layout margins so report card takes full page */
+  main,
+  [data-sidebar="content"],
+  [data-sidebar="sidebar-provider"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Remove borders/shadows from the printable card container itself */
+  .print-area {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure page breaks don't cut rows in half */
+  tr,
+  td,
+  th {
+    page-break-inside: avoid;
+  }
+}

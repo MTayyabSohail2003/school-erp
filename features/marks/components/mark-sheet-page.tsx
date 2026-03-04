@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { ClipboardList, Save, Loader2 } from 'lucide-react';
+import { ClipboardList, Save, Loader2, Printer } from 'lucide-react';
+import Link from 'next/link';
 
 import { useGetExams } from '@/features/exams/api/use-exams';
 import { useGetSubjects } from '@/features/exams/api/use-subjects';
@@ -218,8 +219,13 @@ export function MarkSheetPage() {
                                         >
                                             <td className="px-5 py-3">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold text-primary">{student.roll_number}</span>
-                                                    <span className="font-medium truncate max-w-[120px]">{student.full_name}</span>
+                                                    <span className="text-xs font-bold text-primary w-8">{student.roll_number}</span>
+                                                    <span className="font-medium truncate flex-1 min-w-[120px]">{student.full_name}</span>
+                                                    <Link href={`/dashboard/marks/report/${student.id}/${selectedExamId}`} target="_blank">
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary">
+                                                            <Printer className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </Link>
                                                 </div>
                                             </td>
                                             {(subjects ?? []).map((subject) => {

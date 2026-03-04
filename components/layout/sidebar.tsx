@@ -7,7 +7,6 @@ import { ROUTES } from '@/constants/globals';
 import {
     LayoutDashboard,
     Users,
-    Receipt,
     BookOpen,
     Settings,
     Briefcase,
@@ -15,6 +14,10 @@ import {
     ChevronRight,
     CalendarDays,
     ClipboardList,
+    Banknote,
+    FileText,
+    AlertTriangle,
+    Wallet,
 } from 'lucide-react';
 import {
     Sidebar,
@@ -55,7 +58,10 @@ const navGroups = [
     {
         label: 'Finance',
         items: [
-            { name: 'Fee Management', href: ROUTES.FEES, icon: Receipt, exact: false },
+            { name: 'Fee Structures', href: ROUTES.FEE_STRUCTURES, icon: Banknote, exact: false },
+            { name: 'Auto Challans', href: ROUTES.CHALLANS, icon: FileText, exact: false },
+            { name: 'Defaulters', href: ROUTES.DEFAULTERS, icon: AlertTriangle, exact: false },
+            { name: 'Staff Payroll', href: ROUTES.PAYROLL, icon: Wallet, exact: false },
         ],
     },
     {
