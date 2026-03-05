@@ -1,12 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from './finance.api';
 import { type ChallanStatus } from '../schemas/fee-challan.schema';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
-export const useGetChallans = (monthYear?: string, status?: string) =>
-    useQuery({
-        queryKey: ['fee-challans', monthYear, status],
+const CHALLANS_KEY = ['fee-challans'] as const;
+
+export const useGetChallans = (monthYear?: string, status?: string) => {
+    useRealtimeInvalidate({ table: 'fee_challans', queryKey: CHALLANS_KEY });
+    return useQuery({
+        queryKey: [...CHALLANS_KEY, monthYear, status],
         queryFn: () => financeApi.getChallans(monthYear, status),
     });
+};
 
 export const useUpdateChallanStatus = () => {
     const queryClient = useQueryClient();

@@ -19,64 +19,49 @@ We must not skip phases. Each phase relies on the data foundation of the previou
 
 ## The Master Roadmap (Development Phases)
 
-### Phase 1: Foundation & Security (The Engine)
-*   **Goal:** Set up the database, authentication, and the core Next.js application shell.
-*   **Flows:**
-    1.  User registers/logs in -> Supabase Auth issues JWT.
-    2.  JWT is verified by Supabase Database (RLS checks the User Role: Admin, Teacher, Parent).
-*   **Deliverables:**
-    *   Database Schema applied with Foreign Keys.
-    *   RLS Policies active.
-    *   Next.js project configured with Tailwind + shadcn.
-    *   Auth Context and Login Screen built.
+### Phase 1: Database Architecture & Core Relationships
+*   **Goal:** Before UI, the "Relational Intelligence" must be built in Supabase.
+*   **Key Items:**
+    *   **Multi-Role Schema:** Design tables for profiles (Admin, Teacher, Parent) with strict Row Level Security (RLS).
+    *   **Academic Structure:** Setup `classes`, `sections`, and `subjects` tables as the base.
+    *   **Student-Parent Link:** Create a 1:M (one-to-many) relationship allowing one parent to manage multiple children.
+    *   **Missing Entity - Concessions:** Add a `fee_concessions` table to store discounts (e.g., Kinship, Merit) per student.
 
-### Phase 2: Core Entities (The People)
-*   **Goal:** Build the CRUD (Create, Read, Update, Delete) interfaces for the people in the school.
-*   **Dependency:** Requires the `users` and `classes` tables from Phase 1.
-*   **Flows:**
-    1.  Admin adds a Student -> Saved to `students` table.
-    2.  Admin uploads Student B-Form -> Saved to Supabase Buckets -> URL saved to `students` table.
-    3.  Admin adds a Teacher -> Saved to `users` and linked to `teacher_profiles`.
-*   **Deliverables:**
-    *   Student Profiles & Document Vault UI.
-    *   Teacher Profiles UI.
-    *   Class/Section management UI.
+### Phase 2: Admin Control & Digital Vault
+*   **Goal:** Establishing the management's power and cloud storage.
+*   **Key Items:**
+    *   **Smart Registration:** Build the multi-step student registration form with Zod validation.
+    *   **Digital Vault (Supabase Storage):** Implement secure document uploading for B-Forms and ID cards.
+    *   **Staff Directory:** Create teacher accounts and link them to specific classes/subjects.
+    *   **Missing Flow - Staff Payroll:** Setup the ledger to track teacher salaries and monthly payouts.
 
-### Phase 3: Daily Academic Operations (The Process)
-*   **Goal:** Implement features teachers use every day.
-*   **Dependency:** Requires Students and Teachers from Phase 2.
-*   **Flows:**
-    1.  Teacher selects Class -> Marks Attendance -> Saved to `attendance` table.
-    2.  *Rule:* If marked ABSENT -> Trigger automated SMS to Parent.
-    3.  Admin creates Exam -> Teacher enters Marks -> Saved to `exam_marks` table.
-    4.  System reads Marks -> Generates Report Card PDF.
-*   **Deliverables:**
-    *   Daily Attendance Module & SMS Hook.
-    *   Exam Creation Module.
-    *   Mark Sheet Data Entry Grid.
-    *   Automated Report Card Generator.
+### Phase 3: Academic Operations & Real-time Attendance
+*   **Goal:** Daily classroom activities and instant communication.
+*   **Key Items:**
+    *   **Teacher Dashboard:** Create a focused view for teachers to see only their assigned classes.
+    *   **Smart Attendance:** Mobile-friendly attendance marking for teachers.
+    *   **Missing Syncing - SMS/Notice:** Integration of a trigger where marking a student 'Absent' sends an automated SMS to the Parent portal.
+    *   **Academic Blocks:** Set up `exam_terms` (Mid, Final) and `mark_sheets` for score entry.
 
-### Phase 4: Financial Engine (The Revenue)
-*   **Goal:** Automate fee generation and track defaults.
-*   **Dependency:** Requires Students and Classes from Phase 2.
-*   **Flows:**
-    1.  Admin sets Fee Structure for Class 10.
-    2.  *Cron Job (1st of month):* System reads all Students in Class 10 -> Generates Challans in `fee_challans` table.
-    3.  Parent views/pays Challan -> Status updates to PAID.
-    4.  Admin views dashboard -> Sees OVERDUE list filtered from `fee_challans`.
-*   **Deliverables:**
-    *   Fee Structure Configurator.
-    *   Monthly Auto-Challan Engine.
-    *   Defaulter Tracking UI.
-    *   Staff Payroll & Salary UI.
+### Phase 4: Advanced Financial Engine (Automated Finance)
+*   **Goal:** This is where the software becomes a "Management Tool."
+*   **Key Items:**
+    *   **Fee Rule Engine:** Define tuition, lab, and transport fees for each class.
+    *   **Missing Logic - Arrears & Fines:** Implement logic to carry forward "Unpaid Balances" from the previous month to the next challan.
+    *   **Bulk Auto-Challan:** A single-click system to generate electronic fee slips for the entire school.
+    *   **Defaulter Tracking:** A real-time list of unpaid challans after the "Due Date".
 
-### Phase 5: The Command Center (The Polish)
-*   **Goal:** Bring everything together into high-level dashboards and make the app installable.
-*   **Dependency:** Requires data flowing from Phases 3 and 4.
-*   **Flows:**
-    1.  Principal logs in -> Sees aggregate total revenue, absent count, and expenses.
-    2.  Parent accesses URL on mobile -> Prompts "Add to Home Screen" (PWA).
-*   **Deliverables:**
-    *   Admin Analytics Dashboard.
-    *   Teacher "My Class" Dashboard.
-    *   PWA Manifest and Service Worker implementation.
+### Phase 5: Results & Communication Portal
+*   **Goal:** Finalizing data and delivering it to parents.
+*   **Key Items:**
+    *   **Automated Report Cards:** Logic to calculate grades (A, B, C) and percentages from entered marks.
+    *   **Parent Portal:** A restricted view for parents to see attendance calendars and download PDF report cards.
+    *   **Missing Flow - Leave Requests:** Implement a feature where parents submit leaves, and upon Admin/Teacher approval, the attendance updates to 'L' automatically.
+    *   **PDF Generation:** Server-side generation of Fee Challans and Report Cards for printing.
+
+### Phase 6: Maintenance & PWA Transformation
+*   **Goal:** Software lifecycle and installability.
+*   **Key Items:**
+    *   **Missing Flow - Batch Promotion:** A year-end utility to promote all students from one class to the next in one click.
+    *   **PWA Setup:** Configuring `manifest.json` and service workers for desktop and mobile installation.
+    *   **Global Notice Board:** A "Broadcast" system using Supabase Realtime to push announcements to all active users.

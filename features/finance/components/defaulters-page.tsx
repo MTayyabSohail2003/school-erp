@@ -6,7 +6,6 @@ import { AlertTriangle, Search, Phone, CheckCircle } from 'lucide-react';
 import { format, parseISO, isAfter } from 'date-fns';
 
 import { useGetChallans, useUpdateChallanStatus } from '../api/use-challans';
-import { type ChallanStatus } from '../schemas/fee-challan.schema';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +117,7 @@ export function DefaultersPage() {
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Class</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Month</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Amount Due</th>
+                                        <th className="px-5 py-3 font-semibold text-orange-600 dark:text-orange-400">Arrears</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Due Date</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                                     </tr>
@@ -154,6 +154,15 @@ export function DefaultersPage() {
                                             </td>
                                             <td className="px-5 py-4 font-bold text-foreground">
                                                 Rs. {challan.amount_due.toLocaleString()}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {(challan.arrears ?? 0) > 0 ? (
+                                                    <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-900/50">
+                                                        +Rs. {challan.arrears!.toLocaleString()} arrears
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">None</span>
+                                                )}
                                             </td>
                                             <td className="px-5 py-4">
                                                 <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900/50">

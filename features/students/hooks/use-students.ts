@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { studentsApi } from '../api/students.api';
 import { type StudentFormData } from '../schemas/student.schema';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
 export const studentKeys = {
     all: ['students'] as const,
 };
 
 export function useStudents() {
+    useRealtimeInvalidate({ table: 'students', queryKey: studentKeys.all });
     return useQuery({
         queryKey: studentKeys.all,
         queryFn: studentsApi.getStudents,
@@ -23,13 +25,13 @@ export function useCreateStudent() {
             await queryClient.cancelQueries({ queryKey: studentKeys.all });
             const previousStudents = queryClient.getQueryData(studentKeys.all);
 
-            queryClient.setQueryData(studentKeys.all, (old: any) => {
-                const optimisticStudent = {
-                    ...newStudent,
-                    id: Math.random().toString(), // fake id for UI
-                    created_at: new Date().toISOString(),
-                    classes: { name: 'Loading...', section: '' }
-                };
+            const optimisticStudent = {
+                ...newStudent,
+                id: Math.random().toString(), // fake id for UI
+                created_at: new Date().toISOString(),
+                classes: { name: 'Loading...', section: '' }
+            };
+            queryClient.setQueryData<typeof optimisticStudent[]>(studentKeys.all, (old) => {
                 return old ? [optimisticStudent, ...old] : [optimisticStudent];
             });
 

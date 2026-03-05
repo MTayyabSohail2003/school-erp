@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { examsApi } from './exams.api';
 import { type ExamFormData } from '../schemas/exam.schema';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
 const EXAMS_KEY = ['exams'] as const;
 
-export const useGetExams = () =>
-    useQuery({ queryKey: EXAMS_KEY, queryFn: examsApi.getExams });
+export const useGetExams = () => {
+    useRealtimeInvalidate({ table: 'exams', queryKey: EXAMS_KEY });
+    return useQuery({ queryKey: EXAMS_KEY, queryFn: examsApi.getExams });
+};
 
 export const useCreateExam = () => {
     const queryClient = useQueryClient();

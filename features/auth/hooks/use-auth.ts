@@ -33,3 +33,16 @@ export function useLogout() {
         },
     });
 }
+
+export function useUploadAvatar() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ userId, file }: { userId: string; file: File }) =>
+            authApi.uploadAvatar(userId, file),
+        onSuccess: () => {
+            // Refresh the user's profile to get the new avatar_url
+            queryClient.invalidateQueries({ queryKey: ['authProfile'] });
+        },
+    });
+}

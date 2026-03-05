@@ -1,25 +1,36 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { PromoteStudentsData } from '../schemas/student.schema';
 
-export function usePromoteStudents() {
-    const queryClient = useQueryClient();
+export const promoteStudents = async (fromClassId: string, toClassId: string): Promise<number> => {
     const supabase = createClient();
 
-    return useMutation({
-        mutationFn: async (data: PromoteStudentsData) => {
-            const { error, count } = await supabase
-                .from('students')
-                .update({ class_id: data.destination_class_id })
-                .eq('class_id', data.source_class_id);
+    // Get all students in the source class
+    const { data: students, error: fetchError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('class_id', fromClassId);
 
-            if (error) throw error;
-            return count; // Supabase doesn't easily return count on update without specific config, but we can just assume success if no error.
-        },
+    if (fetchError) throw new Error(fetchError.message);
+    if (!students || students.length === 0) throw new Error('No students found in the selected class.');
+
+    const ids = students.map(s => s.id);
+
+    const { error } = await supabase
+        .from('students')
+        .update({ class_id: toClassId })
+        .in('id', ids);
+
+    if (error) throw new Error(error.message);
+    return ids.length;
+};
+
+export const usePromoteStudents = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ fromClassId, toClassId }: { fromClassId: string; toClassId: string }) =>
+            promoteStudents(fromClassId, toClassId),
         onSuccess: () => {
-            // Invalidate all queries related to students and classes
-            queryClient.invalidateQueries({ queryKey: ['students'] });
-            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            queryClient.invalidateQueries({ queryKey: ['students', 'byClass'] });
         },
     });
-}
+};

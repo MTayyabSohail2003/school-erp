@@ -4,9 +4,11 @@ import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 import { ReactNode, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import AppSidebar from '@/components/layout/sidebar'; // Renamed import to match default export we will create
+import AppSidebar from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { Loader } from '@/components/ui/loader';
+import { AnnouncementBanner } from '@/features/notices/components/announcement-banner';
+import { NotificationToastListener } from '@/features/notifications/components/notification-toast-listener';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { data: profile, isLoading } = useAuthProfile();
@@ -22,14 +24,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             if (role === 'TEACHER' && (isFinanceRoute || isStaffRoute || isConfigRoute)) {
                 router.replace('/dashboard');
-            } else if (role === 'PARENT' && (isFinanceRoute || isStaffRoute || isConfigRoute || pathname.startsWith('/dashboard/students') || pathname.startsWith('/dashboard/exams'))) {
-                // Parents can only view auto challans, mark sheets, and attendance (which might have their own views).
-                // Assuming challans is under finance which is blocked, let's whitelist it if it's true
-                // But wait, the sidebar says Challans is ROUTES.CHALLANS. Let's see what that is.
-                // Assuming we just restrict heavily:
-                if (pathname.includes('/finance/challans')) {
-                    // let it pass
-                } else if (isFinanceRoute || isStaffRoute || isConfigRoute || pathname.startsWith('/dashboard/students')) {
+            } else if (role === 'PARENT') {
+                // Parents can only view auto challans, mark sheets, attendance, leave requests, their children's profiles & exams.
+                const allowedParentRoutes = [
+                    '/dashboard/finance/challans',
+                    '/dashboard/students',
+                    '/dashboard/exams',
+                    '/dashboard/marks',
+                    '/dashboard/attendance',
+                    '/dashboard/notices' // Assuming notices will be open to parents as well
+                ];
+
+                const isAllowed = allowedParentRoutes.some(route => pathname.startsWith(route)) || pathname === '/dashboard';
+
+                if (!isAllowed) {
                     router.replace('/dashboard');
                 }
             }
@@ -49,6 +57,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <AppSidebar />
             <div className="flex w-full flex-col min-h-screen">
                 <Header />
+                <AnnouncementBanner />
+                <NotificationToastListener />
                 <main className="flex-1 p-6 lg:p-8 z-0">
                     <div className="mx-auto max-w-7xl">
                         {children}

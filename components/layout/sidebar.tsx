@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuthProfile } from '@/features/auth/hooks/use-auth';
+import { useAuthProfile, useUploadAvatar } from '@/features/auth/hooks/use-auth';
+import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Banknote, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, FileText, CalendarDays, Briefcase } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Banknote, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, FileText, CalendarDays, Briefcase, User, Loader2, Megaphone } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -20,7 +22,7 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 
-const navGroups = [
+export const navGroups = [
     {
         label: 'Overview',
         items: [
@@ -38,27 +40,17 @@ const navGroups = [
         label: 'Academics',
         items: [
             { name: 'Attendance', href: ROUTES.ATTENDANCE, icon: CalendarDays, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+            { name: 'Leave Requests', href: '/dashboard/attendance/leaves', icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
             { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
-        ],
-    },
-    {
-        label: 'Timetable', // Changed from 'title' to 'label'
-        items: [
-            {
-                name: 'Master Schedule', // Changed from 'title' to 'name'
-                href: '/timetable',
-                icon: Calendar,
-                exact: false, // Added exact property for consistency
-                roles: ['ADMIN'], // Moved roles to item level for consistency
-            },
-        ],
-    },
-    {
-        label: 'Academics',
-        items: [
             { name: 'Subjects', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
-        ]
+        ],
+    },
+    {
+        label: 'Timetable',
+        items: [
+            { name: 'Master Schedule', href: '/timetable', icon: Calendar, exact: false, roles: ['ADMIN'] },
+        ],
     },
     {
         label: 'Finance',
@@ -75,12 +67,54 @@ const navGroups = [
             { name: 'Class Settings', href: ROUTES.SETTINGS_CLASSES, icon: Settings, exact: false, roles: ['ADMIN'] },
         ],
     },
+    {
+        label: 'Broadcasts',
+        items: [
+            { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+        ],
+    },
 ];
 
 export default function AppSidebar() {
     const pathname = usePathname();
     const { open } = useSidebar();
     const { data: profile } = useAuthProfile();
+    const uploadAvatarMutation = useUploadAvatar();
+
+    const onDrop = async (acceptedFiles: File[]) => {
+        if (!profile?.id) return;
+
+        const file = acceptedFiles[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error("Image must be less than 2MB");
+            return;
+        }
+
+        uploadAvatarMutation.mutate(
+            { userId: profile.id, file },
+            {
+                onSuccess: () => {
+                    toast.success('Profile picture updated!');
+                },
+                onError: (error) => {
+                    toast.error(error.message || 'Failed to upload image');
+                }
+            }
+        );
+    };
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        accept: {
+            'image/jpeg': [],
+            'image/png': [],
+            'image/webp': []
+        },
+        maxFiles: 1,
+        disabled: uploadAvatarMutation.isPending
+    });
 
     const isActive = (href: string, exact: boolean) =>
         exact ? pathname === href : (pathname === href || pathname.startsWith(`${href}/`));
@@ -91,39 +125,64 @@ export default function AppSidebar() {
             className="border-r-0 bg-sidebar shadow-xl"
         >
             {/* ── Logo / Brand ── */}
-            <SidebarHeader className="h-20 px-4 border-b border-sidebar-border flex flex-row items-center">
-                <div className="flex items-center gap-3 min-w-0">
-                    {/* Logo mark — always visible */}
-                    <div className={cn(
-                        'flex shrink-0 items-center justify-center transition-all duration-300',
-                        open ? 'h-14 w-14 ml-0' : 'h-10 w-10 mx-auto'
-                    )}>
-                        <img
-                            src="/logo.png"
-                            alt="School ERP Logo"
-                            width={open ? 60 : 40}
-                            height={open ? 60 : 40}
-                            className="object-contain"
-                        />
-                    </div>
+            <SidebarHeader className={cn(
+                "relative h-[84px] flex flex-col items-center justify-center transition-all duration-300",
+                "bg-sidebar text-sidebar-foreground border-none rounded-none shadow-none"
+            )}>
+                {/* Brand name — hidden when collapsed */}
+                <div className={cn(
+                    'flex flex-col items-center justify-center leading-tight overflow-hidden transition-all duration-300',
+                    open ? 'opacity-100 h-auto translate-y-0' : 'opacity-0 h-0 -translate-y-4 hidden'
+                )}>
+                    <span className="font-bold text-lg text-sidebar-foreground whitespace-nowrap tracking-wide">
+                        School ERP
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase mb-1">
+                        Admin Portal
+                    </span>
+                </div>
 
-                    {/* Brand name — hidden when collapsed */}
-                    <div className={cn(
-                        'flex flex-col leading-tight overflow-hidden transition-all duration-300',
-                        open ? 'opacity-100 w-auto' : 'opacity-0 w-0'
-                    )}>
-                        <span className="font-bold text-sm text-sidebar-foreground whitespace-nowrap tracking-wide">
-                            School ERP
-                        </span>
-                        <span className="text-[10px] text-primary font-semibold tracking-widest uppercase">
-                            Admin Portal
-                        </span>
+                {/* Overlapping Avatar Bump with Dropzone */}
+                <div
+                    {...getRootProps()}
+                    className={cn(
+                        "absolute -bottom-[36px] left-1/2 -translate-x-1/2 z-20",
+                        "w-[76px] h-[76px] bg-[#D2F1DF] rounded-full flex items-center justify-center",
+                        "transition-transform duration-300 cursor-pointer group",
+                        !open && "scale-[0.80] -bottom-[28px]",
+                        isDragActive && "ring-4 ring-primary ring-opacity-50"
+                    )}
+                    title="Click to change profile picture"
+                >
+                    <input {...getInputProps()} />
+                    <div className="w-[56px] h-[56px] bg-sidebar rounded-full flex items-center justify-center shadow-md relative overflow-hidden group-hover:ring-2 ring-white/50 transition-all">
+                        {uploadAvatarMutation.isPending ? (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm z-10 transition-opacity">
+                                <Loader2 className="w-5 h-5 text-white animate-spin" />
+                            </div>
+                        ) : (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 z-10 transition-opacity">
+                                <span className="text-[9px] font-bold text-white uppercase tracking-wider text-center leading-tight">Change</span>
+                            </div>
+                        )}
+
+                        {profile?.avatar_url ? (
+                            <img
+                                src={profile.avatar_url}
+                                alt="Profile Avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center shadow-inner" style={{ backgroundColor: '#465FFF' }}>
+                                <User className="w-[22px] h-[22px] text-white" fill="currentColor" strokeWidth={1} />
+                            </div>
+                        )}
                     </div>
                 </div>
             </SidebarHeader>
 
             {/* ── Navigation ── */}
-            <SidebarContent className="py-3 overflow-y-auto">
+            <SidebarContent className="pt-12 pb-3 overflow-y-auto">
                 {navGroups.map((group) => {
                     // Filter items based on role
                     const filteredItems = group.items.filter(item =>

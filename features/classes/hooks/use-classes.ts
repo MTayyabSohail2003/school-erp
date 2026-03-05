@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { classesApi, type ClassRecord } from '../api/classes.api';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
 export const classKeys = {
     all: ['classes'] as const,
 };
 
 export function useClasses() {
+    useRealtimeInvalidate({ table: 'classes', queryKey: classKeys.all });
     return useQuery({
         queryKey: classKeys.all,
         queryFn: classesApi.getClasses,

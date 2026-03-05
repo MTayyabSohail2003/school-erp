@@ -9,7 +9,6 @@ import { useGetChallans, useUpdateChallanStatus } from '../api/use-challans';
 import { ChallanGenerationCard } from './challan-generation-card';
 import { type ChallanStatus } from '../schemas/fee-challan.schema';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -111,7 +110,7 @@ export function ChallansPage() {
                             </div>
                             <div className="w-full sm:w-48 space-y-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</label>
-                                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ChallanStatus | 'ALL')}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="ALL">All Statuses</SelectItem>
@@ -141,6 +140,7 @@ export function ChallansPage() {
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Class</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Month</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Amount Due</th>
+                                        <th className="px-5 py-3 font-semibold text-muted-foreground text-orange-600 dark:text-orange-400">Arrears</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Status</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                                     </tr>
@@ -175,6 +175,15 @@ export function ChallansPage() {
                                             </td>
                                             <td className="px-5 py-4 font-bold text-foreground">
                                                 Rs. {challan.amount_due.toLocaleString()}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {(challan.arrears ?? 0) > 0 ? (
+                                                    <span className="text-orange-600 dark:text-orange-400 font-semibold text-xs">
+                                                        +Rs. {challan.arrears!.toLocaleString()}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs">—</span>
+                                                )}
                                             </td>
                                             <td className="px-5 py-4">
                                                 {getStatusBadge(challan.status)}

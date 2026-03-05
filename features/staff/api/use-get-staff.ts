@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { Staff } from '../schemas/staff.schema';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
+
+export const STAFF_KEY = ['staff'] as const;
 
 export function useGetStaff() {
     const supabase = createClient();
+    useRealtimeInvalidate({ table: 'users', queryKey: STAFF_KEY });
 
     return useQuery({
         queryKey: ['staff'],

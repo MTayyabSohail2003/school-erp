@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EXAM_TERMS } from '../schemas/exam.schema';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -114,10 +115,13 @@ export function ExamsPage() {
                                                     {format(new Date(exam.end_date), 'MMM d, yyyy')}
                                                 </span>
                                             </div>
-                                            <div className="mt-3">
-                                                <Badge variant="secondary" className="text-xs">
-                                                    Created {format(new Date(exam.created_at), 'MMM d, yyyy')}
+                                            <div className="flex justify-between items-center mt-3">
+                                                <Badge variant="outline" className="text-xs font-semibold text-primary border-primary/20 bg-primary/5">
+                                                    {EXAM_TERMS.find(t => t.value === exam.term)?.label || 'Unit Test'}
                                                 </Badge>
+                                                <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                                    Created {format(new Date(exam.created_at), 'MMM d, yy')}
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>

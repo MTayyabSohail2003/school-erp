@@ -60,9 +60,15 @@ import { useDeleteStudent } from '../api/use-delete-student';
 import { EditStudentDialog } from './edit-student-dialog';
 import { Student } from '../schemas/student.schema';
 
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
+
 export function StudentsTable() {
-    const { data: students, isLoading, isError, error } = useStudents();
+    const { data: students, isLoading: studentsLoading, isError, error } = useStudents();
+    const { data: profile, isLoading: profileLoading } = useAuthProfile();
     const deleteMutation = useDeleteStudent();
+
+    const isLoading = studentsLoading || profileLoading;
+    const isParent = profile?.role === 'PARENT';
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -173,6 +179,7 @@ export function StudentsTable() {
         {
             id: 'actions',
             cell: ({ row }) => {
+                if (isParent) return null;
                 const student = row.original;
                 return (
                     <div className="text-right hidden sm:block">
@@ -373,20 +380,24 @@ export function StudentsTable() {
                             )}
                         </div>
                         <DrawerFooter className="flex-col gap-2 pt-6">
-                            <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => { setStudentToEdit(drawerStudent); setDrawerStudent(null); }}
-                            >
-                                <Pencil className="w-4 h-4 mr-2" /> Edit
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                className="w-full"
-                                onClick={() => { setStudentToDelete({ id: drawerStudent.id, name: drawerStudent.full_name }); }}
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </Button>
+                            {!isParent && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => { setStudentToEdit(drawerStudent); setDrawerStudent(null); }}
+                                    >
+                                        <Pencil className="w-4 h-4 mr-2" /> Edit
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="w-full"
+                                        onClick={() => { setStudentToDelete({ id: drawerStudent.id, name: drawerStudent.full_name }); }}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                    </Button>
+                                </>
+                            )}
                         </DrawerFooter>
                         <div className="px-4 pb-4">
                             <DrawerClose asChild>

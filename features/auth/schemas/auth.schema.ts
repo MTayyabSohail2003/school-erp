@@ -13,6 +13,7 @@ export const userSchema = z.object({
     role: z.enum(['ADMIN', 'TEACHER', 'PARENT']),
     full_name: z.string(),
     phone_number: z.string().nullable(),
+    avatar_url: z.string().nullable().optional(),
     created_at: z.string(),
 });
 

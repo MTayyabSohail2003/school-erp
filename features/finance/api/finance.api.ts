@@ -89,8 +89,8 @@ export const financeApi = {
 
         const feeMap = new Map(structures.map(s => [s.class_id, { id: s.id, fee: s.monthly_fee }]));
 
-        // 2. Get all active students only
-        const { data: students } = await supabase.from('students').select('id, class_id').eq('status', 'ACTIVE');
+        // 2. Get all students
+        const { data: students } = await supabase.from('students').select('id, class_id');
         if (!students) throw new Error('No students found');
 
         // 3. Get existing challans for this month to avoid duplicates
@@ -101,23 +101,38 @@ export const financeApi = {
 
         const existingSet = new Set((existing ?? []).map(e => e.student_id));
 
-        // 4. Build inserts for students who have a fee structure and no existing challan this month
+        // 4. Fetch all UNPAID challans from months BEFORE this one (arrears)
+        const { data: unpaidPast } = await supabase
+            .from('fee_challans')
+            .select('student_id, amount_due, arrears')
+            .in('status', ['PENDING', 'OVERDUE'])
+            .lt('month_year', monthYear);
+
+        // Build a map: student_id -> total outstanding (amount_due + their own arrears)
+        const arrearsMap = new Map<string, number>();
+        for (const c of unpaidPast ?? []) {
+            const existing = arrearsMap.get(c.student_id) ?? 0;
+            arrearsMap.set(c.student_id, existing + c.amount_due);
+        }
+
+        // 5. Build inserts
+        const dueDate = `${monthYear}-10`;
         const inserts: Partial<FeeChallan>[] = [];
 
-        // Due date = 10th of the given month (monthYear format: YYYY-MM)
-        const dueDate = `${monthYear}-10`;
-
         for (const student of students) {
-            if (existingSet.has(student.id)) continue; // Already generated
+            if (existingSet.has(student.id)) continue;
 
             const structure = feeMap.get(student.class_id);
-            if (!structure) continue; // No fee configured for this class yet
+            if (!structure) continue;
+
+            const arrears = arrearsMap.get(student.id) ?? 0;
 
             inserts.push({
                 student_id: student.id,
                 fee_structure_id: structure.id,
                 month_year: monthYear,
-                amount_due: structure.fee,
+                arrears,
+                amount_due: structure.fee + arrears,
                 status: 'PENDING',
                 due_date: dueDate,
             });
@@ -125,7 +140,7 @@ export const financeApi = {
 
         if (inserts.length === 0) return { count: 0, message: 'All challans already generated or no students eligible' };
 
-        // 5. Bulk insert
+        // 6. Bulk insert
         const { error } = await supabase.from('fee_challans').insert(inserts);
         if (error) throw new Error(error.message);
 

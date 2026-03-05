@@ -54,10 +54,11 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from '@/components/ui/drawer';
-import { AlertCircle, FileText, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Shield } from 'lucide-react';
+import { AlertCircle, FileText, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Shield, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EditStaffDialog } from './edit-staff-dialog';
+import { AssignSubjectsDialog } from './assign-subjects-dialog';
 
 export function StaffTable() {
     const { data: staff, isLoading, isError, error } = useGetStaff();
@@ -70,6 +71,7 @@ export function StaffTable() {
     // Action States
     const [staffToDelete, setStaffToDelete] = React.useState<{ id: string; name: string } | null>(null);
     const [staffToEdit, setStaffToEdit] = React.useState<any | null>(null);
+    const [staffToAssignSubjects, setStaffToAssignSubjects] = React.useState<any | null>(null);
     const [drawerStaff, setDrawerStaff] = React.useState<any | null>(null);
 
     const confirmDelete = () => {
@@ -186,6 +188,10 @@ export function StaffTable() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setStaffToAssignSubjects(staffMember); }}>
+                                    <BookOpen className="mr-2 h-4 w-4" />
+                                    Assign Subjects
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setStaffToEdit(staffMember); }}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit Profile
@@ -439,6 +445,12 @@ export function StaffTable() {
                 isOpen={!!staffToEdit}
                 setIsOpen={(open) => !open && setStaffToEdit(null)}
                 staffMember={staffToEdit}
+            />
+
+            <AssignSubjectsDialog
+                isOpen={!!staffToAssignSubjects}
+                setIsOpen={(open) => !open && setStaffToAssignSubjects(null)}
+                teacher={staffToAssignSubjects}
             />
         </div>
     );

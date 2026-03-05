@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Loader2, PlusCircle } from 'lucide-react';
 
-import { examFormSchema, type ExamFormData } from '../schemas/exam.schema';
+import { examFormSchema, type ExamFormData, EXAM_TERMS } from '../schemas/exam.schema';
 import { useCreateExam } from '../api/use-exams';
 
 import {
@@ -15,6 +15,9 @@ import {
 import {
     Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
+import {
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -24,7 +27,7 @@ export function AddExamDialog() {
 
     const form = useForm<ExamFormData>({
         resolver: zodResolver(examFormSchema),
-        defaultValues: { title: '', start_date: '', end_date: '' },
+        defaultValues: { title: '', start_date: '', end_date: '', term: 'UNIT_TEST' },
     });
 
     const onSubmit = (data: ExamFormData) => {
@@ -81,6 +84,25 @@ export function AddExamDialog() {
                                 </FormItem>
                             )} />
                         </div>
+                        {/* Term Selector */}
+                        <FormField control={form.control} name="term" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Exam Term</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select term type" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {EXAM_TERMS.map(t => (
+                                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
                         <div className="flex justify-end gap-2 pt-2">
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                 Cancel

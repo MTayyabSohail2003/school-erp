@@ -3,15 +3,18 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Wallet, Edit2, Loader2, Search } from 'lucide-react';
+import { Wallet, Edit2, Loader2, Search, Receipt } from 'lucide-react';
 
 import { useGetPayroll, useUpdateSalary } from '../api/use-payroll';
+import { useGetLedger } from '../api/use-payroll-ledger';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Dialog,
     DialogContent,
@@ -21,19 +24,34 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
+import { ProcessPayoutDialog } from './process-payout-dialog';
+
+type StaffRow = {
+    user_id: string;
+    full_name: string;
+    email: string;
+    phone_number: string | null;
+    profile_id: string | undefined;
+    qualification: string;
+    monthly_salary: number;
+};
+
 export function PayrollPage() {
     const { data: staff, isLoading } = useGetPayroll();
+    const { data: ledger, isLoading: isLoadingLedger } = useGetLedger();
     const updateSalaryMutation = useUpdateSalary();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isPayoutOpen, setIsPayoutOpen] = useState(false);
+    const [selectedTeacher, setSelectedTeacher] = useState<StaffRow | null>(null);
 
-    // For the dialog
+    // For the edit salary dialog
     const [selectedProfileId, setSelectedProfileId] = useState('');
     const [selectedName, setSelectedName] = useState('');
     const [salaryInput, setSalaryInput] = useState<string>('');
 
-    const handleEdit = (teacher: any) => {
+    const handleEdit = (teacher: StaffRow) => {
         if (!teacher.profile_id) {
             toast.error("Profile not found. Please ensure this staff member has a teacher profile.");
             return;
@@ -42,6 +60,15 @@ export function PayrollPage() {
         setSelectedName(teacher.full_name);
         setSalaryInput(teacher.monthly_salary.toString());
         setIsDialogOpen(true);
+    };
+
+    const handlePayout = (teacher: StaffRow) => {
+        if (!teacher.profile_id) {
+            toast.error("Profile not found. Please ensure this staff member has a teacher profile.");
+            return;
+        }
+        setSelectedTeacher(teacher);
+        setIsPayoutOpen(true);
     };
 
     const handleSave = () => {
@@ -63,13 +90,18 @@ export function PayrollPage() {
         );
     };
 
-    const filteredStaff = staff?.filter((t: any) => {
+    const filteredStaff = staff?.filter((t: StaffRow) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
         return t.full_name.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q);
     });
 
-    const totalMonthlyPayroll = staff?.reduce((sum: number, t: any) => sum + (Number(t.monthly_salary) || 0), 0) ?? 0;
+    const totalMonthlyPayroll = staff?.reduce((sum: number, t: StaffRow) => sum + (Number(t.monthly_salary) || 0), 0) ?? 0;
+    const totalPaidThisMonth = (() => {
+        const thisMonth = new Date().toISOString().slice(0, 7);
+        return ledger?.filter((e) => e.month_year === thisMonth)
+            .reduce((sum, e) => sum + Number(e.net_paid), 0) ?? 0;
+    })();
 
     return (
         <PageTransition>
@@ -82,90 +114,176 @@ export function PayrollPage() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">Staff Payroll</h1>
-                            <p className="text-sm text-muted-foreground">Manage teacher salaries and overview total monthly payroll</p>
+                            <p className="text-sm text-muted-foreground">Manage teacher salaries and record monthly payouts</p>
                         </div>
                     </div>
                 </div>
 
-                {/* KPI */}
-                <Card className="bg-primary/5 border-primary/20">
-                    <CardContent className="p-6">
-                        <p className="text-sm font-medium text-primary">Total Monthly Payroll</p>
-                        <h3 className="text-3xl font-bold text-foreground mt-2">
-                            Rs. {isLoading ? '-' : totalMonthlyPayroll.toLocaleString()}
-                        </h3>
-                    </CardContent>
-                </Card>
-
-                {/* Filter and Grid */}
-                {isLoading ? (
-                    <Skeleton className="h-[400px] w-full rounded-xl" />
-                ) : (
-                    <Card>
-                        <CardHeader className="border-b pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <CardTitle className="text-lg">Staff Directory</CardTitle>
-                            <div className="relative w-full sm:w-64">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search staff..."
-                                    className="pl-9 h-9"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </CardHeader>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead>
-                                    <tr className="border-b bg-muted/30">
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Staff Name</th>
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Contact</th>
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Qualification</th>
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Monthly Salary</th>
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {filteredStaff?.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                No staff found.
-                                            </td>
-                                        </tr>
-                                    ) : null}
-                                    {(filteredStaff ?? []).map((teacher: any, idx: number) => (
-                                        <motion.tr
-                                            key={teacher.user_id}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: idx * 0.03 }}
-                                            className="hover:bg-muted/20 transition-colors"
-                                        >
-                                            <td className="px-5 py-4 font-semibold">{teacher.full_name}</td>
-                                            <td className="px-5 py-4">
-                                                <div className="text-xs text-muted-foreground">{teacher.email}</div>
-                                                <div className="text-xs">{teacher.phone_number}</div>
-                                            </td>
-                                            <td className="px-5 py-4 text-muted-foreground">{teacher.qualification}</td>
-                                            <td className="px-5 py-4 font-bold text-foreground">
-                                                Rs. {Number(teacher.monthly_salary).toLocaleString()}
-                                            </td>
-                                            <td className="px-5 py-4 text-right">
-                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(teacher)}>
-                                                    <Edit2 className="h-4 w-4 mr-2" />
-                                                    Edit Salary
-                                                </Button>
-                                            </td>
-                                        </motion.tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Card className="bg-primary/5 border-primary/20">
+                        <CardContent className="p-6">
+                            <p className="text-sm font-medium text-primary">Total Monthly Payroll</p>
+                            <h3 className="text-3xl font-bold text-foreground mt-2">
+                                Rs. {isLoading ? '-' : totalMonthlyPayroll.toLocaleString()}
+                            </h3>
+                        </CardContent>
                     </Card>
-                )}
+                    <Card className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900">
+                        <CardContent className="p-6">
+                            <p className="text-sm font-medium text-green-700 dark:text-green-400">Paid This Month</p>
+                            <h3 className="text-3xl font-bold text-foreground mt-2">
+                                Rs. {isLoadingLedger ? '-' : totalPaidThisMonth.toLocaleString()}
+                            </h3>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Tabs: Staff Directory / Ledger History */}
+                <Tabs defaultValue="directory">
+                    <TabsList>
+                        <TabsTrigger value="directory">Staff Directory</TabsTrigger>
+                        <TabsTrigger value="ledger">
+                            <Receipt className="w-4 h-4 mr-2" />
+                            Payout Ledger
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* ── TAB 1: Staff Directory ── */}
+                    <TabsContent value="directory">
+                        {isLoading ? (
+                            <Skeleton className="h-[400px] w-full rounded-xl" />
+                        ) : (
+                            <Card>
+                                <CardHeader className="border-b pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <CardTitle className="text-lg">Staff Directory</CardTitle>
+                                    <div className="relative w-full sm:w-64">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Search staff..."
+                                            className="pl-9 h-9"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+                                </CardHeader>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead>
+                                            <tr className="border-b bg-muted/30">
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Staff Name</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Contact</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Qualification</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Monthly Salary</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {filteredStaff?.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={5} className="text-center py-8 text-muted-foreground">No staff found.</td>
+                                                </tr>
+                                            ) : null}
+                                            {(filteredStaff ?? []).map((teacher: StaffRow, idx: number) => (
+                                                <motion.tr
+                                                    key={teacher.user_id}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ delay: idx * 0.03 }}
+                                                    className="hover:bg-muted/20 transition-colors"
+                                                >
+                                                    <td className="px-5 py-4 font-semibold">{teacher.full_name}</td>
+                                                    <td className="px-5 py-4">
+                                                        <div className="text-xs text-muted-foreground">{teacher.email}</div>
+                                                        <div className="text-xs">{teacher.phone_number}</div>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-muted-foreground">{teacher.qualification}</td>
+                                                    <td className="px-5 py-4 font-bold text-foreground">
+                                                        Rs. {Number(teacher.monthly_salary).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(teacher)}>
+                                                                <Edit2 className="h-4 w-4 mr-2" />
+                                                                Edit
+                                                            </Button>
+                                                            <Button size="sm" onClick={() => handlePayout(teacher)}>
+                                                                <Wallet className="h-4 w-4 mr-2" />
+                                                                Pay
+                                                            </Button>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+                        )}
+                    </TabsContent>
+
+                    {/* ── TAB 2: Payout Ledger ── */}
+                    <TabsContent value="ledger">
+                        {isLoadingLedger ? (
+                            <Skeleton className="h-[400px] w-full rounded-xl" />
+                        ) : (
+                            <Card>
+                                <CardHeader className="border-b pb-4">
+                                    <CardTitle className="text-lg">Payout History</CardTitle>
+                                </CardHeader>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead>
+                                            <tr className="border-b bg-muted/30">
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Staff Name</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Month</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Base Salary</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Deductions</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Net Paid</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {!ledger || ledger.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                        No payout records yet. Use the "Pay" button on a staff member to record a payout.
+                                                    </td>
+                                                </tr>
+                                            ) : ledger.map((entry, idx) => (
+                                                <motion.tr
+                                                    key={entry.id}
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ delay: idx * 0.03 }}
+                                                    className="hover:bg-muted/20 transition-colors"
+                                                >
+                                                    <td className="px-5 py-4 font-semibold">{entry.full_name}</td>
+                                                    <td className="px-5 py-4 text-muted-foreground">{entry.month_year}</td>
+                                                    <td className="px-5 py-4">Rs. {Number(entry.base_salary).toLocaleString()}</td>
+                                                    <td className="px-5 py-4 text-red-500">
+                                                        {Number(entry.deductions) > 0 ? `- Rs. ${Number(entry.deductions).toLocaleString()}` : '—'}
+                                                    </td>
+                                                    <td className="px-5 py-4 font-bold text-green-600">
+                                                        Rs. {Number(entry.net_paid).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                                            {entry.status}
+                                                        </Badge>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+                        )}
+                    </TabsContent>
+                </Tabs>
             </div>
 
-            {/* Set Salary Dialog */}
+            {/* Edit Salary Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -199,6 +317,13 @@ export function PayrollPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Process Payout Dialog */}
+            <ProcessPayoutDialog
+                isOpen={isPayoutOpen}
+                setIsOpen={setIsPayoutOpen}
+                teacher={selectedTeacher}
+            />
         </PageTransition>
     );
 }

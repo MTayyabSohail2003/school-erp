@@ -4,14 +4,15 @@ export const storageApi = {
     /**
      * Pure function to upload a file to a specific Supabase bucket.
      * Returns the public URL of the uploaded file.
+     * @param folderPath Optional subfolder inside the bucket (e.g., 'students' or 'staff')
      */
-    uploadDocument: async (file: File, bucketName: string = 'documents'): Promise<string> => {
+    uploadDocument: async (file: File, bucketName: string = 'documents', folderPath: string = 'vault'): Promise<string> => {
         const supabase = createClient();
 
         // Generate a unique file name to prevent collisions
         const fileExtension = file.name.split('.').pop();
         const uniqueFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
-        const filePath = `vault/${uniqueFileName}`;
+        const filePath = `${folderPath}/${uniqueFileName}`;
 
         const { error: uploadError } = await supabase.storage
             .from(bucketName)
