@@ -45,7 +45,10 @@ export function PromoteStudentsDialog() {
     });
 
     const onSubmit = (data: PromoteStudentsData) => {
-        promoteMutation.mutate(data, {
+        promoteMutation.mutate({
+            fromClassId: data.source_class_id,
+            toClassId: data.destination_class_id,
+        }, {
             onSuccess: () => {
                 toast.success('Students successfully promoted to the new class.');
                 setOpen(false);

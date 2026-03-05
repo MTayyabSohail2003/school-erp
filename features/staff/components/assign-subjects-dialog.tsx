@@ -69,7 +69,7 @@ export function AssignSubjectsDialog({ isOpen, setIsOpen, teacher }: AssignSubje
                 toast.success('Subjects successfully linked to teacher.');
                 // Notify the assigned teacher
                 await sendNotification({
-                    recipientId: teacher.id,
+                    recipientId: teacher.id as string,
                     title: 'Subject Assignment Updated',
                     message: 'Your assigned subjects have been updated. Please check your timetable for the latest schedule.',
                     type: 'INFO',
