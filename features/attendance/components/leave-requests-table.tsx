@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Check, X, Loader2, AlertCircle } from 'lucide-react';
@@ -16,12 +15,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getLeaveRequests, updateLeaveRequestStatus, LeaveRequestStatus } from '@/features/attendance/actions/leave-actions';
+import { useRealtimeInvalidation } from '@/hooks/use-realtime-invalidation';
 
 interface LeaveRequestsTableProps {
     userRole: string; // 'ADMIN' | 'TEACHER' | 'PARENT'
 }
 
 export function LeaveRequestsTable({ userRole }: LeaveRequestsTableProps) {
+    useRealtimeInvalidation('leave_requests', ['leave-requests']);
     const queryClient = useQueryClient();
     const canManage = userRole === 'ADMIN' || userRole === 'TEACHER';
 

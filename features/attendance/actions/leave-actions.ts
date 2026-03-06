@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { NotificationTemplates } from '@/features/notifications/utils/notification-templates';
+import { notifyAllAdmins } from '@/features/notifications/utils/notification.utils';
 
 // Types
 export type LeaveRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -55,30 +57,6 @@ const getSupabase = async () => {
                 },
             },
         }
-    );
-};
-
-// Notify all admins (server-side helper)
-const notifyAdminsOfLeave = async (
-    supabase: Awaited<ReturnType<typeof getSupabase>>,
-    studentName: string,
-) => {
-    const { data: admins } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'ADMIN');
-
-    if (!admins || admins.length === 0) return;
-
-    await supabase.from('notifications').insert(
-        admins.map((admin: { id: string }) => ({
-            recipient_id: admin.id,
-            title: 'New Leave Request',
-            message: `A leave request has been submitted for ${studentName}. Please review and take action.`,
-            type: 'INFO',
-            link: '/dashboard/attendance/leaves',
-            is_read: false,
-        })),
     );
 };
 
@@ -136,7 +114,7 @@ export async function createLeaveRequest(formData: z.infer<typeof createLeaveSch
 
         // 6. Notify all admins (non-blocking)
         if (student?.full_name) {
-            await notifyAdminsOfLeave(supabase, student.full_name);
+            await notifyAllAdminsServerSide(supabase, NotificationTemplates.LEAVE_REQUEST_SUBMITTED(student.full_name));
         }
 
         revalidatePath('/dashboard/attendance/leaves');
@@ -146,6 +124,27 @@ export async function createLeaveRequest(formData: z.infer<typeof createLeaveSch
         console.error('Unhandled error in createLeaveRequest');
         return { error: 'An unexpected error occurred.' };
     }
+}
+
+// Server-side helper to notify admins
+async function notifyAllAdminsServerSide(supabase: Awaited<ReturnType<typeof getSupabase>>, template: { title: string; message: string; type: string; link?: string }) {
+    const { data: admins } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'ADMIN');
+
+    if (!admins || admins.length === 0) return;
+
+    await supabase.from('notifications').insert(
+        admins.map((admin: { id: string }) => ({
+            recipient_id: admin.id,
+            title: template.title,
+            message: template.message,
+            type: template.type,
+            link: template.link,
+            is_read: false,
+        })),
+    );
 }
 
 export async function getLeaveRequests() {
@@ -210,13 +209,17 @@ export async function updateLeaveRequestStatus(id: string, status: LeaveRequestS
             const studentName = Array.isArray(leaveRequest.student)
                 ? (leaveRequest.student as unknown as { full_name: string }[])[0]?.full_name ?? 'your child'
                 : (leaveRequest.student as unknown as { full_name: string } | null)?.full_name ?? 'your child';
-            const statusLabel = status === 'APPROVED' ? 'approved ✅' : 'rejected ❌';
+
+            const template = status === 'APPROVED'
+                ? NotificationTemplates.LEAVE_REQUEST_APPROVED(studentName)
+                : NotificationTemplates.LEAVE_REQUEST_REJECTED(studentName);
+
             await supabase.from('notifications').insert({
                 recipient_id: leaveRequest.applied_by,
-                title: `Leave Request ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
-                message: `The leave request for ${studentName} has been ${statusLabel}.`,
-                type: status === 'APPROVED' ? 'SUCCESS' : 'ERROR',
-                link: '/dashboard/attendance/leaves',
+                title: template.title,
+                message: template.message,
+                type: template.type,
+                link: template.link,
                 is_read: false,
             });
         }

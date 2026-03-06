@@ -34,6 +34,7 @@ export const navGroups = [
         items: [
             { name: 'Students', href: ROUTES.STUDENTS, icon: Users, exact: false, roles: ['ADMIN', 'TEACHER'] },
             { name: 'Staff & Teachers', href: ROUTES.STAFF, icon: Briefcase, exact: false, roles: ['ADMIN'] },
+            { name: 'Parents', href: '/dashboard/parents', icon: User, exact: false, roles: ['ADMIN'] },
         ],
     },
     {
@@ -124,45 +125,68 @@ export default function AppSidebar() {
             collapsible="icon"
             className="border-r-0 bg-sidebar shadow-xl"
         >
-            {/* ── Logo / Brand ── */}
+            {/* ── Logo / Brand with SVG Cutout ── */}
             <SidebarHeader className={cn(
-                "relative h-[84px] flex flex-col items-center justify-center transition-all duration-300",
-                "bg-sidebar text-sidebar-foreground border-none rounded-none shadow-none"
+                "relative flex flex-col items-center justify-start transition-all duration-300",
+                "bg-sidebar text-sidebar-foreground border-none rounded-none shadow-none p-0 mb-8",
+                open ? 'h-[120px]' : 'h-[80px]'
             )}>
-                {/* Brand name — hidden when collapsed */}
-                <div className={cn(
-                    'flex flex-col items-center justify-center leading-tight overflow-hidden transition-all duration-300',
-                    open ? 'opacity-100 h-auto translate-y-0' : 'opacity-0 h-0 -translate-y-4 hidden'
-                )}>
-                    <span className="font-bold text-lg text-sidebar-foreground whitespace-nowrap tracking-wide">
-                        School ERP
-                    </span>
-                    <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase mb-1">
-                        Admin Portal
-                    </span>
+                {/* 1. Header Background & Brand Text Space */}
+                <div className="w-full h-[80px] relative z-10 flex flex-col items-center justify-center pt-2">
+                    <div className={cn(
+                        'flex flex-col items-center justify-center leading-tight overflow-hidden transition-all duration-300',
+                        open ? 'opacity-100 h-auto translate-y-0' : 'opacity-0 h-0 -translate-y-4 hidden'
+                    )}>
+                        <span className="font-bold text-xl text-sidebar-foreground whitespace-nowrap tracking-wide">
+                            School ERP
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase mt-0.5">
+                            Admin Portal
+                        </span>
+                    </div>
                 </div>
 
-                {/* Overlapping Avatar Bump with Dropzone */}
+                {/* 2. The SVG Curved Line (Only visible when expanded for best effect, or scales down) */}
+                <div className="absolute top-[80px] left-0 w-full h-[40px] z-0 overflow-hidden">
+                    {open ? (
+                        <svg viewBox="0 0 250 40" preserveAspectRatio="none" className="w-full h-full text-border/40" style={{ strokeWidth: 2 }}>
+                            {/* Draws the horizontal line that dips into a U-shape in the middle */}
+                            <path
+                                d="M 0 0 L 85 0 C 95 0 95 40 125 40 C 155 40 155 0 165 0 L 250 0"
+                                fill="none"
+                                stroke="currentColor"
+                            />
+                        </svg>
+                    ) : (
+                        <div className="w-full h-px bg-border/40" />
+                    )}
+                </div>
+
+                {/* 3. Overlapping Avatar Bump with Dropzone */}
                 <div
                     {...getRootProps()}
                     className={cn(
-                        "absolute -bottom-[36px] left-1/2 -translate-x-1/2 z-20",
-                        "w-[76px] h-[76px] bg-[#D2F1DF] rounded-full flex items-center justify-center",
-                        "transition-transform duration-300 cursor-pointer group",
-                        !open && "scale-[0.80] -bottom-[28px]",
+                        "absolute left-1/2 -translate-x-1/2 z-20 flex items-center justify-center",
+                        "transition-all duration-300 cursor-pointer group",
+                        open ? "top-[50px] w-[86px] h-[86px]" : "top-[55px] w-[45px] h-[45px]",
+                        // The primary colored background ring that acts as the "glow" or outer boundary
+                        open ? "bg-[#e2f5e9] rounded-full" : "bg-transparent",
                         isDragActive && "ring-4 ring-primary ring-opacity-50"
                     )}
                     title="Click to change profile picture"
                 >
                     <input {...getInputProps()} />
-                    <div className="w-[56px] h-[56px] bg-sidebar rounded-full flex items-center justify-center shadow-md relative overflow-hidden group-hover:ring-2 ring-white/50 transition-all">
+                    <div className={cn(
+                        "bg-sidebar rounded-full flex items-center justify-center shadow-sm relative overflow-hidden transition-all",
+                        open ? "w-[64px] h-[64px] group-hover:ring-2 ring-white/50" : "w-[40px] h-[40px] border border-border"
+                    )}>
                         {uploadAvatarMutation.isPending ? (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm z-10 transition-opacity">
-                                <Loader2 className="w-5 h-5 text-white animate-spin" />
+                                <Loader2 className="w-4 h-4 text-white animate-spin" />
                             </div>
                         ) : (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 z-10 transition-opacity">
-                                <span className="text-[9px] font-bold text-white uppercase tracking-wider text-center leading-tight">Change</span>
+                                <span className={cn("font-bold text-white uppercase tracking-wider text-center leading-tight", open ? "text-[10px]" : "text-[8px]")}>Change</span>
                             </div>
                         )}
 
@@ -173,8 +197,8 @@ export default function AppSidebar() {
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center shadow-inner" style={{ backgroundColor: '#465FFF' }}>
-                                <User className="w-[22px] h-[22px] text-white" fill="currentColor" strokeWidth={1} />
+                            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2b3f5c' }}>
+                                <User className={cn("text-white", open ? "w-7 h-7" : "w-5 h-5")} fill="currentColor" strokeWidth={1} />
                             </div>
                         )}
                     </div>

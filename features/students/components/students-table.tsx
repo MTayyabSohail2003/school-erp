@@ -73,6 +73,40 @@ export function StudentsTable() {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [globalFilter, setGlobalFilter] = React.useState('');
+    const [activeTab, setActiveTab] = React.useState<string>('All');
+    const [activeSection, setActiveSection] = React.useState<string>('All');
+
+    const uniqueClasses = React.useMemo(() => {
+        if (!students) return [];
+        const classes = new Set(students.map((s: any) => s.classes?.name).filter(Boolean));
+        return Array.from(classes).sort((a: any, b: any) => {
+            const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+            const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+            if (numA === numB) return a.localeCompare(b);
+            return numA - numB;
+        }) as string[];
+    }, [students]);
+
+    const uniqueSections = React.useMemo(() => {
+        if (!students) return [];
+        let filtered = students;
+        if (activeTab !== 'All') {
+            filtered = students.filter((s: any) => s.classes?.name === activeTab);
+        }
+        const sections = new Set(filtered.map((s: any) => s.classes?.section).filter(Boolean));
+        return Array.from(sections).sort() as string[];
+    }, [students, activeTab]);
+
+    const handleClassTabChange = (className: string) => {
+        setActiveTab(className);
+        setActiveSection('All');
+        table.getColumn('class_section')?.setFilterValue({ className, section: 'All' });
+    };
+
+    const handleSectionTabChange = (section: string) => {
+        setActiveSection(section);
+        table.getColumn('class_section')?.setFilterValue({ className: activeTab, section });
+    };
 
     // Action States
     const [studentToDelete, setStudentToDelete] = React.useState<{ id: string; name: string } | null>(null);
@@ -138,6 +172,13 @@ export function StudentsTable() {
             id: 'class_section',
             accessorFn: row => `${row.classes?.name} ${row.classes?.section}`,
             header: 'Class',
+            filterFn: (row, columnId, filterValue) => {
+                if (!filterValue || typeof filterValue !== 'object') return true;
+                const { className, section } = filterValue as any;
+                const matchClass = !className || className === 'All' || row.original.classes?.name === className;
+                const matchSection = !section || section === 'All' || row.original.classes?.section === section;
+                return matchClass && matchSection;
+            },
             cell: ({ row }) => (
                 <div className="hidden md:flex gap-2">
                     <Badge variant="outline">{row.original.classes?.name || 'Unknown'}</Badge>
@@ -245,24 +286,73 @@ export function StudentsTable() {
     return (
         <div className="space-y-4">
             {/* Top Bar for PWA */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 py-4 bg-card px-4 border rounded-xl shadow-sm">
-                <div className="relative w-full sm:max-w-xs">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search students..."
-                        value={globalFilter}
-                        onChange={(event) => setGlobalFilter(event.target.value)}
-                        className="pl-9 bg-background w-full"
-                    />
+            <div className="flex flex-col gap-4 py-4 bg-card px-4 border rounded-xl shadow-sm min-w-0">
+                <div className="flex flex-col gap-4 w-full">
+                    <div className="relative w-full md:max-w-xs shrink-0">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search students..."
+                            value={globalFilter}
+                            onChange={(event) => setGlobalFilter(event.target.value)}
+                            className="pl-9 bg-background w-full"
+                        />
+                    </div>
+
+                    {/* Dynamic Class Filter Tabs */}
+                    {uniqueClasses.length > 0 && (
+                        <div
+                            className="flex w-full items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden"
+                            style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+                        >
+                            <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Classes:</span>
+                            <Button
+                                variant={activeTab === 'All' ? 'default' : 'secondary'}
+                                size="sm"
+                                className="rounded-full shrink-0"
+                                onClick={() => handleClassTabChange('All')}
+                            >
+                                All Classes
+                            </Button>
+                            {uniqueClasses.map((className) => (
+                                <Button
+                                    key={className}
+                                    variant={activeTab === className ? 'default' : 'secondary'}
+                                    size="sm"
+                                    className="rounded-full shrink-0"
+                                    onClick={() => handleClassTabChange(className)}
+                                >
+                                    {className}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                <div className="flex w-full sm:w-auto items-center gap-2 sm:ml-auto">
-                    <Input
-                        placeholder="Filter by Class..."
-                        value={(table.getColumn('class_section')?.getFilterValue() as string) ?? ''}
-                        onChange={(event) => table.getColumn('class_section')?.setFilterValue(event.target.value)}
-                        className="w-full sm:max-w-[150px] bg-background"
-                    />
-                </div>
+
+                {/* Dynamic Section Filter Tabs */}
+                {uniqueSections.length > 0 && (
+                    <div className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden">
+                        <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Sections:</span>
+                        <Button
+                            variant={activeSection === 'All' ? 'default' : 'secondary'}
+                            size="sm"
+                            className="rounded-full shrink-0"
+                            onClick={() => handleSectionTabChange('All')}
+                        >
+                            All Sections
+                        </Button>
+                        {uniqueSections.map((section) => (
+                            <Button
+                                key={section}
+                                variant={activeSection === section ? 'default' : 'secondary'}
+                                size="sm"
+                                className="rounded-full shrink-0"
+                                onClick={() => handleSectionTabChange(section)}
+                            >
+                                Section {section}
+                            </Button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Data Table */}
