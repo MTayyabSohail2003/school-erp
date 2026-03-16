@@ -13,6 +13,7 @@ export const feeChallanSchema = z.object({
     status: challanStatusEnum.default('PENDING'),
     due_date: z.string(),
     paid_date: z.string().nullable().optional(),
+    payment_method: z.enum(['CASH', 'BANK']).nullable().optional(),
 });
 
 export type FeeChallan = z.infer<typeof feeChallanSchema> & {

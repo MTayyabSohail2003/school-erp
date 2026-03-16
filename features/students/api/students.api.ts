@@ -5,16 +5,27 @@ export const studentsApi = {
     /**
      * Pure function to fetch all students with their class details.
      */
-    getStudents: async (): Promise<(Student & { classes: { name: string; section: string }, users: { full_name: string } })[]> => {
+    getStudents: async (parentId?: string): Promise<(Student & { classes: { name: string; section: string }, users: { full_name: string } })[]> => {
         const supabase = createClient();
-        const { data, error } = await supabase
+        let query = supabase
             .from('students')
             .select('*, classes(name, section), users!students_parent_id_fkey(full_name)')
-            .eq('status', 'ACTIVE')
-            .order('created_at', { ascending: false });
+            .eq('status', 'ACTIVE');
+
+        if (parentId) {
+            query = query.eq('parent_id', parentId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) throw new Error(error.message);
-        return data as any;
+        
+        // Normalize joined data (Supabase can return arrays for joins depending on schema/hints)
+        return (data || []).map((student) => ({
+            ...student,
+            classes: Array.isArray(student.classes) ? student.classes[0] : student.classes,
+            users: Array.isArray(student.users) ? student.users[0] : student.users,
+        })) as (Student & { classes: { name: string; section: string }, users: { full_name: string } })[];
     },
 
     /**
@@ -32,7 +43,9 @@ export const studentsApi = {
                     date_of_birth: student.date_of_birth,
                     class_id: student.class_id,
                     parent_id: student.parent_id || null,
+                    b_form_url: student.b_form_url,
                     old_cert_url: student.old_cert_url,
+                    monthly_fee: student.monthly_fee,
                 }
             ])
             .select()

@@ -23,6 +23,13 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 import { useClasses } from '@/features/classes/hooks/use-classes';
 import { useGetParents } from '@/features/parents/api/use-get-parents';
@@ -39,6 +46,7 @@ const editStudentSchema = z.object({
     b_form_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
     class_id: z.string().uuid('Select a valid class'),
+    monthly_fee: z.number().optional().nullable(),
 });
 
 type EditStudentForm = z.infer<typeof editStudentSchema>;
@@ -55,6 +63,7 @@ type EditStudentProps = {
         b_form_url?: string | null;
         date_of_birth: string;
         class_id: string;
+        monthly_fee?: number | null;
     } | null;
 };
 
@@ -77,6 +86,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                 ? student.date_of_birth.split('T')[0] // strip time component for date input
                 : '',
             class_id: student?.class_id || '',
+            monthly_fee: student?.monthly_fee ?? undefined,
         },
     });
 
@@ -89,8 +99,8 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
             const url = await storageApi.uploadDocument(file);
             form.setValue(fieldName, url);
             toast.success('Document uploaded to vault securely.');
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to upload document.');
+        } catch (error: unknown) {
+            toast.error((error as Error).message || 'Failed to upload document.');
         } finally {
             setIsUploading(false);
         }
@@ -104,8 +114,8 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                 toast.success(`${data.full_name}'s record updated.`);
                 setIsOpen(false);
             },
-            onError: (err) => {
-                toast.error(err.message || 'Failed to update student.');
+            onError: (err: unknown) => {
+                toast.error((err as Error).message || 'Failed to update student.');
             },
         });
     };
@@ -171,23 +181,20 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Assign Parent</FormLabel>
-                                    <FormControl>
-                                        <select
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                            {...field}
-                                            value={field.value || ''}
-                                            disabled={isParentsLoading}
-                                        >
-                                            <option value="" disabled>
-                                                {isParentsLoading ? 'Loading parents...' : 'Select a parent'}
-                                            </option>
+                                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isParentsLoading}>
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder={isParentsLoading ? 'Loading parents...' : 'Select a parent'} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
                                             {parents?.map((p) => (
-                                                <option key={p.id} value={p.id}>
+                                                <SelectItem key={p.id} value={p.id}>
                                                     {p.full_name} ({p.email})
-                                                </option>
+                                                </SelectItem>
                                             ))}
-                                        </select>
-                                    </FormControl>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -200,22 +207,20 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Assign Class</FormLabel>
-                                        <FormControl>
-                                            <select
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                                {...field}
-                                                disabled={isClassesLoading}
-                                            >
-                                                <option value="" disabled>
-                                                    {isClassesLoading ? 'Loading classes...' : 'Select a class'}
-                                                </option>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isClassesLoading}>
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder={isClassesLoading ? 'Loading classes...' : 'Select a class'} />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
                                                 {classes?.map((c) => (
-                                                    <option key={c.id} value={c.id}>
+                                                    <SelectItem key={c.id} value={c.id}>
                                                         {c.name} - {c.section}
-                                                    </option>
+                                                    </SelectItem>
                                                 ))}
-                                            </select>
-                                        </FormControl>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -227,21 +232,45 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Account Status</FormLabel>
-                                        <FormControl>
-                                            <select
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                {...field}
-                                            >
-                                                <option value="ACTIVE">Active Student</option>
-                                                <option value="INACTIVE">Inactive (Suspended)</option>
-                                                <option value="LEAVER">Leaver (Alumni)</option>
-                                            </select>
-                                        </FormControl>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="ACTIVE">Active Student</SelectItem>
+                                                <SelectItem value="INACTIVE">Inactive (Suspended)</SelectItem>
+                                                <SelectItem value="LEAVER">Leaver (Alumni)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+
+                        <FormField
+                            control={form.control}
+                            name="monthly_fee"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Custom Monthly Fee (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            type="number" 
+                                            placeholder="e.g. 5000" 
+                                            value={field.value ?? ''}
+                                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                    <p className="text-[10px] text-muted-foreground font-medium italic">
+                                        * This will override the class tuition fee.
+                                    </p>
+                                </FormItem>
+                            )}
+                        />
 
                         {/* Document Vault Upload */}
                         <div className="border rounded-md p-4 bg-muted/40 space-y-3">

@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     '/dashboard/exams',
                     '/dashboard/marks',
                     '/dashboard/attendance',
-                    '/dashboard/notices' // Assuming notices will be open to parents as well
+                    '/settings/notices' // Assuming notices will be open to parents as well
                 ];
 
                 const isAllowed = allowedParentRoutes.some(route => pathname.startsWith(route)) || pathname === '/dashboard';

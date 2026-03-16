@@ -16,10 +16,17 @@ export const dashboardApi = {
 
         let totalCollected = 0;
         let totalPending = 0;
+        let studentsPaidCount = 0;
+        let studentsPendingCount = 0;
 
         challans?.forEach(c => {
-            if (c.status === 'PAID') totalCollected += Number(c.amount_due);
-            else totalPending += Number(c.amount_due);
+            if (c.status === 'PAID') {
+                totalCollected += Number(c.amount_due);
+                studentsPaidCount++;
+            } else {
+                totalPending += Number(c.amount_due);
+                studentsPendingCount++;
+            }
         });
 
         // 3. Overall Defaulters (All Time)
@@ -59,6 +66,8 @@ export const dashboardApi = {
             financials: {
                 currentMonthCollected: totalCollected,
                 currentMonthPending: totalPending,
+                currentMonthPaidCount: studentsPaidCount,
+                currentMonthPendingCount: studentsPendingCount,
                 totalArrears: totalArrears,
                 totalDefaultersCount: defaultersSet.size,
             },

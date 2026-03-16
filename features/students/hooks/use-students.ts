@@ -7,11 +7,11 @@ export const studentKeys = {
     all: ['students'] as const,
 };
 
-export function useStudents() {
+export function useStudents(parentId?: string) {
     useRealtimeInvalidate({ table: 'students', queryKey: studentKeys.all });
     return useQuery({
-        queryKey: studentKeys.all,
-        queryFn: studentsApi.getStudents,
+        queryKey: parentId ? [...studentKeys.all, parentId] : studentKeys.all,
+        queryFn: () => studentsApi.getStudents(parentId),
     });
 }
 

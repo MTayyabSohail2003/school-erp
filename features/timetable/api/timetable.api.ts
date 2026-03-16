@@ -43,11 +43,34 @@ export const timetableApi = {
         const { data, error } = await supabase
             .from('timetable')
             .upsert(entry)
-            .select()
+            .select(`
+                *,
+                classes (name, section),
+                users (full_name),
+                subjects (name, code),
+                periods (name, start_time, end_time, order_index)
+            `)
             .single();
 
         if (error) throw new Error(error.message);
         return data as TimetableWithDetails;
+    },
+
+    bulkUpsertTimetable: async (entries: TimetableEntry[]): Promise<TimetableWithDetails[]> => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+            .from('timetable')
+            .upsert(entries)
+            .select(`
+                *,
+                classes (name, section),
+                users (full_name),
+                subjects (name, code),
+                periods (name, start_time, end_time, order_index)
+            `);
+
+        if (error) throw new Error(error.message);
+        return data as TimetableWithDetails[];
     },
 
     deleteTimetableEntry: async (id: string): Promise<void> => {

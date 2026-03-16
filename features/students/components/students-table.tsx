@@ -156,8 +156,8 @@ export function StudentsTable() {
                         {(row.getValue('full_name') as string).substring(0, 2)}
                     </div>
                     <div>
-                        <div className="font-semibold text-slate-900">{row.getValue('full_name')}</div>
-                        <div className="text-xs text-slate-500 md:hidden">{row.original.classes?.name} - {row.original.classes?.section}</div>
+                        <div className="font-semibold text-foreground">{row.getValue('full_name')}</div>
+                        <div className="text-xs text-muted-foreground md:hidden">{row.original.classes?.name} - {row.original.classes?.section}</div>
                     </div>
                 </div>
             ),
@@ -193,7 +193,7 @@ export function StudentsTable() {
                 const status = row.getValue('status') as string;
                 return (
                     <Badge variant={status === 'ACTIVE' ? 'default' : status === 'INACTIVE' ? 'secondary' : 'destructive'}
-                        className={status === 'ACTIVE' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}>
+                        className={status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}>
                         {status || 'ACTIVE'}
                     </Badge>
                 );
@@ -203,6 +203,18 @@ export function StudentsTable() {
             accessorKey: 'date_of_birth',
             header: 'DOB',
             cell: ({ row }) => <div className="text-muted-foreground text-sm hidden lg:block">{new Date(row.getValue('date_of_birth')).toLocaleDateString()}</div>,
+        },
+        {
+            accessorKey: 'monthly_fee',
+            header: 'Fee',
+            cell: ({ row }) => {
+                const fee = row.getValue('monthly_fee') as number | null;
+                return (
+                    <div className="text-sm font-medium hidden lg:block">
+                        {fee ? `Rs. ${fee.toLocaleString()}` : <span className="text-xs text-muted-foreground italic">Default</span>}
+                    </div>
+                );
+            },
         },
         {
             accessorKey: 'b_form_url',

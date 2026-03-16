@@ -64,7 +64,7 @@ export async function editParentAction(data: EditParentInput) {
     } catch (err: unknown) {
         console.error('Edit Parent Action Error:', err);
         if (err instanceof z.ZodError) {
-            const zodError = err as z.ZodError;
+            const zodError = err as any;
             return { success: false, error: zodError.errors[0]?.message || 'Validation failed' };
         }
         return {

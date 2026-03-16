@@ -108,12 +108,12 @@ export function StaffTable() {
             },
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs uppercase hidden sm:flex">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase hidden sm:flex">
                         {(row.getValue('full_name') as string).substring(0, 2)}
                     </div>
                     <div>
-                        <div className="font-semibold text-slate-900">{row.getValue('full_name')}</div>
-                        <div className="text-xs text-slate-500 md:hidden">{row.original.email}</div>
+                        <div className="font-semibold text-foreground">{row.getValue('full_name')}</div>
+                        <div className="text-xs text-muted-foreground md:hidden">{row.original.email}</div>
                     </div>
                 </div>
             ),
@@ -122,8 +122,8 @@ export function StaffTable() {
             accessorKey: 'role',
             header: 'Role',
             cell: () => (
-                <Badge variant="outline" className="flex items-center gap-1 w-fit bg-slate-50">
-                    <Shield className="w-3 h-3 text-slate-500" /> Teacher
+                <Badge variant="outline" className="flex items-center gap-1 w-fit bg-secondary/30 text-foreground border-border">
+                    <Shield className="w-3 h-3 text-muted-foreground" /> Teacher
                 </Badge>
             ),
         },
@@ -134,7 +134,7 @@ export function StaffTable() {
                 const status = row.getValue('status') as string;
                 return (
                     <Badge variant={status === 'ACTIVE' ? 'default' : status === 'INACTIVE' ? 'secondary' : 'destructive'}
-                        className={status === 'ACTIVE' ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}>
+                        className={status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : ''}>
                         {status || 'ACTIVE'}
                     </Badge>
                 );

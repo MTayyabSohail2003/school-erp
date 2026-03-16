@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Search, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { FileText, Search, CheckCircle, AlertTriangle, Clock, Banknote } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 import { useGetChallans, useUpdateChallanStatus } from '../api/use-challans';
 import { ChallanGenerationCard } from './challan-generation-card';
-import { type ChallanStatus } from '../schemas/fee-challan.schema';
+import { CollectFeeModal } from './collect-fee-modal';
+import { type ChallanStatus, type FeeChallan } from '../schemas/fee-challan.schema';
+import { TrendingUp, Users, DollarSign, Wallet } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/ui/motion';
@@ -20,6 +23,8 @@ export function ChallansPage() {
     const [monthFilter, setMonthFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<ChallanStatus | 'ALL'>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedChallan, setSelectedChallan] = useState<FeeChallan | null>(null);
+    const [isCollectModalOpen, setIsCollectModalOpen] = useState(false);
 
     const { data: challans, isLoading } = useGetChallans(
         monthFilter === 'all' ? undefined : monthFilter,
@@ -40,6 +45,11 @@ export function ChallansPage() {
             c.students?.roll_number.toLowerCase().includes(q)
         );
     });
+
+    // Calculate stats for the visible month/filter
+    const totalCollected = filteredChallans?.filter(c => c.status === 'PAID').reduce((acc, c) => acc + c.amount_due, 0) || 0;
+    const totalPending = filteredChallans?.filter(c => c.status !== 'PAID').reduce((acc, c) => acc + c.amount_due, 0) || 0;
+    const totalExpected = totalCollected + totalPending;
 
     // Generate month options dynamically
     const today = new Date();
@@ -78,6 +88,48 @@ export function ChallansPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Monthly Quick Stats */}
+                {!isLoading && (
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <Card className="bg-emerald-500/5 border-emerald-500/20 overflow-hidden relative">
+                            <div className="absolute -right-4 -top-4 opacity-10"><DollarSign className="h-20 w-20 text-emerald-500" /></div>
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                    <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-black tracking-widest text-emerald-600/70 dark:text-emerald-400/70">Total Collected</p>
+                                    <p className="text-xl font-black text-emerald-700 dark:text-emerald-300">Rs. {totalCollected.toLocaleString()}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-amber-500/5 border-amber-500/20 overflow-hidden relative">
+                            <div className="absolute -right-4 -top-4 opacity-10"><Clock className="h-20 w-20 text-amber-500" /></div>
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                                    <Wallet className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-black tracking-widest text-amber-600/70 dark:text-amber-400/70">Total Pending</p>
+                                    <p className="text-xl font-black text-amber-700 dark:text-amber-300">Rs. {totalPending.toLocaleString()}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-primary/5 border-primary/20 overflow-hidden relative">
+                            <div className="absolute -right-4 -top-4 opacity-10"><Users className="h-20 w-20 text-primary" /></div>
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                                    <DollarSign className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-black tracking-widest text-primary/70">Total Revenue</p>
+                                    <p className="text-xl font-black text-primary">Rs. {totalExpected.toLocaleString()}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 <ChallanGenerationCard />
 
@@ -189,19 +241,33 @@ export function ChallansPage() {
                                                 {getStatusBadge(challan.status)}
                                             </td>
                                             <td className="px-5 py-4 text-right">
-                                                <Select
-                                                    value={challan.status}
-                                                    onValueChange={(v) => handleStatusChange(challan.id!, v as ChallanStatus)}
-                                                >
-                                                    <SelectTrigger className="w-32 h-8 ml-auto">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="PENDING">Mark Pending</SelectItem>
-                                                        <SelectItem value="PAID">Mark Paid</SelectItem>
-                                                        <SelectItem value="OVERDUE">Mark Overdue</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
+                                                {challan.status !== 'PAID' ? (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="h-8 rounded-lg font-bold gap-1.5 shadow-sm"
+                                                        onClick={() => {
+                                                            setSelectedChallan(challan);
+                                                            setIsCollectModalOpen(true);
+                                                        }}
+                                                    >
+                                                        <Banknote className="h-3.5 w-3.5" />
+                                                        Collect Fee
+                                                    </Button>
+                                                ) : (
+                                                    <Select
+                                                        value={challan.status}
+                                                        onValueChange={(v) => handleStatusChange(challan.id!, v as ChallanStatus)}
+                                                    >
+                                                        <SelectTrigger className="w-32 h-8 ml-auto border-emerald-500/20 bg-emerald-500/5 text-emerald-600 font-semibold">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="PENDING">Mark Pending</SelectItem>
+                                                            <SelectItem value="PAID">Paid</SelectItem>
+                                                            <SelectItem value="OVERDUE">Mark Overdue</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
                                             </td>
                                         </motion.tr>
                                     ))}
@@ -210,6 +276,12 @@ export function ChallansPage() {
                         </div>
                     </Card>
                 )}
+
+                <CollectFeeModal 
+                    open={isCollectModalOpen} 
+                    onOpenChange={setIsCollectModalOpen} 
+                    challan={selectedChallan} 
+                />
             </div>
         </PageTransition>
     );

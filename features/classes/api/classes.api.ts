@@ -4,6 +4,8 @@ export type ClassRecord = {
     id: string;
     name: string;
     section: string;
+    class_teacher_id: string | null;
+    is_primary: boolean;
 };
 
 export const classesApi = {
@@ -14,7 +16,7 @@ export const classesApi = {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('classes')
-            .select('id, name, section')
+            .select('id, name, section, class_teacher_id, is_primary')
             .order('name', { ascending: true });
 
         if (error) throw new Error(error.message);
@@ -24,7 +26,7 @@ export const classesApi = {
     /**
      * Pure function to create a new class.
      */
-    createClass: async (classData: { name: string; section: string }): Promise<ClassRecord> => {
+    createClass: async (classData: { name: string; section: string; class_teacher_id?: string | null; is_primary?: boolean }): Promise<ClassRecord> => {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('classes')
@@ -32,9 +34,11 @@ export const classesApi = {
                 {
                     name: classData.name,
                     section: classData.section,
+                    class_teacher_id: classData.class_teacher_id || null,
+                    is_primary: classData.is_primary ?? false,
                 }
             ])
-            .select('id, name, section')
+            .select('id, name, section, class_teacher_id, is_primary')
             .single();
 
         if (error) {

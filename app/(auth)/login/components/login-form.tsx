@@ -80,7 +80,7 @@ export function LoginForm() {
                         />
 
                         {loginMutation.isError && (
-                            <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md flex items-center gap-2">
+                            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">
                                 <AlertCircle className="w-4 h-4" />
                                 <span>{loginMutation.error?.message || 'Invalid credentials'}</span>
                             </div>

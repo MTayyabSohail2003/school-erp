@@ -4,6 +4,7 @@
 import { useGetParents } from '@/features/parents/api/use-get-parents';
 import { useRealtimeInvalidation } from '@/hooks/use-realtime-invalidation';
 import { EditParentDialog } from '@/features/parents/components/edit-parent-dialog';
+import { useDeleteParent } from '@/features/parents/hooks/use-delete-parent';
 import {
     Table,
     TableBody,
@@ -12,17 +13,31 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Mail, Phone, User, Loader2, AlertCircle } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from '@/components/ui/button';
+import { Mail, Phone, User, Loader2, AlertCircle, Trash2 } from 'lucide-react';
 
 export function ParentsTable() {
     // 1. Listen for real-time changes to the users table specifically pointing to parents
     useRealtimeInvalidation('users', ['parents'], "role=eq.PARENT");
 
+    const deleteMutation = useDeleteParent();
+
     const { data: parents, isLoading, error } = useGetParents();
 
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center py-10 text-muted-foreground border rounded-md bg-white">
+            <div className="flex justify-center items-center py-10 text-muted-foreground border rounded-md bg-card">
                 <Loader2 className="w-6 h-6 animate-spin mr-2" />
                 Loading parents...
             </div>
@@ -83,12 +98,43 @@ export function ParentsTable() {
                                 </div>
                             </TableCell>
                             <TableCell>
-                                <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 uppercase tracking-widest">
+                                <span className="inline-flex items-center rounded-md bg-emerald-500/15 px-2 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20 uppercase tracking-widest">
                                     Parent
                                 </span>
                             </TableCell>
                             <TableCell className="text-right">
-                                <EditParentDialog parent={parent} />
+                                <div className="flex items-center justify-end gap-2">
+                                    <EditParentDialog parent={parent} />
+
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Parent Account</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Are you sure you want to delete <strong>{parent.full_name}</strong>? This action cannot be undone and will remove their access to the portal.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        deleteMutation.mutate(parent.id);
+                                                    }}
+                                                    disabled={deleteMutation.isPending}
+                                                >
+                                                    {deleteMutation.isPending ? 'Deleting...' : 'Delete Account'}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}

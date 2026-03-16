@@ -17,8 +17,8 @@ export const useUpdateChallanStatus = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, status }: { id: string; status: ChallanStatus }) =>
-            financeApi.updateChallanStatus(id, status),
+        mutationFn: ({ id, status, paymentMethod }: { id: string; status: ChallanStatus; paymentMethod?: 'CASH' | 'BANK' }) =>
+            financeApi.updateChallanStatus(id, status, paymentMethod),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['fee-challans'] });
         },

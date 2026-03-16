@@ -9,9 +9,10 @@ export const studentSchema = z.object({
         message: 'Invalid date format',
     }),
     class_id: z.string().uuid({ message: 'Select a valid class' }),
-    parent_id: z.string().uuid({ message: 'Select a valid parent' }).optional().nullable(),
+    parent_id: z.string().uuid({ message: 'Select a valid parent' }),
     b_form_url: z.string().url().optional().nullable(),
     old_cert_url: z.string().url().optional().nullable(),
+    monthly_fee: z.number().min(0, { message: 'Fee must be positive' }).optional().nullable(),
     created_at: z.string().optional(),
 });
 

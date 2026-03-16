@@ -19,5 +19,5 @@ export const ROUTES = {
     ATTENDANCE: '/dashboard/attendance',
     MARKS: '/dashboard/marks',
     SETTINGS_CLASSES: '/settings/classes',
-    NOTICE_BOARD: '/dashboard/notices',
+    NOTICE_BOARD: '/settings/notices',
 } as const;

@@ -93,3 +93,21 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.notices;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.leave_requests;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.staff_payroll_ledger;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.teacher_subjects;
+
+-- ============================================================================
+-- CLASS TEACHER & PRIMARY CLASS SUPPORT
+-- ============================================================================
+ALTER TABLE public.classes 
+ADD COLUMN IF NOT EXISTS class_teacher_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+
+ALTER TABLE public.classes 
+ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT false;
+
+-- ============================================================================
+-- U. FEE CHALLAN ENHANCEMENTS (Payment Methods)
+-- ============================================================================
+ALTER TABLE public.fee_challans 
+ADD COLUMN IF NOT EXISTS payment_method TEXT CHECK (payment_method IN ('CASH', 'BANK'));
+
+ALTER TABLE public.students
+ADD COLUMN IF NOT EXISTS monthly_fee NUMERIC;

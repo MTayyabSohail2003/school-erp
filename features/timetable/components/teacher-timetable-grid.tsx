@@ -28,17 +28,19 @@ export function TeacherTimetableGrid({ timetable }: TeacherTimetableGridProps) {
     });
 
     return (
-        <div className="col-span-1 border rounded-xl overflow-hidden bg-card">
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+        <div className="relative border rounded-xl overflow-hidden bg-card shadow-sm w-full max-w-full">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
+                <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-muted/40 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
                         <tr>
-                            <th className="px-4 py-3 border-b border-r w-24 sticky left-0 bg-muted/40 z-10">Day</th>
+                            <th className="px-5 py-4 border-b border-r w-24 sticky left-0 bg-muted/95 backdrop-blur shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-20">Day</th>
                             {periods.map(period => (
-                                <th key={period.id} className="px-4 py-3 border-b text-center min-w-[140px] max-w-[160px]">
-                                    {period.name}
-                                    <div className="font-normal opacity-70 lowercase mt-0.5 tracking-normal">
-                                        {period.start_time.substring(0, 5)} - {period.end_time.substring(0, 5)}
+                                <th key={period.id} className="px-4 py-4 border-b text-center min-w-[150px] max-w-[180px]">
+                                    <div className="text-foreground/90">{period.name}</div>
+                                    <div className="font-normal opacity-60 lowercase mt-0.5 tracking-normal flex items-center justify-center gap-1">
+                                        <span className="tabular-nums">{period.start_time.substring(0, 5)}</span>
+                                        <span className="opacity-40">-</span>
+                                        <span className="tabular-nums">{period.end_time.substring(0, 5)}</span>
                                     </div>
                                 </th>
                             ))}
@@ -46,8 +48,8 @@ export function TeacherTimetableGrid({ timetable }: TeacherTimetableGridProps) {
                     </thead>
                     <tbody className="divide-y divide-border">
                         {DAYS.map((day) => (
-                            <tr key={day.id} className="group hover:bg-muted/10 transition-colors">
-                                <td className="px-4 py-3 border-r font-semibold sticky left-0 bg-card group-hover:bg-muted/10 z-10 transition-colors">
+                            <tr key={day.id} className="group hover:bg-muted/5 transition-colors">
+                                <td className="px-5 py-4 border-r font-bold text-xs sticky left-0 bg-card group-hover:bg-muted/10 z-20 transition-colors shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
                                     {day.name}
                                 </td>
                                 {periods.map(period => {

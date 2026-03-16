@@ -18,9 +18,10 @@ export const fadeIn = {
 };
 
 export const staggerContainer = {
+    initial: {},
     animate: {
         transition: {
-            staggerChildren: 0.07,
+            staggerChildren: 0.08,
         },
     },
 };

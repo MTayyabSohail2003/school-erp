@@ -7,7 +7,7 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Banknote, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, FileText, CalendarDays, Briefcase, User, Loader2, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Banknote, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, FileText, CalendarDays, Briefcase, User, Loader2 } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -19,10 +19,23 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubItem,
+    SidebarMenuSubButton,
     useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-export const navGroups = [
+export type NavItem = {
+    name: string;
+    icon: React.ElementType;
+    href?: string;
+    exact?: boolean;
+    roles: string[];
+    subItems?: { name: string; href: string; exact?: boolean; roles: string[] }[];
+};
+
+export const navGroups: { label: string; items: NavItem[] }[] = [
     {
         label: 'Overview',
         items: [
@@ -63,15 +76,17 @@ export const navGroups = [
         ],
     },
     {
-        label: 'Config',
+        label: 'Settings',
         items: [
-            { name: 'Class Settings', href: ROUTES.SETTINGS_CLASSES, icon: Settings, exact: false, roles: ['ADMIN'] },
-        ],
-    },
-    {
-        label: 'Broadcasts',
-        items: [
-            { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+            {
+                name: 'Settings',
+                icon: Settings,
+                roles: ['ADMIN', 'TEACHER', 'PARENT'],
+                subItems: [
+                    { name: 'Add Classes', href: ROUTES.SETTINGS_CLASSES, exact: false, roles: ['ADMIN'] },
+                    { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+                ],
+            },
         ],
     },
 ];
@@ -169,9 +184,9 @@ export default function AppSidebar() {
                         "absolute left-1/2 -translate-x-1/2 z-20 flex items-center justify-center",
                         "transition-all duration-300 cursor-pointer group",
                         open ? "top-[50px] w-[86px] h-[86px]" : "top-[55px] w-[45px] h-[45px]",
-                        // The primary colored background ring that acts as the "glow" or outer boundary
-                        open ? "bg-[#e2f5e9] rounded-full" : "bg-transparent",
-                        isDragActive && "ring-4 ring-primary ring-opacity-50"
+                        // Using a semi-transparent primary color for the outer ring
+                        open ? "bg-primary/10 rounded-full" : "bg-transparent",
+                        isDragActive && "ring-4 ring-primary/50"
                     )}
                     title="Click to change profile picture"
                 >
@@ -197,8 +212,8 @@ export default function AppSidebar() {
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#2b3f5c' }}>
-                                <User className={cn("text-white", open ? "w-7 h-7" : "w-5 h-5")} fill="currentColor" strokeWidth={1} />
+                            <div className="w-full h-full flex items-center justify-center bg-primary/20">
+                                <User className={cn("text-primary", open ? "w-7 h-7" : "w-5 h-5")} fill="currentColor" strokeWidth={1} />
                             </div>
                         )}
                     </div>
@@ -228,9 +243,66 @@ export default function AppSidebar() {
                             <SidebarGroupContent>
                                 <SidebarMenu className="gap-1.5">
                                     {filteredItems.map((item) => {
-                                        const active = isActive(item.href, item.exact);
+                                        const itemIsActive = item.href ? isActive(item.href, item.exact || false) : item.subItems?.some(sub => isActive(sub.href, sub.exact || false));
+
+                                        if (item.subItems) {
+                                            const filteredSubItems = item.subItems.filter(sub => !profile || sub.roles.includes(profile.role));
+                                            if (filteredSubItems.length === 0) return null;
+
+                                            return (
+                                                <Collapsible
+                                                    key={item.name}
+                                                    asChild
+                                                    defaultOpen={itemIsActive}
+                                                    className="group/collapsible"
+                                                >
+                                                    <SidebarMenuItem>
+                                                        <CollapsibleTrigger asChild>
+                                                            <SidebarMenuButton
+                                                                tooltip={!open ? item.name : undefined}
+                                                                className={cn(
+                                                                    'relative w-full rounded-lg transition-all duration-200 h-10',
+                                                                    itemIsActive ? 'text-primary font-semibold' : 'text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                                                                )}
+                                                            >
+                                                                <item.icon className="shrink-0 h-[18px] w-[18px]" />
+                                                                {open && <span className="text-sm truncate flex-1">{item.name}</span>}
+                                                                {open && (
+                                                                    <ChevronRight className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 opacity-70" />
+                                                                )}
+                                                            </SidebarMenuButton>
+                                                        </CollapsibleTrigger>
+                                                        <CollapsibleContent>
+                                                            <SidebarMenuSub>
+                                                                {filteredSubItems.map((sub) => {
+                                                                    const subActive = isActive(sub.href, sub.exact || false);
+                                                                    return (
+                                                                        <SidebarMenuSubItem key={sub.href}>
+                                                                            <SidebarMenuSubButton
+                                                                                asChild
+                                                                                isActive={subActive}
+                                                                                className={cn(
+                                                                                    'transition-all duration-200',
+                                                                                    subActive ? 'text-primary font-semibold' : 'text-sidebar-foreground/70 hover:text-sidebar-foreground'
+                                                                                )}
+                                                                            >
+                                                                                <Link href={sub.href}>
+                                                                                    <span>{sub.name}</span>
+                                                                                </Link>
+                                                                            </SidebarMenuSubButton>
+                                                                        </SidebarMenuSubItem>
+                                                                    );
+                                                                })}
+                                                            </SidebarMenuSub>
+                                                        </CollapsibleContent>
+                                                    </SidebarMenuItem>
+                                                </Collapsible>
+                                            );
+                                        }
+
+                                        const active = isActive(item.href!, item.exact || false);
                                         return (
-                                            <SidebarMenuItem key={item.href}>
+                                            <SidebarMenuItem key={item.href || item.name}>
                                                 <SidebarMenuButton
                                                     asChild
                                                     isActive={active}
@@ -247,7 +319,7 @@ export default function AppSidebar() {
                                                     } : undefined}
                                                 >
                                                     <Link
-                                                        href={item.href}
+                                                        href={item.href!}
                                                         className={cn(
                                                             'flex items-center gap-3 px-3 w-full h-full',
                                                             !open && 'justify-center px-0'

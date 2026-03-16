@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,6 +31,13 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Loader2, Plus, UploadCloud, UserPlus, X, ChevronRight, ChevronLeft } from 'lucide-react';
 
 // Sub-component for inline parent creation
@@ -113,8 +121,32 @@ export function AddStudentDialog() {
             class_id: '',
             b_form_url: null,
             old_cert_url: null,
+            monthly_fee: undefined,
         },
     });
+
+    // Auto-prefix Roll Number based on Class
+    const watchedClassId = form.watch('class_id');
+    const prevClassId = React.useRef<string>('');
+
+    React.useEffect(() => {
+        if (!watchedClassId || watchedClassId === prevClassId.current) return;
+        
+        const selectedClass = classes?.find(c => c.id === watchedClassId);
+        if (selectedClass) {
+            const classNum = selectedClass.name.match(/\d+/)?.[0] || selectedClass.name;
+            const prefix = `C${classNum}-${selectedClass.section}-`.toUpperCase().replace(/\s+/g, '');
+            
+            const currentRoll = form.getValues('roll_number') || '';
+            // If current roll doesn't start with the new prefix, update it
+            // We try to preserve the numeric part if possible
+            const existingSuffix = currentRoll.split('-').pop() || '';
+            const isJustPrefix = currentRoll.includes('-') && !/\d+$/.test(currentRoll);
+            
+            form.setValue('roll_number', prefix + (isJustPrefix ? '' : existingSuffix));
+        }
+        prevClassId.current = watchedClassId;
+    }, [watchedClassId, classes, form]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url' | 'old_cert_url') => {
         const file = e.target.files?.[0];
@@ -139,7 +171,7 @@ export function AddStudentDialog() {
         if (step === 1) {
             fieldsToValidate = ['roll_number', 'full_name', 'date_of_birth'];
         } else if (step === 2) {
-            fieldsToValidate = ['class_id']; // parent_id is optional effectively, but class is required
+            fieldsToValidate = ['class_id', 'parent_id', 'monthly_fee'];
         }
 
         const isValid = await form.trigger(fieldsToValidate);
@@ -153,6 +185,11 @@ export function AddStudentDialog() {
     };
 
     async function onSubmit(values: StudentFormData) {
+        if (step !== 3) {
+            nextStep();
+            return;
+        }
+
         createStudentMutation.mutate(values, {
             onSuccess: () => {
                 toast.success('Student registered successfully.');
@@ -170,8 +207,6 @@ export function AddStudentDialog() {
     const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen);
         if (!newOpen) {
-            setStep(1);
-            form.reset();
             setIsCreatingParent(false);
         }
     };
@@ -201,7 +236,7 @@ export function AddStudentDialog() {
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4 pt-4">
 
                         {/* STEP 1: Personal Info */}
                         {step === 1 && (
@@ -260,22 +295,20 @@ export function AddStudentDialog() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Assign Class</FormLabel>
-                                            <FormControl>
-                                                <select
-                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                                    {...field}
-                                                    disabled={isClassesLoading}
-                                                >
-                                                    <option value="" disabled>
-                                                        {isClassesLoading ? 'Loading classes...' : 'Select a class'}
-                                                    </option>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isClassesLoading}>
+                                                <FormControl>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder={isClassesLoading ? 'Loading classes...' : 'Select a class'} />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
                                                     {classes?.map((c) => (
-                                                        <option key={c.id} value={c.id}>
+                                                        <SelectItem key={c.id} value={c.id}>
                                                             {c.name} - {c.section}
-                                                        </option>
+                                                        </SelectItem>
                                                     ))}
-                                                </select>
-                                            </FormControl>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -289,28 +322,25 @@ export function AddStudentDialog() {
                                             <div className="flex items-center justify-between">
                                                 <FormLabel>Assign Parent</FormLabel>
                                                 {!isCreatingParent && (
-                                                    <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" onClick={() => setIsCreatingParent(true)}>
+                                                    <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" onClick={(e) => { e.preventDefault(); setIsCreatingParent(true); }}>
                                                         <Plus className="h-3 w-3 mr-1" /> New Parent
                                                     </Button>
                                                 )}
                                             </div>
-                                            <FormControl>
-                                                <select
-                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                                    {...field}
-                                                    value={field.value || ''}
-                                                    disabled={isParentsLoading || isCreatingParent}
-                                                >
-                                                    <option value="" disabled>
-                                                        {isParentsLoading ? 'Loading parents...' : 'Select a parent'}
-                                                    </option>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isParentsLoading || isCreatingParent}>
+                                                <FormControl>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder={isParentsLoading ? 'Loading parents...' : 'Select a parent'} />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
                                                     {parents?.map((p) => (
-                                                        <option key={p.id} value={p.id}>
+                                                        <SelectItem key={p.id} value={p.id}>
                                                             {p.full_name} ({p.email})
-                                                        </option>
+                                                        </SelectItem>
                                                     ))}
-                                                </select>
-                                            </FormControl>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                             {isCreatingParent && (
                                                 <CreateParentForm
@@ -322,6 +352,28 @@ export function AddStudentDialog() {
                                                     }}
                                                 />
                                             )}
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="monthly_fee"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Custom Monthly Fee (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input 
+                                                    type="number" 
+                                                    placeholder="e.g. 5000" 
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                            <p className="text-[10px] text-muted-foreground font-medium italic">
+                                                * This will override the class tuition fee.
+                                            </p>
                                         </FormItem>
                                     )}
                                 />
@@ -376,7 +428,8 @@ export function AddStudentDialog() {
                                 </Button>
                             ) : (
                                 <Button
-                                    type="submit"
+                                    type="button"
+                                    onClick={form.handleSubmit(onSubmit)}
                                     disabled={createStudentMutation.isPending || isUploading}
                                     className="bg-primary"
                                 >

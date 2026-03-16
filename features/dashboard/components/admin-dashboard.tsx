@@ -152,16 +152,33 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
 
                     {/* Revenue pill highlight */}
                     {!isLoading && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.3 }}
-                            className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-6 py-4 shrink-0 text-center"
-                        >
-                            <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Collected This Month</p>
-                            <p className="text-2xl font-black">Rs. {(stats?.financials.currentMonthCollected ?? 0).toLocaleString()}</p>
-                            <p className="text-xs text-yellow-300 mt-1">Pending: Rs. {(stats?.financials.currentMonthPending ?? 0).toLocaleString()}</p>
-                        </motion.div>
+                        <div className="flex flex-col sm:flex-row gap-3 overflow-hidden">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-6 py-4 shrink-0 text-center"
+                            >
+                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Fee Collection</p>
+                                <p className="text-2xl font-black">
+                                    {stats?.financials.currentMonthPaidCount ?? 0}
+                                    <span className="text-sm font-normal text-white/40 mx-1">/</span>
+                                    {(stats?.financials.currentMonthPaidCount ?? 0) + (stats?.financials.currentMonthPendingCount ?? 0)}
+                                </p>
+                                <p className="text-[10px] text-emerald-300 font-bold uppercase tracking-tight mt-1">Students Paid</p>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4 }}
+                                className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-6 py-4 shrink-0 text-center"
+                            >
+                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Collected</p>
+                                <p className="text-2xl font-black">Rs. {(stats?.financials.currentMonthCollected ?? 0).toLocaleString()}</p>
+                                <p className="text-xs text-yellow-300 mt-1">Pending: Rs. {(stats?.financials.currentMonthPending ?? 0).toLocaleString()}</p>
+                            </motion.div>
+                        </div>
                     )}
                 </div>
             </motion.div>
@@ -210,7 +227,7 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
                         <KpiCard
                             title="Monthly Revenue"
                             value={isLoading ? '—' : `Rs. ${(stats?.financials.currentMonthCollected ?? 0).toLocaleString()}`}
-                            subtitle={`Pending: Rs. ${(stats?.financials.currentMonthPending ?? 0).toLocaleString()}`}
+                            subtitle={`${stats?.financials.currentMonthPaidCount ?? 0} of ${(stats?.financials.currentMonthPaidCount ?? 0) + (stats?.financials.currentMonthPendingCount ?? 0)} paid`}
                             icon={TrendingUp}
                             gradient="from-violet-600 to-purple-700"
                             glow="shadow-xl shadow-violet-500/30"

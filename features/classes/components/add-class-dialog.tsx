@@ -5,9 +5,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { classFormSchema, type ClassFormData } from '@/features/classes/schemas/class.schema';
 import { useCreateClass } from '@/features/classes/hooks/use-classes';
+import { useGetStaff } from '@/features/staff/api/use-get-staff';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -30,17 +39,26 @@ import { Loader2, Plus } from 'lucide-react';
 export function AddClassDialog() {
     const [open, setOpen] = useState(false);
     const createClassMutation = useCreateClass();
+    const { data: staff, isLoading: isStaffLoading } = useGetStaff();
 
     const form = useForm<ClassFormData>({
         resolver: zodResolver(classFormSchema),
         defaultValues: {
             name: '',
             section: '',
+            class_teacher_id: null,
+            is_primary: false,
         },
     });
 
     async function onSubmit(values: ClassFormData) {
-        createClassMutation.mutate(values, {
+        // Ensure class_teacher_id is null if it's an empty string or undefined
+        const formattedValues = {
+            ...values,
+            class_teacher_id: values.class_teacher_id ?? null,
+        };
+
+        createClassMutation.mutate(formattedValues as any, {
             onSuccess: () => {
                 toast.success(`Class ${values.name} - ${values.section} added successfully.`);
                 setOpen(false);
@@ -94,6 +112,57 @@ export function AddClassDialog() {
                                         <Input placeholder="e.g. A" {...field} />
                                     </FormControl>
                                     <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+ 
+                        <FormField
+                            control={form.control}
+                            name="class_teacher_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Class Teacher (In-charge)</FormLabel>
+                                    <Select 
+                                        onValueChange={field.onChange} 
+                                        defaultValue={field.value || undefined}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder={isStaffLoading ? "Loading staff..." : "Select a teacher"} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {staff?.map((s) => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.full_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+ 
+                        <FormField
+                            control={form.control}
+                            name="is_primary"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                    <div className="space-y-1">
+                                        <FormLabel>
+                                            Primary Class Mode
+                                        </FormLabel>
+                                        <div className="text-[12px] text-muted-foreground">
+                                            Enable easy timetable management for Nursery to 4th.
+                                        </div>
+                                    </div>
                                 </FormItem>
                             )}
                         />

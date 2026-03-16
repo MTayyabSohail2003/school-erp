@@ -7,7 +7,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { useStudents } from '@/features/students/hooks/use-students';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { PageTransition, StaggerList, StaggerItem } from '@/components/ui/motion';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,8 +40,8 @@ function useStudentMarks(studentId?: string) {
                 .select('marks_obtained, total_marks, subjects(name), exams(name)')
                 .eq('student_id', studentId);
             return (data ?? []).map((m: any) => ({
-                subject: m.subjects?.name ?? 'N/A',
-                exam: m.exams?.name ?? 'Exam',
+                subject: Array.isArray(m.subjects) ? m.subjects[0]?.name : m.subjects?.name ?? 'N/A',
+                exam: Array.isArray(m.exams) ? m.exams[0]?.name : m.exams?.name ?? 'Exam',
                 score: m.total_marks ? Math.round((m.marks_obtained / m.total_marks) * 100) : 0,
             }));
         },
@@ -80,45 +80,47 @@ function ChildCard({ child }: { child: any }) {
     const { data: attendance, isLoading: attLoading } = useStudentAttendance(child.id);
     const total = (attendance?.present ?? 0) + (attendance?.absent ?? 0) + (attendance?.leave ?? 0);
     const attRate = total > 0 ? Math.round((attendance!.present / total) * 100) : 0;
-    const subjectScores = (marks ?? []).slice(-6); // last 6 subjects
+    const subjectScores = (marks ?? []).slice(-6);
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="rounded-2xl border bg-card shadow-sm overflow-hidden"
-        >
+        <div className="rounded-2xl border bg-card shadow-sm overflow-hidden h-full flex flex-col">
             {/* Child Header */}
             <div className="bg-gradient-to-r from-primary/15 via-primary/8 to-transparent px-5 py-4 flex items-center gap-4 border-b">
                 <Avatar className="h-14 w-14 border-2 border-background shadow">
                     <AvatarFallback className="bg-primary/20 text-primary text-lg font-bold">
-                        {child.full_name?.substring(0, 2).toUpperCase()}
+                        {child.full_name?.substring(0, 2).toUpperCase() || <User className="h-6 w-6" />}
                     </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                    <h3 className="font-bold text-lg">{child.full_name}</h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                        <GraduationCap className="h-3.5 w-3.5" />
-                        {child.classes?.name} — Section {child.classes?.section}
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg truncate">{child.full_name || 'Student'}</h3>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5 truncate">
+                        <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+                        {child.classes?.name && child.classes?.section 
+                            ? `${child.classes.name} — Section ${child.classes.section}`
+                            : 'Unassigned Class'}
                     </p>
                 </div>
-                <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Roll No</p>
-                    <p className="text-xl font-bold text-primary">#{child.roll_number}</p>
+                <div className="text-right shrink-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Roll No</p>
+                    <p className="text-xl font-black text-primary">#{child.roll_number || '??'}</p>
                 </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
+            <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border border-b">
                 {/* Attendance Chart */}
                 <div className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                        <Award className="h-3 w-3" /> Attendance (Last 30 Days)
+                        <Award className="h-3 w-3" /> Attendance (30D)
                     </p>
-                    {attLoading ? <Skeleton className="h-[140px] w-full rounded-lg" /> : (
-                        <>
+                    {attLoading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-8 w-16" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                    ) : (
+                        <div>
                             <div className="flex items-center gap-2 mb-2">
-                                <span className={`text-2xl font-bold ${attRate >= 75 ? 'text-emerald-500' : attRate >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                                <span className={`text-2xl font-black ${attRate >= 75 ? 'text-emerald-500' : attRate >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
                                     {attRate}%
                                 </span>
                                 <Badge variant="outline" className={`text-xs ${attRate >= 75 ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10' : attRate >= 60 ? 'border-amber-500/30 text-amber-600 bg-amber-500/10' : 'border-red-500/30 text-red-600 bg-red-500/10'}`}>
@@ -127,37 +129,40 @@ function ChildCard({ child }: { child: any }) {
                             </div>
                             <div className="grid grid-cols-3 gap-2 mt-3">
                                 {[
-                                    { label: 'Present', val: attendance?.present ?? 0, color: 'text-emerald-500 bg-emerald-500/10' },
-                                    { label: 'Absent', val: attendance?.absent ?? 0, color: 'text-red-500 bg-red-500/10' },
-                                    { label: 'Leave', val: attendance?.leave ?? 0, color: 'text-amber-500 bg-amber-500/10' },
+                                    { label: 'Pr', val: attendance?.present ?? 0, color: 'text-emerald-500 bg-emerald-500/10' },
+                                    { label: 'Ab', val: attendance?.absent ?? 0, color: 'text-red-500 bg-red-500/10' },
+                                    { label: 'Lv', val: attendance?.leave ?? 0, color: 'text-amber-500 bg-amber-500/10' },
                                 ].map(s => (
-                                    <div key={s.label} className={`rounded-lg p-2 text-center ${s.color}`}>
-                                        <p className="text-lg font-bold">{s.val}</p>
-                                        <p className="text-xs opacity-80">{s.label}</p>
+                                    <div key={s.label} className={`rounded-lg py-2 px-1 text-center ${s.color}`}>
+                                        <p className="text-base font-bold">{s.val}</p>
+                                        <p className="text-[10px] uppercase font-bold opacity-60">{s.label}</p>
                                     </div>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     )}
                 </div>
 
                 {/* Subject Scores Chart */}
                 <div className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                        <BookOpen className="h-3 w-3" /> Exam Performance
+                        <BookOpen className="h-3 w-3" /> Academic Skill
                     </p>
-                    {marksLoading ? <Skeleton className="h-[140px] w-full rounded-lg" /> :
+                    {marksLoading ? <Skeleton className="h-[120px] w-full rounded-lg" /> :
                         subjectScores.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-8">No exam marks recorded yet.</p>
+                            <div className="h-[120px] flex items-center justify-center border border-dashed rounded-lg bg-muted/5">
+                                <p className="text-[10px] text-muted-foreground text-center px-4">No exam records.</p>
+                            </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height={140}>
-                                <RadarChart data={subjectScores} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
-                                    <PolarGrid stroke="hsl(var(--border))" />
-                                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
-                                    <Radar name="Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                                    <Tooltip {...ttStyle} formatter={((v: number) => [`${v}%`, 'Score']) as any} />
-                                </RadarChart>
-                            </ResponsiveContainer>
+                            <div className="h-[120px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RadarChart data={subjectScores} margin={{ top: 0, right: 10, bottom: 0, left: 10 }}>
+                                        <PolarGrid stroke="hsl(var(--border))" />
+                                        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 8, fill: 'hsl(var(--muted-foreground))' }} />
+                                        <Radar name="Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+                                    </RadarChart>
+                                </ResponsiveContainer>
+                            </div>
                         )
                     }
                 </div>
@@ -165,31 +170,33 @@ function ChildCard({ child }: { child: any }) {
 
             {/* Recent Scores Bar */}
             {!marksLoading && subjectScores.length > 0 && (
-                <div className="px-4 pb-4 pt-2 border-t">
+                <div className="px-4 pb-4 pt-3 mt-auto">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
                         <TrendingUp className="h-3 w-3" /> Score Breakdown
                     </p>
-                    <ResponsiveContainer width="100%" height={100}>
-                        <BarChart data={subjectScores} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                            <XAxis dataKey="subject" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                            <YAxis domain={[0, 100]} hide />
-                            <Tooltip {...ttStyle} formatter={((v: number) => [`${v}%`, 'Score']) as any} />
-                            <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                                {subjectScores.map((s, i) => (
-                                    <Cell key={i} fill={s.score >= 75 ? '#10b981' : s.score >= 50 ? '#f59e0b' : '#ef4444'} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div className="h-[80px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={subjectScores} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                                <XAxis dataKey="subject" tick={{ fontSize: 8, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                                <YAxis domain={[0, 100]} hide />
+                                <Tooltip {...ttStyle} formatter={(v: any) => [`${v}%`, 'Score']} />
+                                <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                                    {subjectScores.map((s: any, i: number) => (
+                                        <Cell key={i} fill={s.score >= 75 ? '#10b981' : s.score >= 50 ? '#f59e0b' : '#ef4444'} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }
 
-export function ParentDashboard({ profile }: { profile: { full_name?: string } }) {
-    const { data: children, isLoading } = useStudents();
+export function ParentDashboard({ profile }: { profile: { id: string; full_name?: string } }) {
+    const { data: children, isLoading } = useStudents(profile.id);
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     const firstName = profile?.full_name?.split(' ')[0] || 'there';
@@ -231,13 +238,13 @@ export function ParentDashboard({ profile }: { profile: { full_name?: string } }
                             </CardContent>
                         </Card>
                     ) : (
-                        <StaggerList className="grid gap-5 lg:grid-cols-2">
-                            {children?.map((child: any) => (
-                                <StaggerItem key={child.id}>
-                                    <ChildCard child={child} />
-                                </StaggerItem>
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            {children?.map((child) => (
+                                <div key={child.id}>
+                                    <ChildCard child={child as any} />
+                                </div>
                             ))}
-                        </StaggerList>
+                        </div>
                     )}
                 </div>
             </div>

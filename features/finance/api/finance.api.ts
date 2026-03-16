@@ -63,13 +63,16 @@ export const financeApi = {
         return data as unknown as FeeChallan[];
     },
 
-    updateChallanStatus: async (id: string, status: ChallanStatus) => {
+    updateChallanStatus: async (id: string, status: ChallanStatus, paymentMethod?: 'CASH' | 'BANK') => {
         const supabase = createClient();
         const payload: Partial<FeeChallan> = { status };
+        
         if (status === 'PAID') {
             payload.paid_date = new Date().toISOString().split('T')[0];
+            if (paymentMethod) payload.payment_method = paymentMethod;
         } else {
             payload.paid_date = null;
+            payload.payment_method = null;
         }
 
         const { error } = await supabase
@@ -90,7 +93,7 @@ export const financeApi = {
         const feeMap = new Map(structures.map(s => [s.class_id, { id: s.id, fee: s.monthly_fee }]));
 
         // 2. Get all students
-        const { data: students } = await supabase.from('students').select('id, class_id');
+        const { data: students } = await supabase.from('students').select('id, class_id, monthly_fee');
         if (!students) throw new Error('No students found');
 
         // 3. Get existing challans for this month to avoid duplicates
@@ -126,13 +129,14 @@ export const financeApi = {
             if (!structure) continue;
 
             const arrears = arrearsMap.get(student.id) ?? 0;
+            const baseFee = student.monthly_fee ? Number(student.monthly_fee) : structure.fee;
 
             inserts.push({
                 student_id: student.id,
                 fee_structure_id: structure.id,
                 month_year: monthYear,
                 arrears,
-                amount_due: structure.fee + arrears,
+                amount_due: baseFee + arrears,
                 status: 'PENDING',
                 due_date: dueDate,
             });

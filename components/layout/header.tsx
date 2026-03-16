@@ -37,11 +37,22 @@ export function Header() {
     let ActiveIcon: LucideIcon | null = null;
     for (const group of navGroups) {
         for (const item of group.items) {
-            const isExact = item.exact;
-            if (isExact ? pathname === item.href : (pathname === item.href || pathname.startsWith(`${item.href}/`))) {
-                ActiveIcon = item.icon;
-                break;
+            if (item.subItems) {
+                for (const subItem of item.subItems) {
+                    const isExact = subItem.exact;
+                    if (isExact ? pathname === subItem.href : (pathname === subItem.href || pathname.startsWith(`${subItem.href}/`))) {
+                        ActiveIcon = item.icon as LucideIcon;
+                        break;
+                    }
+                }
+            } else if (item.href) {
+                const isExact = item.exact;
+                if (isExact ? pathname === item.href : (pathname === item.href || pathname.startsWith(`${item.href}/`))) {
+                    ActiveIcon = item.icon as LucideIcon;
+                    break;
+                }
             }
+            if (ActiveIcon) break;
         }
         if (ActiveIcon) break;
     }
