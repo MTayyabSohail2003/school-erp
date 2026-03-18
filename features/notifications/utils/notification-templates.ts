@@ -1,4 +1,5 @@
 import { type NotificationType } from '@/features/notifications/api/use-notifications';
+import { ROUTES } from '@/constants/globals';
 
 export interface NotificationTemplate {
     title: string;
@@ -43,14 +44,14 @@ export const NotificationTemplates = {
         title: 'New Fee Challan',
         message: `Fee challan for ${month} has been generated.`,
         type: 'INFO',
-        link: '/dashboard/finance/fees',
+        link: ROUTES.FEE,
     }),
 
     FEE_RECEIVED: (studentName: string, amount: number): NotificationTemplate => ({
         title: 'Fee Payment Received',
         message: `Payment of Rs. ${amount} received for ${studentName}.`,
         type: 'SUCCESS',
-        link: '/dashboard/finance/fees',
+        link: ROUTES.FEE,
     }),
 
     // ---- GENERAL ----

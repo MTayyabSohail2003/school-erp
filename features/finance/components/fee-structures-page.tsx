@@ -55,7 +55,7 @@ export function FeeStructuresPage() {
         return structures?.find((s) => s.class_id === classId);
     };
 
-    const handleEdit = (cls: { id: string, name: string, section: string }) => {
+    const handleEdit = (cls: { id: string, name: string, section: string | null }) => {
         const existing = getFeeForClass(cls.id);
         form.reset({
             id: existing?.id,
