@@ -9,6 +9,8 @@ export type StudentUpdateData = {
     parent_id?: string | null;
     status?: string;
     b_form_url?: string | null;
+    photo_url?: string | null;
+    monthly_fee?: number | null;
 };
 
 export function useUpdateStudent() {
@@ -25,6 +27,8 @@ export function useUpdateStudent() {
                     parent_id: data.parent_id,
                     status: data.status,
                     b_form_url: data.b_form_url,
+                    photo_url: data.photo_url,
+                    monthly_fee: data.monthly_fee,
                     date_of_birth: data.date_of_birth,
                     class_id: data.class_id,
                 })

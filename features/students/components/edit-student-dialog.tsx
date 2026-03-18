@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
+import { ImageCropper } from '@/components/ui/image-cropper';
 import {
     Dialog,
     DialogContent,
@@ -44,9 +45,10 @@ const editStudentSchema = z.object({
     parent_id: z.string().uuid('Select a valid parent').optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER']).optional(),
     b_form_url: z.string().url().optional().nullable(),
+    photo_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
-    class_id: z.string().uuid('Select a valid class'),
-    monthly_fee: z.number().optional().nullable(),
+    class_id: z.string().min(1, 'Select a valid class'),
+    monthly_fee: z.number().min(0, { message: 'Monthly fee is required and must be 0 or positive' }),
 });
 
 type EditStudentForm = z.infer<typeof editStudentSchema>;
@@ -61,6 +63,7 @@ type EditStudentProps = {
         parent_id?: string | null;
         status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER';
         b_form_url?: string | null;
+        photo_url?: string | null;
         date_of_birth: string;
         class_id: string;
         monthly_fee?: number | null;
@@ -69,30 +72,59 @@ type EditStudentProps = {
 
 export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentProps) {
     const [isUploading, setIsUploading] = useState(false);
+    
+    // Cropper State
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [tempCropImage, setTempCropImage] = useState<string>('');
+
     const updateMutation = useUpdateStudent();
     const { data: classes, isLoading: isClassesLoading } = useClasses();
     const { data: parents, isLoading: isParentsLoading } = useGetParents();
 
     const form = useForm<EditStudentForm>({
         resolver: zodResolver(editStudentSchema),
-        // 'values' mode syncs the form whenever the `student` prop changes (dynamic pre-fill)
-        values: {
-            roll_number: student?.roll_number || '',
-            full_name: student?.full_name || '',
-            parent_id: student?.parent_id || '',
-            status: student?.status || 'ACTIVE',
-            b_form_url: student?.b_form_url || null,
-            date_of_birth: student?.date_of_birth
-                ? student.date_of_birth.split('T')[0] // strip time component for date input
-                : '',
-            class_id: student?.class_id || '',
-            monthly_fee: student?.monthly_fee ?? undefined,
+        defaultValues: {
+            roll_number: '',
+            full_name: '',
+            parent_id: '',
+            status: 'ACTIVE',
+            b_form_url: null,
+            photo_url: null,
+            date_of_birth: '',
+            class_id: '',
+            monthly_fee: undefined, // Default to undefined
         },
     });
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url') => {
+    // Sync form with student prop changes
+    useEffect(() => {
+        if (student) {
+            form.reset({
+                ...student,
+                full_name: student.full_name || '',
+                roll_number: student.roll_number || '',
+                date_of_birth: student.date_of_birth
+                    ? student.date_of_birth.split('T')[0] // strip time component for date input
+                    : '',
+                class_id: student?.class_id || '',
+                monthly_fee: student?.monthly_fee || undefined,
+            });
+        }
+    }, [student, form]);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url' | 'photo_url') => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (fieldName === 'photo_url') {
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                setTempCropImage(reader.result?.toString() || "");
+                setCropModalOpen(true);
+            });
+            reader.readAsDataURL(file);
+            return;
+        }
 
         try {
             setIsUploading(true);
@@ -104,6 +136,11 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
         } finally {
             setIsUploading(false);
         }
+    };
+
+    const handleCropComplete = (base64Image: string) => {
+        form.setValue('photo_url', base64Image);
+        toast.success('Photo cropped and updated locally. Click Save Changes to confirm.', { duration: 4000 });
     };
 
     const onSubmit = (data: EditStudentForm) => {
@@ -122,7 +159,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-[480px]">
+            <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary">
                 <DialogHeader>
                     <DialogTitle>Edit Student Record</DialogTitle>
                     <DialogDescription>
@@ -255,22 +292,46 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                             name="monthly_fee"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Custom Monthly Fee (Optional)</FormLabel>
+                                    <FormLabel>Monthly Fee <span className="text-destructive">*</span></FormLabel>
                                     <FormControl>
                                         <Input 
                                             type="number" 
                                             placeholder="e.g. 5000" 
-                                            value={field.value ?? ''}
+                                            value={field.value !== null && field.value !== undefined ? field.value : ''}
                                             onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                                         />
                                     </FormControl>
                                     <FormMessage />
                                     <p className="text-[10px] text-muted-foreground font-medium italic">
-                                        * This will override the class tuition fee.
+                                        * Fixed monthly fee for this student.
                                     </p>
                                 </FormItem>
                             )}
                         />
+
+                        {/* Document Vault Upload */}
+                        <div className="border rounded-md p-4 bg-muted/40 space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <UploadCloud className="w-4 h-4 text-primary" />
+                                Update Student Photo
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {form.watch('photo_url') && (
+                                    <div className="shrink-0">
+                                        <img src={form.watch('photo_url') as string} alt="Student Preview" className="w-16 h-16 object-cover rounded-full border shadow-sm bg-background" />
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleFileUpload(e, 'photo_url')}
+                                        disabled={isUploading}
+                                        className="text-xs bg-background"
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Document Vault Upload */}
                         <div className="border rounded-md p-4 bg-muted/40 space-y-3">
@@ -312,6 +373,13 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                         </div>
                     </form>
                 </Form>
+
+                <ImageCropper 
+                    open={cropModalOpen}
+                    onOpenChange={setCropModalOpen}
+                    imageSrc={tempCropImage}
+                    onCropComplete={handleCropComplete}
+                />
             </DialogContent>
         </Dialog>
     );

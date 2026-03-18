@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useState } from 'react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { studentFormSchema, type StudentFormData } from '@/features/students/schemas/student.schema';
@@ -13,6 +14,7 @@ import { createParentAction } from '@/features/parents/api/create-parent.action'
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { ImageCropper } from '@/components/ui/image-cropper';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -103,6 +105,10 @@ export function AddStudentDialog() {
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState(1);
     const [isUploading, setIsUploading] = useState(false);
+    
+    // Cropper State
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [tempCropImage, setTempCropImage] = useState<string>('');
 
     const createStudentMutation = useCreateStudent();
     const { data: classes, isLoading: isClassesLoading } = useClasses();
@@ -116,11 +122,13 @@ export function AddStudentDialog() {
         defaultValues: {
             roll_number: '',
             full_name: '',
-            parent_id: '',
-            date_of_birth: '',
+            status: 'ACTIVE',
+            date_of_birth: new Date().toISOString().split('T')[0],
             class_id: '',
+            parent_id: '',
             b_form_url: null,
             old_cert_url: null,
+            photo_url: null,
             monthly_fee: undefined,
         },
     });
@@ -148,9 +156,20 @@ export function AddStudentDialog() {
         prevClassId.current = watchedClassId;
     }, [watchedClassId, classes, form]);
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url' | 'old_cert_url') => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url' | 'old_cert_url' | 'photo_url') => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (fieldName === 'photo_url') {
+            // Read file for cropping instead of direct upload
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                setTempCropImage(reader.result?.toString() || "");
+                setCropModalOpen(true);
+            });
+            reader.readAsDataURL(file);
+            return;
+        }
 
         try {
             setIsUploading(true);
@@ -162,6 +181,12 @@ export function AddStudentDialog() {
         } finally {
             setIsUploading(false);
         }
+    };
+
+    const handleCropComplete = (base64Image: string) => {
+        // Direct Base64 save for db scalability instead of bucket upload
+        form.setValue('photo_url', base64Image);
+        toast.success('Photo cropped and added to profile.');
     };
 
     // Step Validation Logic
@@ -219,7 +244,7 @@ export function AddStudentDialog() {
                     Add New Student
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary">
                 <DialogHeader>
                     <DialogTitle>Register Student</DialogTitle>
                     <DialogDescription>
@@ -294,8 +319,15 @@ export function AddStudentDialog() {
                                     name="class_id"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Assign Class</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isClassesLoading}>
+                                            <div className="flex items-center justify-between">
+                                                <FormLabel>Assign Class <span className="text-destructive">*</span></FormLabel>
+                                                <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" asChild>
+                                                    <Link href="/settings/classes">
+                                                        <Plus className="h-3 w-3 mr-1" /> New Class
+                                                    </Link>
+                                                </Button>
+                                            </div>
+                                            <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isClassesLoading}>
                                                 <FormControl>
                                                     <SelectTrigger className="w-full">
                                                         <SelectValue placeholder={isClassesLoading ? 'Loading classes...' : 'Select a class'} />
@@ -320,7 +352,7 @@ export function AddStudentDialog() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <div className="flex items-center justify-between">
-                                                <FormLabel>Assign Parent</FormLabel>
+                                                <FormLabel>Assign Parent <span className="text-destructive">*</span></FormLabel>
                                                 {!isCreatingParent && (
                                                     <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" onClick={(e) => { e.preventDefault(); setIsCreatingParent(true); }}>
                                                         <Plus className="h-3 w-3 mr-1" /> New Parent
@@ -361,18 +393,18 @@ export function AddStudentDialog() {
                                     name="monthly_fee"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Custom Monthly Fee (Optional)</FormLabel>
+                                            <FormLabel>Monthly Fee <span className="text-destructive">*</span></FormLabel>
                                             <FormControl>
                                                 <Input 
                                                     type="number" 
                                                     placeholder="e.g. 5000" 
-                                                    value={field.value ?? ''}
+                                                    value={field.value !== null && field.value !== undefined ? field.value : ''}
                                                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                                                 />
                                             </FormControl>
                                             <FormMessage />
                                             <p className="text-[10px] text-muted-foreground font-medium italic">
-                                                * This will override the class tuition fee.
+                                                * Fixed monthly fee for this student.
                                             </p>
                                         </FormItem>
                                     )}
@@ -383,6 +415,32 @@ export function AddStudentDialog() {
                         {/* STEP 3: Document Vault */}
                         {step === 3 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="border rounded-md p-4 bg-muted/40 space-y-3">
+                                    <div className="flex items-center gap-2 text-sm font-medium">
+                                        <UploadCloud className="w-4 h-4 text-primary" />
+                                        Student Photo (Optional)
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-2">
+                                        Upload a clear portrait photo for the student profile and ID card.
+                                    </p>
+                                    <div className="flex items-center gap-4">
+                                        {form.watch('photo_url') && (
+                                            <div className="shrink-0">
+                                                <img src={form.watch('photo_url') as string} alt="Student Preview" className="w-16 h-16 object-cover rounded-full border shadow-sm bg-background" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1">
+                                            <Input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => handleFileUpload(e, 'photo_url')}
+                                                disabled={isUploading}
+                                                className="text-xs bg-background"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="border rounded-md p-4 bg-muted/40 space-y-3">
                                     <div className="flex items-center gap-2 text-sm font-medium">
                                         <UploadCloud className="w-4 h-4 text-primary" />
@@ -446,6 +504,13 @@ export function AddStudentDialog() {
                         </div>
                     </form>
                 </Form>
+
+                <ImageCropper 
+                    open={cropModalOpen}
+                    onOpenChange={setCropModalOpen}
+                    imageSrc={tempCropImage}
+                    onCropComplete={handleCropComplete}
+                />
             </DialogContent>
         </Dialog>
     );

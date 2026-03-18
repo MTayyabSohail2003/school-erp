@@ -69,8 +69,7 @@ export async function createParentAction(data: CreateParentFormData) {
 
         // 4. Send Welcome Email
 
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const loginUrl = `${siteUrl}/login`;
+
 
         const emailHtml = `
             <!DOCTYPE html>
@@ -112,8 +111,11 @@ export async function createParentAction(data: CreateParentFormData) {
                             For your security, please log in and change your password immediately.
                         </p>
                         
-                        <div class="btn-container">
-                            <a href="${loginUrl}" class="btn">Accept Invite & Log In</a>
+                        <div style="text-align: center; margin: 35px 0 20px;">
+                            <a href="https://ak-school-erp.vercel.app/login" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);">Accept Invite & Log In (Live)</a>
+                            <div style="margin-top: 15px; font-size: 13px; color: #64748b;">
+                                Local Access: <a href="http://localhost:3000/login" style="color: #10b981; text-decoration: underline;">localhost:3000</a>
+                            </div>
                         </div>
                         
                         <p style="margin-top: 30px; margin-bottom: 0;">Warm regards,<br><strong>The School Administration Team</strong></p>

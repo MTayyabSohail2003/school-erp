@@ -11,8 +11,6 @@ export const ROUTES = {
     DASHBOARD: '/dashboard',
     STUDENTS: '/dashboard/students',
     STAFF: '/dashboard/staff',
-    FEE_STRUCTURES: '/dashboard/finance/structures',
-    CHALLANS: '/dashboard/finance/challans',
     DEFAULTERS: '/dashboard/finance/defaulters',
     PAYROLL: '/dashboard/payroll',
     EXAMS: '/dashboard/exams',
@@ -20,4 +18,6 @@ export const ROUTES = {
     MARKS: '/dashboard/marks',
     SETTINGS_CLASSES: '/settings/classes',
     NOTICE_BOARD: '/settings/notices',
+    FEE: '/dashboard/fees',
+
 } as const;

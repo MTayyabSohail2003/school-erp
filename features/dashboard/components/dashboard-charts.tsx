@@ -18,17 +18,17 @@ const TICK_COLOR = 'rgba(160,160,160,0.9)';        // readable in both modes
 
 const TT = {
     contentStyle: {
-        background: 'hsl(var(--card))',
-        border: '1px solid rgba(128,128,128,0.25)',
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
         borderRadius: '12px',
-        color: 'hsl(var(--foreground))',
+        color: 'var(--foreground)',
         fontSize: '12px',
         boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
         padding: '10px 14px',
     },
-    itemStyle: { color: 'hsl(var(--foreground))' },
+    itemStyle: { color: 'var(--foreground)' },
     labelStyle: { color: TICK_COLOR, fontWeight: 600, marginBottom: 4 },
-    cursor: { fill: 'rgba(128,128,128,0.12)' },
+    cursor: { fill: 'var(--muted)', fillOpacity: 0.12 },
 };
 
 // ── Animated Chart Card ─────────────────────────────────────────────────────
@@ -204,9 +204,9 @@ function SubjectRadarChart({ data }: { data: { subject: string; average: number;
     return (
         <ResponsiveContainer width="100%" height={270}>
             <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} />
+                <PolarGrid stroke="var(--border)" />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} />
                 <defs>
                     <linearGradient id="radarGrad" x1="0" y1="0" x2="1" y2="1">
                         <stop offset="0%" stopColor="#6366f1" />

@@ -111,3 +111,21 @@ ADD COLUMN IF NOT EXISTS payment_method TEXT CHECK (payment_method IN ('CASH', '
 
 ALTER TABLE public.students
 ADD COLUMN IF NOT EXISTS monthly_fee NUMERIC;
+
+-- ============================================================================
+-- STUDENT PHOTO UPLOAD SUPPORT
+-- ============================================================================
+ALTER TABLE public.students 
+ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
+-- ============================================================================
+-- V. FEE CHALLAN ENHANCEMENTS (Partial Payments)
+-- ============================================================================
+ALTER TABLE public.fee_challans 
+ADD COLUMN IF NOT EXISTS paid_amount NUMERIC NOT NULL DEFAULT 0;
+
+-- ============================================================================
+-- W. MAKE FEE_STRUCTURE_ID OPTIONAL FOR DYNAMIC CHALLANS
+-- ============================================================================
+ALTER TABLE public.fee_challans
+ALTER COLUMN fee_structure_id DROP NOT NULL;

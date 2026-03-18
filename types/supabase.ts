@@ -188,34 +188,43 @@ export type Database = {
       fee_challans: {
         Row: {
           amount_due: number
+          arrears: number
           created_at: string
           due_date: string
           fee_structure_id: string
           id: string
           month_year: string
+          paid_amount: number
           paid_date: string | null
+          payment_method: string | null
           status: Database["public"]["Enums"]["fee_status"]
           student_id: string
         }
         Insert: {
           amount_due: number
+          arrears?: number
           created_at?: string
           due_date: string
           fee_structure_id: string
           id?: string
           month_year: string
+          paid_amount?: number
           paid_date?: string | null
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["fee_status"]
           student_id: string
         }
         Update: {
           amount_due?: number
+          arrears?: number
           created_at?: string
           due_date?: string
           fee_structure_id?: string
           id?: string
           month_year?: string
+          paid_amount?: number
           paid_date?: string | null
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["fee_status"]
           student_id?: string
         }
@@ -414,8 +423,10 @@ export type Database = {
           full_name: string
           guardian_name: string | null
           id: string
+          monthly_fee: number | null
           old_cert_url: string | null
           parent_id: string | null
+          photo_url: string | null
           roll_number: string
           status: string | null
         }
@@ -427,8 +438,10 @@ export type Database = {
           full_name: string
           guardian_name?: string | null
           id?: string
+          monthly_fee?: number | null
           old_cert_url?: string | null
           parent_id?: string | null
+          photo_url?: string | null
           roll_number: string
           status?: string | null
         }
@@ -440,8 +453,10 @@ export type Database = {
           full_name?: string
           guardian_name?: string | null
           id?: string
+          monthly_fee?: number | null
           old_cert_url?: string | null
           parent_id?: string | null
+          photo_url?: string | null
           roll_number?: string
           status?: string | null
         }

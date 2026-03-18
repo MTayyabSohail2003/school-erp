@@ -9,7 +9,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "School ERP — Admin Portal",
+  title: "AR-School ERP — Admin Portal",
   description: "School Management System — Students, Staff, Attendance, Exams & Fees",
   icons: {
     icon: "/logo.png",

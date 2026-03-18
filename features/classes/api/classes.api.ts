@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/client';
 export type ClassRecord = {
     id: string;
     name: string;
-    section: string;
+    section: string | null;
     class_teacher_id: string | null;
     is_primary: boolean;
 };
@@ -26,7 +26,7 @@ export const classesApi = {
     /**
      * Pure function to create a new class.
      */
-    createClass: async (classData: { name: string; section: string; class_teacher_id?: string | null; is_primary?: boolean }): Promise<ClassRecord> => {
+    createClass: async (classData: { name: string; section?: string | null; class_teacher_id?: string | null; is_primary?: boolean }): Promise<ClassRecord> => {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('classes')

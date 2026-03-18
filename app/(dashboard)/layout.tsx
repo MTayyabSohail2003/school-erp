@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <AnnouncementBanner />
                 <NotificationToastListener />
                 <main className="flex-1 p-6 lg:p-8 z-0">
-                    <div className="mx-auto max-w-7xl">
+                    <div className="w-full h-full">
                         {children}
                     </div>
                 </main>

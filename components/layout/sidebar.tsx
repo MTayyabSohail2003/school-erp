@@ -7,7 +7,7 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Banknote, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, FileText, CalendarDays, Briefcase, User, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -57,7 +57,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
             { name: 'Leave Requests', href: '/dashboard/attendance/leaves', icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
             { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
-            { name: 'Subjects', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
+            { name: 'Subjects & Periods', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
         ],
     },
     {
@@ -69,8 +69,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
     {
         label: 'Finance',
         items: [
-            { name: 'Fee Structures', href: ROUTES.FEE_STRUCTURES, icon: Banknote, exact: false, roles: ['ADMIN'] },
-            { name: 'Auto Challans', href: ROUTES.CHALLANS, icon: FileText, exact: false, roles: ['ADMIN', 'PARENT'] },
+            { name: 'Fees Management', href: ROUTES.FEE, icon: WalletCards, exact: false, roles: ['ADMIN'] },
             { name: 'Defaulters', href: ROUTES.DEFAULTERS, icon: AlertTriangle, exact: false, roles: ['ADMIN'] },
             { name: 'Staff Payroll', href: ROUTES.PAYROLL, icon: Wallet, exact: false, roles: ['ADMIN'] },
         ],
@@ -153,7 +152,7 @@ export default function AppSidebar() {
                         open ? 'opacity-100 h-auto translate-y-0' : 'opacity-0 h-0 -translate-y-4 hidden'
                     )}>
                         <span className="font-bold text-xl text-sidebar-foreground whitespace-nowrap tracking-wide">
-                            School ERP
+                            AR-School ERP
                         </span>
                         <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase mt-0.5">
                             Admin Portal
@@ -211,6 +210,10 @@ export default function AppSidebar() {
                                 alt="Profile Avatar"
                                 className="w-full h-full object-cover"
                             />
+                        ) : profile?.full_name ? (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/20 text-primary font-bold uppercase tracking-wider text-2xl">
+                                {profile.full_name.substring(0, 2)}
+                            </div>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-primary/20">
                                 <User className={cn("text-primary", open ? "w-7 h-7" : "w-5 h-5")} fill="currentColor" strokeWidth={1} />

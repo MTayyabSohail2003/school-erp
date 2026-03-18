@@ -110,11 +110,13 @@ export function Header() {
 
                 {/* User Profile Block */}
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 overflow-hidden rounded-full bg-primary/20 flex-shrink-0 flex items-center justify-center shadow-inner">
+                    <div className="h-10 w-10 overflow-hidden rounded-full bg-primary/20 flex-shrink-0 flex items-center justify-center shadow-inner text-primary font-bold uppercase tracking-wider text-sm">
                         {profile?.avatar_url ? (
                             <img src={profile.avatar_url} alt="User Avatar" className="h-full w-full object-cover" />
+                        ) : profile?.full_name ? (
+                            profile.full_name.substring(0, 2)
                         ) : (
-                            <User className="h-5 w-5 text-primary" />
+                            <User className="h-5 w-5" />
                         )}
                     </div>
                     <div className="hidden md:flex flex-col items-start leading-none justify-center">

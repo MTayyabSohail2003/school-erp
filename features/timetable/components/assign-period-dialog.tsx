@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Loader2, Trash2 } from 'lucide-react';
 
 import { useGetStaff } from '@/features/staff/api/use-get-staff';
-import { useGetSubjects } from '@/features/subjects/hooks/use-get-subjects';
+import { useClassSubjects } from '@/features/subjects/hooks/use-class-subjects';
 import { useUpsertTimetable } from '../hooks/use-upsert-timetable';
 import { useDeleteTimetable } from '../hooks/use-delete-timetable';
 import { timetableValidation } from '../utils/validation.utils';
@@ -64,7 +64,7 @@ export function AssignPeriodDialog({
     existingClassTimetable,
 }: AssignPeriodDialogProps) {
     const { data: staffList, isLoading: isStaffLoading } = useGetStaff();
-    const { data: subjectsList, isLoading: isSubjectsLoading } = useGetSubjects();
+    const { data: subjectsList, isLoading: isSubjectsLoading } = useClassSubjects(classId);
     const upsertMutation = useUpsertTimetable();
     const deleteMutation = useDeleteTimetable();
 
@@ -185,14 +185,14 @@ export function AssignPeriodDialog({
                                     <FormLabel>Subject</FormLabel>
                                     <FormControl>
                                         <select
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 dark:bg-muted/10 dark:text-foreground"
                                             {...field}
                                             disabled={isSubjectsLoading}
                                         >
-                                            <option value="" disabled>Select subject...</option>
+                                            <option value="" disabled className="dark:bg-background">Select subject...</option>
                                             {(subjectsList as Subject[])?.map((s) => (
-                                                <option key={s.id} value={s.id}>
-                                                    {s.name} ({s.code || 'N/A'})
+                                                <option key={s.id} value={s.id} className="dark:bg-background">
+                                                    {s.name.toUpperCase()} ({s.code?.toUpperCase() || 'N/A'})
                                                 </option>
                                             ))}
                                         </select>
@@ -210,13 +210,13 @@ export function AssignPeriodDialog({
                                     <FormLabel>Teacher</FormLabel>
                                     <FormControl>
                                         <select
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 dark:bg-muted/10 dark:text-foreground"
                                             {...field}
                                             disabled={isStaffLoading}
                                         >
-                                            <option value="" disabled>Select teacher...</option>
+                                            <option value="" disabled className="dark:bg-background">Select teacher...</option>
                                             {staffList?.map((t) => (
-                                                <option key={t.id} value={t.id}>
+                                                <option key={t.id} value={t.id} className="dark:bg-background">
                                                     {t.full_name}
                                                 </option>
                                             ))}

@@ -8,11 +8,12 @@ export const studentSchema = z.object({
     date_of_birth: z.string().refine((date) => !isNaN(Date.parse(date)), {
         message: 'Invalid date format',
     }),
-    class_id: z.string().uuid({ message: 'Select a valid class' }),
-    parent_id: z.string().uuid({ message: 'Select a valid parent' }),
+    class_id: z.string().min(1, { message: 'Select a valid class' }),
+    parent_id: z.string().min(1, { message: 'Select a valid parent' }),
     b_form_url: z.string().url().optional().nullable(),
     old_cert_url: z.string().url().optional().nullable(),
-    monthly_fee: z.number().min(0, { message: 'Fee must be positive' }).optional().nullable(),
+    photo_url: z.string().url().optional().nullable(),
+    monthly_fee: z.number().min(0, { message: 'Monthly fee is required and must be 0 or positive' }),
     created_at: z.string().optional(),
 });
 

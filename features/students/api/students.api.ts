@@ -45,6 +45,7 @@ export const studentsApi = {
                     parent_id: student.parent_id || null,
                     b_form_url: student.b_form_url,
                     old_cert_url: student.old_cert_url,
+                    photo_url: student.photo_url,
                     monthly_fee: student.monthly_fee,
                 }
             ])

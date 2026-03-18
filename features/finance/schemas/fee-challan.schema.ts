@@ -10,6 +10,7 @@ export const feeChallanSchema = z.object({
     month_year: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
     amount_due: z.number().min(0),
     arrears: z.number().min(0).default(0),
+    paid_amount: z.number().min(0).default(0),
     status: challanStatusEnum.default('PENDING'),
     due_date: z.string(),
     paid_date: z.string().nullable().optional(),

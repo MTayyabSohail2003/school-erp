@@ -1,6 +1,6 @@
 'use client';
 
-import { useClasses } from '@/features/classes/hooks/use-classes';
+import { useClasses, useDeleteClass } from '@/features/classes/hooks/use-classes';
 import {
     Table,
     TableBody,
@@ -11,10 +11,35 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Loader } from '@/components/ui/loader';
-import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { AlertCircle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function ClassesTable() {
     const { data: classes, isLoading, isError, error } = useClasses();
+    const deleteClassMutation = useDeleteClass();
+
+    const handleDelete = (id: string, name: string) => {
+        deleteClassMutation.mutate(id, {
+            onSuccess: () => {
+                toast.success(`Class ${name} deleted successfully.`);
+            },
+            onError: (err) => {
+                toast.error(`Failed to delete class: ${err.message}`);
+            },
+        });
+    };
 
     if (isLoading) {
         return (
@@ -49,7 +74,8 @@ export function ClassesTable() {
                     <TableRow>
                         <TableHead>Class Name</TableHead>
                         <TableHead>Section</TableHead>
-                        <TableHead className="text-right">System ID</TableHead>
+                        <TableHead>System ID</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -57,10 +83,41 @@ export function ClassesTable() {
                         <TableRow key={cls.id}>
                             <TableCell className="font-medium text-base">{cls.name}</TableCell>
                             <TableCell>
-                                <Badge variant="secondary">{cls.section}</Badge>
+                                {cls.section ? <Badge variant="secondary">{cls.section}</Badge> : <span className="text-muted-foreground text-xs italic">No Section</span>}
                             </TableCell>
-                            <TableCell className="text-right text-muted-foreground text-xs font-mono">
+                            <TableCell className="text-muted-foreground text-xs font-mono">
                                 {cls.id.split('-')[0]}...
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Class</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Are you sure you want to delete <strong>{cls.name}{cls.section ? ` - ${cls.section}` : ''}</strong>? 
+                                                This action cannot be undone and may fail if students are still enrolled in this class.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={() => handleDelete(cls.id, cls.name)}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </TableCell>
                         </TableRow>
                     ))}

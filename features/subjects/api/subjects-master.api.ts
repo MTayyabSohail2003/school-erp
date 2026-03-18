@@ -1,50 +1,51 @@
 import { createClient } from '@/lib/supabase/client';
 
-export type Subject = {
+export type SubjectMaster = {
     id: string;
     name: string;
     code: string | null;
+    created_at: string;
 };
 
-export interface SubjectAssignmentWithClass {
-    id: string;
-    name: string;
-    code: string | null;
-    class_id: string;
-    classes: {
-        name: string;
-        section: string;
-    } | null;
-}
-
-export const subjectsApi = {
-    getSubjects: async (): Promise<Subject[]> => {
+export const subjectsMasterApi = {
+    getSubjects: async (): Promise<SubjectMaster[]> => {
         const supabase = createClient();
         const { data, error } = await supabase
-            .from('subjects')
+            .from('subjects_master')
             .select('*')
             .order('name', { ascending: true });
 
         if (error) throw new Error(error.message);
-        return data as Subject[];
+        return data as SubjectMaster[];
     },
 
-    createSubject: async (name: string, code: string | null): Promise<Subject> => {
+    createSubject: async (name: string, code: string | null): Promise<SubjectMaster> => {
         const supabase = createClient();
         const { data, error } = await supabase
-            .from('subjects')
+            .from('subjects_master')
             .insert([{ name, code }])
             .select()
             .single();
 
         if (error) throw new Error(error.message);
-        return data as Subject;
+        return data as SubjectMaster;
+    },
+
+    bulkCreateSubjects: async (subjects: { name: string; code: string | null }[]): Promise<SubjectMaster[]> => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+            .from('subjects_master')
+            .insert(subjects)
+            .select();
+
+        if (error) throw new Error(error.message);
+        return data as SubjectMaster[];
     },
 
     deleteSubject: async (id: string): Promise<void> => {
         const supabase = createClient();
         const { error } = await supabase
-            .from('subjects')
+            .from('subjects_master')
             .delete()
             .eq('id', id);
 

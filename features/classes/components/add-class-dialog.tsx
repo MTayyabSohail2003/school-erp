@@ -55,12 +55,14 @@ export function AddClassDialog() {
         // Ensure class_teacher_id is null if it's an empty string or undefined
         const formattedValues = {
             ...values,
+            section: values.section?.trim() || null,
             class_teacher_id: values.class_teacher_id ?? null,
+            is_primary: values.is_primary ?? false,
         };
 
-        createClassMutation.mutate(formattedValues as any, {
+        createClassMutation.mutate(formattedValues, {
             onSuccess: () => {
-                toast.success(`Class ${values.name} - ${values.section} added successfully.`);
+                toast.success(`Class ${values.name}${values.section ? ` - ${values.section}` : ''} added successfully.`);
                 setOpen(false);
                 form.reset();
             },
@@ -95,7 +97,16 @@ export function AddClassDialog() {
                                 <FormItem>
                                     <FormLabel>Class Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g. Class 10" {...field} />
+                                        <Input 
+                                            placeholder="e.g. 10 or Class 10" 
+                                            {...field} 
+                                            onBlur={() => {
+                                                const trimmed = field.value.trim();
+                                                if (/^\d+$/.test(trimmed)) {
+                                                    field.onChange(`Class ${trimmed}`);
+                                                }
+                                            }}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -109,7 +120,12 @@ export function AddClassDialog() {
                                 <FormItem>
                                     <FormLabel>Section</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g. A" {...field} />
+                                        <Input 
+                                            placeholder="e.g. A" 
+                                            {...field} 
+                                            value={field.value || ''}
+                                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -124,7 +140,7 @@ export function AddClassDialog() {
                                     <FormLabel>Class Teacher (In-charge)</FormLabel>
                                     <Select 
                                         onValueChange={field.onChange} 
-                                        defaultValue={field.value || undefined}
+                                        value={field.value || ""}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">
@@ -133,7 +149,7 @@ export function AddClassDialog() {
                                         </FormControl>
                                         <SelectContent>
                                             {staff?.map((s) => (
-                                                <SelectItem key={s.id} value={s.id}>
+                                                <SelectItem key={s.id} value={s.id as string}>
                                                     {s.full_name}
                                                 </SelectItem>
                                             ))}

@@ -56,9 +56,10 @@ import {
 import { AlertCircle, FileText, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useDeleteStudent } from '../api/use-delete-student';
 import { EditStudentDialog } from './edit-student-dialog';
 import { Student } from '../schemas/student.schema';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useDeleteStudent } from '../api/use-delete-student';
 
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 
@@ -112,6 +113,7 @@ export function StudentsTable() {
     const [studentToDelete, setStudentToDelete] = React.useState<{ id: string; name: string } | null>(null);
     const [studentToEdit, setStudentToEdit] = React.useState<any | null>(null);
     const [drawerStudent, setDrawerStudent] = React.useState<any | null>(null);
+    const [photoViewerUrl, setPhotoViewerUrl] = React.useState<string | null>(null);
 
     const confirmDelete = () => {
         if (!studentToDelete) return;
@@ -152,9 +154,21 @@ export function StudentsTable() {
             },
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase hidden sm:flex">
-                        {(row.getValue('full_name') as string).substring(0, 2)}
-                    </div>
+                    {row.original.photo_url ? (
+                        <div 
+                            className="h-8 w-8 rounded-full overflow-hidden border shadow-sm hidden sm:block shrink-0 cursor-pointer ring-offset-2 hover:ring-2 ring-primary/50 transition-all"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPhotoViewerUrl(row.original.photo_url);
+                            }}
+                        >
+                            <img src={row.original.photo_url} alt="Photo" className="h-full w-full object-cover" />
+                        </div>
+                    ) : (
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase hidden sm:flex shrink-0">
+                            {(row.getValue('full_name') as string).substring(0, 2)}
+                        </div>
+                    )}
                     <div>
                         <div className="font-semibold text-foreground">{row.getValue('full_name')}</div>
                         <div className="text-xs text-muted-foreground md:hidden">{row.original.classes?.name} - {row.original.classes?.section}</div>
@@ -450,9 +464,23 @@ export function StudentsTable() {
             <Drawer open={!!drawerStudent} onOpenChange={(o) => (!o && setDrawerStudent(null))}>
                 <DrawerContent>
                     <div className="w-full">
-                        <DrawerHeader>
-                            <DrawerTitle className="text-xl">{drawerStudent?.full_name}</DrawerTitle>
-                            <DrawerDescription>Roll No: {drawerStudent?.roll_number}</DrawerDescription>
+                        <DrawerHeader className="flex items-center gap-4 text-left">
+                            {drawerStudent?.photo_url ? (
+                                <img 
+                                    src={drawerStudent.photo_url} 
+                                    alt="Photo" 
+                                    className="w-12 h-12 rounded-full object-cover border shadow-sm shrink-0 cursor-pointer ring-offset-2 hover:ring-2 ring-primary/50 transition-all" 
+                                    onClick={() => setPhotoViewerUrl(drawerStudent.photo_url)}
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase shrink-0">
+                                    {(drawerStudent?.full_name as string)?.substring(0, 2) || ''}
+                                </div>
+                            )}
+                            <div>
+                                <DrawerTitle className="text-xl">{drawerStudent?.full_name}</DrawerTitle>
+                                <DrawerDescription>Roll No: {drawerStudent?.roll_number}</DrawerDescription>
+                            </div>
                         </DrawerHeader>
                         <div className="p-4 pb-0 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -537,6 +565,21 @@ export function StudentsTable() {
                 setIsOpen={(open) => !open && setStudentToEdit(null)}
                 student={studentToEdit}
             />
+
+            {/* Photo Lightbox */}
+            <Dialog open={!!photoViewerUrl} onOpenChange={(open) => !open && setPhotoViewerUrl(null)}>
+                <DialogContent className="sm:max-w-md p-1 bg-transparent border-none shadow-none">
+                    <div className="relative w-full overflow-hidden rounded-xl aspect-square bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-2xl">
+                        {photoViewerUrl && (
+                            <img 
+                                src={photoViewerUrl} 
+                                alt="Student Portrait" 
+                                className="w-full h-full object-contain" 
+                            />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

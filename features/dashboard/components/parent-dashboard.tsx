@@ -1,19 +1,19 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { useStudents } from '@/features/students/hooks/use-students';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { PageTransition, StaggerList, StaggerItem } from '@/components/ui/motion';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { GraduationCap, User, Award, BookOpen, TrendingUp } from 'lucide-react';
-import { format } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { GraduationCap, User, Award, BookOpen, TrendingUp, LayoutGrid, List, Users, Activity, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -28,6 +28,49 @@ const ttStyle = {
     itemStyle: { color: 'hsl(var(--foreground))' },
 };
 
+// ── Premium KPI Card ────────────────────────────────────────────────────────
+
+type KpiCardProps = {
+    title: string;
+    value: string | number;
+    subtitle: string;
+    icon: React.ElementType;
+    gradient: string;
+    glow: string;
+    trend?: string;
+    trendUp?: boolean;
+};
+
+// Removed Framer motion animation to adhere to use client / motion rules cleanly
+function KpiCard({ title, value, subtitle, icon: Icon, gradient, glow, trend, trendUp = true }: KpiCardProps) {
+    return (
+        <div className="h-full transition-transform hover:-translate-y-1 hover:scale-[1.02] duration-300">
+            <div className={`relative h-full rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-xl ${glow} overflow-hidden`}>
+                <div className="absolute -right-5 -top-5 h-28 w-28 rounded-full bg-white/10" />
+                <div className="absolute -right-2 bottom-4 h-16 w-16 rounded-full bg-white/5" />
+
+                <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex items-start justify-between mb-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                            <Icon className="h-5 w-5 text-white" />
+                        </div>
+                        {trend && (
+                            <span className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full ${trendUp ? 'bg-white/20' : 'bg-black/20'}`}>
+                                <span className={`text-[10px] ${!trendUp ? 'rotate-90' : ''}`}>{trendUp ? '↗' : '↘'}</span>
+                                {trend}
+                            </span>
+                        )}
+                    </div>
+
+                    <p className="text-xs font-semibold uppercase tracking-widest text-white/70 mt-auto">{title}</p>
+                    <p className="text-4xl font-black tracking-tight mt-0.5">{value}</p>
+                    <p className="text-xs text-white/65 mt-1">{subtitle}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Fetch marks for a specific student  
 function useStudentMarks(studentId?: string) {
     return useQuery({
@@ -39,7 +82,7 @@ function useStudentMarks(studentId?: string) {
                 .from('exam_marks')
                 .select('marks_obtained, total_marks, subjects(name), exams(name)')
                 .eq('student_id', studentId);
-            return (data ?? []).map((m: any) => ({
+            return (data ?? []).map((m: { subjects: { name: string } | { name: string }[], exams: { name: string } | { name: string }[], total_marks: number, marks_obtained: number }) => ({
                 subject: Array.isArray(m.subjects) ? m.subjects[0]?.name : m.subjects?.name ?? 'N/A',
                 exam: Array.isArray(m.exams) ? m.exams[0]?.name : m.exams?.name ?? 'Exam',
                 score: m.total_marks ? Math.round((m.marks_obtained / m.total_marks) * 100) : 0,
@@ -75,7 +118,9 @@ function useStudentAttendance(studentId?: string) {
     });
 }
 
-function ChildCard({ child }: { child: any }) {
+export type DashboardChild = { id?: string; full_name?: string; roll_number?: string; photo_url?: string; monthly_fee?: number | string | null; classes?: { name: string; section: string } };
+
+function ChildCard({ child }: { child: DashboardChild }) {
     const { data: marks, isLoading: marksLoading } = useStudentMarks(child.id);
     const { data: attendance, isLoading: attLoading } = useStudentAttendance(child.id);
     const total = (attendance?.present ?? 0) + (attendance?.absent ?? 0) + (attendance?.leave ?? 0);
@@ -87,6 +132,7 @@ function ChildCard({ child }: { child: any }) {
             {/* Child Header */}
             <div className="bg-gradient-to-r from-primary/15 via-primary/8 to-transparent px-5 py-4 flex items-center gap-4 border-b">
                 <Avatar className="h-14 w-14 border-2 border-background shadow">
+                    {child.photo_url && <AvatarImage src={child.photo_url} alt={child.full_name} style={{ objectFit: 'cover' }} />}
                     <AvatarFallback className="bg-primary/20 text-primary text-lg font-bold">
                         {child.full_name?.substring(0, 2).toUpperCase() || <User className="h-6 w-6" />}
                     </AvatarFallback>
@@ -103,6 +149,12 @@ function ChildCard({ child }: { child: any }) {
                 <div className="text-right shrink-0">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Roll No</p>
                     <p className="text-xl font-black text-primary">#{child.roll_number || '??'}</p>
+                    {child.monthly_fee && (
+                        <div className="mt-1">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Monthly Fee</p>
+                            <p className="text-sm font-bold">Rs {Number(child.monthly_fee).toLocaleString()}</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -180,9 +232,10 @@ function ChildCard({ child }: { child: any }) {
                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                                 <XAxis dataKey="subject" tick={{ fontSize: 8, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
                                 <YAxis domain={[0, 100]} hide />
+                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                 <Tooltip {...ttStyle} formatter={(v: any) => [`${v}%`, 'Score']} />
                                 <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                                    {subjectScores.map((s: any, i: number) => (
+                                    {subjectScores.map((s: { score: number }, i: number) => (
                                         <Cell key={i} fill={s.score >= 75 ? '#10b981' : s.score >= 50 ? '#f59e0b' : '#ef4444'} />
                                     ))}
                                 </Bar>
@@ -197,32 +250,108 @@ function ChildCard({ child }: { child: any }) {
 
 export function ParentDashboard({ profile }: { profile: { id: string; full_name?: string } }) {
     const { data: children, isLoading } = useStudents(profile.id);
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    const firstName = profile?.full_name?.split(' ')[0] || 'there';
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const totalFee = children?.reduce((sum, child) => sum + (Number((child as DashboardChild).monthly_fee) || 0), 0) || 0;
+
+    const filteredChildren = (children as unknown as DashboardChild[])?.filter((child) => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            child.full_name?.toLowerCase().includes(q) ||
+            child.roll_number?.toLowerCase().includes(q)
+        );
+    });
 
     return (
         <PageTransition>
-            <div className="space-y-7">
-                {/* ── Hero Banner ── */}
-                <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-6 py-7 text-white shadow-xl">
-                    <div className="absolute right-0 top-0 h-full w-48 opacity-10 bg-[radial-gradient(circle_at_right,_white_0%,_transparent_65%)]" />
-                    <div className="absolute -bottom-8 -right-8 h-48 w-48 rounded-full bg-white/5" />
-                    <p className="text-sm font-medium opacity-75">{format(new Date(), 'EEEE, MMMM dd, yyyy')}</p>
-                    <h1 className="text-2xl font-bold mt-1">{greeting}, {firstName}! 👋</h1>
-                    <p className="text-sm opacity-70 mt-1">Track your {children?.length === 1 ? "child's" : "children's"} progress from one place.</p>
-                    <div className="flex items-center gap-3 mt-4">
-                        <div className="bg-white/20 rounded-lg px-3 py-1.5 text-sm font-medium">
-                            👨‍👩‍👧 {isLoading ? '...' : children?.length ?? 0} {(children?.length ?? 0) === 1 ? 'Child' : 'Children'} Enrolled
-                        </div>
+            <div className="space-y-8">
+                {/* ── Core KPIs ── */}
+                <div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="h-4 w-1 rounded-full bg-primary" />
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Overview</h2>
                     </div>
+                    
+                    <StaggerList className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <StaggerItem>
+                            <KpiCard
+                                title="Total Children"
+                                value={isLoading ? '—' : children?.length ?? 0}
+                                subtitle="Active enrollments"
+                                icon={Users}
+                                gradient="from-blue-600 to-indigo-700"
+                                glow="shadow-xl shadow-blue-500/30"
+                                trend="Active"
+                            />
+                        </StaggerItem>
+                        <StaggerItem>
+                            <KpiCard
+                                title="Monthly Fee"
+                                value={isLoading ? '—' : `Rs ${totalFee.toLocaleString()}`}
+                                subtitle="Total consolidated fee"
+                                icon={TrendingUp}
+                                gradient="from-violet-600 to-purple-700"
+                                glow="shadow-xl shadow-violet-500/30"
+                                trend="This Month"
+                            />
+                        </StaggerItem>
+                        <StaggerItem>
+                            <KpiCard
+                                title="Account Status"
+                                value="Active"
+                                subtitle="All systems operational"
+                                icon={Activity}
+                                gradient="from-emerald-500 to-teal-600"
+                                glow="shadow-xl shadow-emerald-500/30"
+                                trend="Monitor"
+                            />
+                        </StaggerItem>
+                    </StaggerList>
                 </div>
 
                 {/* ── Children Detail Cards ── */}
                 <div>
-                    <div className="flex items-center gap-2 mb-4">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <h2 className="text-base font-semibold text-foreground">Your Children</h2>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <h2 className="text-base font-semibold text-foreground">Your Children</h2>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    placeholder="Search by name or roll no..."
+                                    className="pl-8 h-9 shadow-sm"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            
+                            <div className="flex items-center bg-muted/50 p-1 rounded-lg border w-full sm:w-auto">
+                            <Button
+                                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                size="sm"
+                                className="h-7 px-3 rounded-md shadow-none"
+                                onClick={() => setViewMode('grid')}
+                            >
+                                <LayoutGrid className="h-4 w-4 mr-1.5" />
+                                Cards
+                            </Button>
+                            <Button
+                                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                                size="sm"
+                                className="h-7 px-3 rounded-md shadow-none"
+                                onClick={() => setViewMode('table')}
+                            >
+                                <List className="h-4 w-4 mr-1.5" />
+                                Table
+                            </Button>
+                            </div>
+                        </div>
                     </div>
 
                     {isLoading ? (
@@ -233,15 +362,58 @@ export function ParentDashboard({ profile }: { profile: { id: string; full_name?
                         <Card className="border-dashed border-2 bg-muted/10">
                             <CardContent className="flex flex-col items-center justify-center py-16">
                                 <User className="h-12 w-12 text-muted-foreground mb-3" />
-                                <p className="font-semibold text-muted-foreground">No children linked to your account</p>
-                                <p className="text-sm text-muted-foreground mt-1">Please contact the school administration.</p>
+                                <p className="font-semibold text-muted-foreground">
+                                    {searchQuery ? 'No children found matching your search.' : 'No children linked to your account'}
+                                </p>
+                                {!searchQuery && <p className="text-sm text-muted-foreground mt-1">Please contact the school administration.</p>}
                             </CardContent>
+                        </Card>
+                    ) : viewMode === 'table' ? (
+                        <Card className="overflow-hidden border shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs uppercase bg-muted/50 border-b">
+                                        <tr>
+                                            <th className="px-4 py-3 font-semibold">Student</th>
+                                            <th className="px-4 py-3 font-semibold">Roll No</th>
+                                            <th className="px-4 py-3 font-semibold">Class</th>
+                                            <th className="px-4 py-3 font-semibold text-right">Monthly Fee</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {(filteredChildren as unknown as DashboardChild[])?.map((child) => (
+                                            <tr key={child.id} className="hover:bg-muted/10 transition-colors">
+                                                <td className="px-4 py-3 text-nowrap">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-8 w-8">
+                                                            {child.photo_url && <AvatarImage src={child.photo_url} alt={child.full_name} style={{ objectFit: 'cover' }} />}
+                                                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                                                                {child.full_name?.substring(0, 2).toUpperCase()}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="font-medium">{child.full_name}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 font-semibold text-nowrap">#{child.roll_number || '??'}</td>
+                                                <td className="px-4 py-3 text-muted-foreground text-nowrap">
+                                                    {child.classes?.name && child.classes?.section
+                                                        ? `${child.classes.name} — Section ${child.classes.section}`
+                                                        : 'Unassigned'}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-medium text-nowrap">
+                                                    {child.monthly_fee ? `Rs ${Number(child.monthly_fee).toLocaleString()}` : '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </Card>
                     ) : (
                         <div className="grid gap-6 lg:grid-cols-2">
-                            {children?.map((child) => (
+                            {(filteredChildren as unknown as DashboardChild[])?.map((child) => (
                                 <div key={child.id}>
-                                    <ChildCard child={child as any} />
+                                    <ChildCard child={child} />
                                 </div>
                             ))}
                         </div>
