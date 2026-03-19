@@ -1,87 +1,39 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { User, Calendar, Award } from 'lucide-react';
+import { useState } from 'react';
 import { format } from 'date-fns';
+import { Calendar as CalendarIcon, User, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useStudents } from '@/features/students/hooks/use-students';
-import { useGetStudentAttendance } from '../api/use-get-student-attendance';
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
+import { useGetStudentsAttendanceByDate } from '../api/use-get-students-attendance-by-date';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageTransition, StaggerList, StaggerItem } from '@/components/ui/motion';
+import { Card, CardContent } from '@/components/ui/card';
+import { PageTransition } from '@/components/ui/motion';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-
-function ChildAttendanceCard({ child }: { child: any }) {
-    const { data: attendance, isLoading } = useGetStudentAttendance(child.id);
-
-    const counts = { present: 0, absent: 0, leave: 0 };
-    attendance?.forEach(r => {
-        if (r.status === 'PRESENT') counts.present++;
-        else if (r.status === 'ABSENT') counts.absent++;
-        else counts.leave++;
-    });
-
-    const total = counts.present + counts.absent + counts.leave;
-    const attRate = total > 0 ? Math.round((counts.present / total) * 100) : 0;
-
-    return (
-        <Card className="overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/10 to-transparent px-5 py-4 flex items-center gap-4 border-b">
-                <Avatar className="h-12 w-12 border-2 border-background shadow">
-                    <AvatarFallback className="bg-primary/20 text-primary text-sm font-bold">
-                        {child.full_name?.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                    <h3 className="font-bold text-lg">{child.full_name}</h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                        {child.classes?.name} — Section {child.classes?.section}
-                    </p>
-                </div>
-            </div>
-
-            <CardContent className="p-0">
-                {isLoading ? (
-                    <div className="p-5"><Skeleton className="h-[100px] w-full" /></div>
-                ) : (
-                    <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b">
-                        <div className="p-4 text-center">
-                            <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Attendance Rate</p>
-                            <p className={`text-2xl font-bold ${attRate >= 75 ? 'text-emerald-500' : attRate >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{attRate}%</p>
-                        </div>
-                        <div className="p-4 flex flex-col justify-center">
-                            <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Present:</span><span className="font-bold text-emerald-600">{counts.present}</span></div>
-                            <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">Absent:</span><span className="font-bold text-red-600">{counts.absent}</span></div>
-                            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Leave:</span><span className="font-bold text-amber-600">{counts.leave}</span></div>
-                        </div>
-                        <div className="col-span-1 md:col-span-1 bg-muted/10 p-4 max-h-[160px] overflow-y-auto">
-                            <p className="text-xs text-muted-foreground uppercase font-semibold mb-3">Recent Records</p>
-                            {(!attendance || attendance.length === 0) ? (
-                                <p className="text-xs text-muted-foreground">No records found.</p>
-                            ) : (
-                                <div className="space-y-2">
-                                    {attendance.slice(0, 10).map((record) => (
-                                        <div key={record.record_date} className="flex justify-between items-center text-sm border-b pb-1 last:border-0">
-                                            <span>{format(new Date(record.record_date), 'MMM dd, yyyy')}</span>
-                                            <Badge variant="outline" className={`text-[10px] uppercase ${record.status === 'PRESENT' ? 'border-emerald-500 text-emerald-600' : record.status === 'ABSENT' ? 'border-red-500 text-red-600' : 'border-amber-500 text-amber-600'}`}>
-                                                {record.status}
-                                            </Badge>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 export function ParentAttendanceView() {
-    const { data: children, isLoading } = useStudents();
+    const [date, setDate] = useState<Date>(new Date());
+    const dateStr = format(date, 'yyyy-MM-dd');
+
+    const { data: profile } = useAuthProfile();
+    const { data: children, isLoading: studentsLoading } = useStudents({ parentId: profile?.id });
+    
+    const studentIds = children?.map(c => c.id).filter((id): id is string => !!id) || [];
+    const { data: attendance, isLoading: attendanceLoading } = useGetStudentsAttendanceByDate(studentIds, dateStr);
+
+    const isLoading = studentsLoading || attendanceLoading || !profile;
+
+    const getStatus = (studentId: string) => {
+        const record = attendance?.find(r => r.student_id === studentId);
+        return record?.status || 'NOT_MARKED';
+    };
 
     return (
         <PageTransition>
@@ -89,20 +41,64 @@ export function ParentAttendanceView() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                            <Calendar className="h-5 w-5 text-primary" />
+                            <CalendarIcon className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Attendance Records</h1>
-                            <p className="text-sm text-muted-foreground">View your children&apos;s recent attendance</p>
+                            <h1 className="text-2xl font-bold tracking-tight">Daily Attendance</h1>
+                            <p className="text-sm text-muted-foreground">Monitor your children&apos;s daily attendance</p>
                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-full"
+                            onClick={() => setDate(d => {
+                                const newDate = new Date(d);
+                                newDate.setDate(d.getDate() - 1);
+                                return newDate;
+                            })}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        <Input
+                            type="date"
+                            value={dateStr}
+                            onChange={(e) => {
+                                const newDate = new Date(e.target.value);
+                                if (!isNaN(newDate.getTime())) setDate(newDate);
+                            }}
+                            max={format(new Date(), 'yyyy-MM-dd')}
+                            className="w-[170px] rounded-full border-primary/20 bg-background"
+                        />
+
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-full"
+                            disabled={dateStr === format(new Date(), 'yyyy-MM-dd')}
+                            onClick={() => setDate(d => {
+                                const newDate = new Date(d);
+                                newDate.setDate(d.getDate() + 1);
+                                return newDate;
+                            })}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
 
                 {isLoading ? (
-                    <StaggerList className="grid gap-5 lg:grid-cols-2">
-                        {[0, 1].map((i) => <Skeleton key={i} className="h-64 rounded-xl" />)}
-                    </StaggerList>
-                ) : children?.length === 0 ? (
+                    <Card className="border-none shadow-premium overflow-hidden">
+                        <CardContent className="p-0">
+                            <div className="space-y-4 p-6">
+                                {[0, 1].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (!children || children.length === 0) ? (
                     <Card className="border-dashed border-2 bg-muted/10">
                         <CardContent className="flex flex-col items-center justify-center py-16">
                             <User className="h-12 w-12 text-muted-foreground mb-3" />
@@ -110,13 +106,64 @@ export function ParentAttendanceView() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <StaggerList className="grid gap-5 lg:grid-cols-2">
-                        {children?.map((child: any) => (
-                            <StaggerItem key={child.id}>
-                                <ChildAttendanceCard child={child} />
-                            </StaggerItem>
-                        ))}
-                    </StaggerList>
+                    <Card className="overflow-hidden border-none shadow-premium bg-card/50 backdrop-blur-sm">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-primary/10">
+                                    <TableHead className="w-[300px] py-4">Student</TableHead>
+                                    <TableHead>Class & Section</TableHead>
+                                    <TableHead className="text-right">Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {children.map((child: any) => (
+                                    <TableRow key={child.id} className="hover:bg-primary/5 transition-colors border-b-primary/5">
+                                        <TableCell className="py-4">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-10 w-10 border border-primary/20 shadow-sm">
+                                                    {child.photo_url ? (
+                                                        <img src={child.photo_url} alt={child.full_name} className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold uppercase">
+                                                            {child.full_name?.substring(0, 2)}
+                                                        </AvatarFallback>
+                                                    )}
+                                                </Avatar>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-sm">{child.full_name}</span>
+                                                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">ROLL: {child.roll_number}</span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary" className="font-semibold bg-primary/10 text-primary hover:bg-primary/20 border-none px-3">
+                                                {child.classes?.name} — {child.classes?.section}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {(() => {
+                                                const status = getStatus(child.id);
+                                                return (
+                                                    <Badge 
+                                                        variant="outline" 
+                                                        className={cn(
+                                                            "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm",
+                                                            status === 'PRESENT' && "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20",
+                                                            status === 'ABSENT' && "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400 ring-1 ring-red-500/20",
+                                                            status === 'LEAVE' && "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20",
+                                                            status === 'NOT_MARKED' && "border-slate-200 bg-slate-50 text-slate-400"
+                                                        )}
+                                                    >
+                                                        {status.replace('_', ' ')}
+                                                    </Badge>
+                                                );
+                                            })()}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Card>
                 )}
             </div>
         </PageTransition>

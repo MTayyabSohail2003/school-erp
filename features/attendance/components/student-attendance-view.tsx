@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { CalendarDays, Save, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { useClasses } from '@/features/classes/hooks/use-classes';
+import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes';
 import { useGetAttendance } from '../api/use-get-attendance';
 import { useUpsertAttendance } from '../api/use-upsert-attendance';
 import { type AttendanceStatus } from '../schemas/attendance.schema';
@@ -51,7 +51,7 @@ export function StudentAttendanceView() {
     // Map of student_id → status (local state before save)
     const [statusMap, setStatusMap] = useState<Record<string, AttendanceStatus>>({});
 
-    const { data: classes, isLoading: classesLoading } = useClasses();
+    const { data: classes, isLoading: classesLoading } = useTeacherClasses();
     const { data: attendanceData, isLoading: attendanceLoading } = useGetAttendance(selectedClassId, selectedDate);
     const upsertMutation = useUpsertAttendance(selectedClassId, selectedDate);
     const { data: profile } = useAuthProfile();
@@ -112,6 +112,8 @@ export function StudentAttendanceView() {
     const leaveCount = Object.values(statusMap).filter((s) => s === 'LEAVE').length;
     const unmarkedCount = studentList.length - Object.keys(statusMap).length;
 
+    const isTeacher = profile?.role === 'TEACHER';
+
     return (
         <PageTransition>
             <div className="space-y-6">
@@ -123,22 +125,26 @@ export function StudentAttendanceView() {
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">Daily Attendance</h1>
-                            <p className="text-sm text-muted-foreground">Mark attendance for a class</p>
+                            <p className="text-sm text-muted-foreground">
+                                {isTeacher ? 'Mark attendance for your class' : 'Overview of student attendance'}
+                            </p>
                         </div>
                     </div>
 
-                    <Button
-                        onClick={handleSave}
-                        disabled={upsertMutation.isPending || studentList.length === 0}
-                        className="gap-2"
-                    >
-                        {upsertMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Save className="h-4 w-4" />
-                        )}
-                        Save Attendance
-                    </Button>
+                    {isTeacher && (
+                        <Button
+                            onClick={handleSave}
+                            disabled={upsertMutation.isPending || studentList.length === 0}
+                            className="gap-2"
+                        >
+                            {upsertMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Save className="h-4 w-4" />
+                            )}
+                            Save Attendance
+                        </Button>
+                    )}
                 </div>
 
                 {/* ── Filters ── */}
@@ -249,9 +255,17 @@ export function StudentAttendanceView() {
                                         >
                                             {/* Student info */}
                                             <div className="flex items-center gap-3 min-w-0">
-                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
-                                                    {student.roll_number}
-                                                </div>
+                                                {student.photo_url ? (
+                                                    <img
+                                                        src={student.photo_url}
+                                                        alt={student.full_name}
+                                                        className="h-8 w-8 rounded-full object-cover shrink-0 border border-primary/20 shadow-sm"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                                                        {student.roll_number}
+                                                    </div>
+                                                )}
                                                 <span className="text-sm font-medium truncate">{student.full_name}</span>
                                             </div>
 
@@ -260,8 +274,8 @@ export function StudentAttendanceView() {
                                                 {(Object.keys(STATUS_CONFIG) as AttendanceStatus[]).map((status) => (
                                                     <button
                                                         key={status}
-                                                        onClick={() => setStatus(student.id, status)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 cursor-pointer ${currentStatus === status
+                                                        onClick={() => isTeacher && setStatus(student.id, status)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 ${isTeacher ? 'cursor-pointer' : 'cursor-default'} ${currentStatus === status
                                                             ? STATUS_CONFIG[status].className
                                                             : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40'
                                                             }`}

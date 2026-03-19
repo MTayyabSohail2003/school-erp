@@ -5,11 +5,12 @@ import { DashboardCharts } from './dashboard-charts';
 import { StaggerList, StaggerItem } from '@/components/ui/motion';
 import {
     Users, Briefcase, TrendingUp, AlertTriangle,
-    Activity, ChevronRight, Zap
+    Activity, ChevronRight, Zap, RefreshCcw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ROUTES } from '@/constants/globals';
 import { format } from 'date-fns';
+import { NoticeBoardWidget } from '@/features/notices/components/notice-board-widget';
 
 // ── Premium KPI Card ────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ function AlertBanner({ icon: Icon, title, value, subtitle, href, palette }: Aler
 
 
 export function AdminDashboard({ profile }: { profile: { full_name?: string; role?: string } }) {
-    const { data: stats, isLoading } = useAdminDashboardStats();
+    const { data: stats, isLoading, refetchStats, isRefetching } = useAdminDashboardStats();
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -131,7 +132,18 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
                         <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
                             {greeting}, {firstName}! 👋
                         </h1>
-                        <p className="text-sm text-white/60 mt-1.5">{format(today, 'EEEE, MMMM dd, yyyy')}</p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                            <p className="text-sm text-white/60">{format(today, 'EEEE, MMMM dd, yyyy')}</p>
+                            <div className="h-4 w-[1px] bg-white/10" />
+                            <button 
+                                onClick={() => refetchStats()}
+                                disabled={isRefetching}
+                                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCcw className={`h-3 w-3 ${isRefetching ? 'animate-spin' : ''}`} />
+                                {isRefetching ? 'Refreshing...' : 'Refresh'}
+                            </button>
+                        </div>
 
                         <div className="flex flex-wrap gap-2 mt-4">
                             {!isLoading && (
@@ -159,13 +171,13 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
                                 transition={{ delay: 0.3 }}
                                 className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-6 py-4 shrink-0 text-center"
                             >
-                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Fee Collection</p>
-                                <p className="text-2xl font-black">
-                                    {stats?.financials.currentMonthPaidCount ?? 0}
-                                    <span className="text-sm font-normal text-white/40 mx-1">/</span>
-                                    {(stats?.financials.currentMonthPaidCount ?? 0) + (stats?.financials.currentMonthPendingCount ?? 0)}
+                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Net Profit</p>
+                                <p className={`text-2xl font-black ${(stats?.financials.currentMonthProfit ?? 0) >= 0 ? 'text-white' : 'text-rose-400'}`}>
+                                    Rs. {(stats?.financials.currentMonthProfit ?? 0).toLocaleString()}
                                 </p>
-                                <p className="text-[10px] text-emerald-300 font-bold uppercase tracking-tight mt-1">Students Paid</p>
+                                <p className="text-[10px] text-emerald-300 font-bold uppercase tracking-tight mt-1">
+                                    Total Collected: Rs. {(stats?.financials.currentMonthCollected ?? 0).toLocaleString()}
+                                </p>
                             </motion.div>
 
                             <motion.div
@@ -174,9 +186,11 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
                                 transition={{ delay: 0.4 }}
                                 className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl px-6 py-4 shrink-0 text-center"
                             >
-                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Collected</p>
-                                <p className="text-2xl font-black">Rs. {(stats?.financials.currentMonthCollected ?? 0).toLocaleString()}</p>
-                                <p className="text-xs text-yellow-300 mt-1">Pending: Rs. {(stats?.financials.currentMonthPending ?? 0).toLocaleString()}</p>
+                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Staff Payroll</p>
+                                <p className="text-2xl font-black text-rose-300">
+                                    Rs. {(stats?.financials.currentMonthStaffPayroll ?? 0).toLocaleString()}
+                                </p>
+                                <p className="text-[10px] text-rose-200/70 font-bold uppercase tracking-tight mt-1">Paid this month</p>
                             </motion.div>
                         </div>
                     )}
@@ -279,6 +293,26 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
                 </StaggerList>
             </div>
 
+
+            {/* ── Latest Notices & Updates ── */}
+            <div>
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="h-4 w-1 rounded-full bg-blue-500" />
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Announcements</h2>
+                </div>
+                <div className="grid gap-6 lg:grid-cols-3">
+                    <div className="lg:col-span-2">
+                        <NoticeBoardWidget role="ADMIN" />
+                    </div>
+                    {/* Placeholder for future sidebar widget or more stats */}
+                    <div className="hidden lg:block space-y-4">
+                        <div className="bg-muted/10 border-2 border-dashed border-muted rounded-2xl p-8 flex flex-col items-center justify-center text-center opacity-40">
+                             <Zap className="h-8 w-8 mb-2" />
+                             <p className="text-sm font-bold">More features coming soon</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {/* ── Analytics Charts ── */}
             <DashboardCharts />

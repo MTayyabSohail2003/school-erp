@@ -16,6 +16,7 @@ import { GraduationCap, User, Award, BookOpen, TrendingUp, LayoutGrid, List, Use
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { NoticeBoardWidget } from '@/features/notices/components/notice-board-widget';
 
 const ttStyle = {
     contentStyle: {
@@ -41,7 +42,6 @@ type KpiCardProps = {
     trendUp?: boolean;
 };
 
-// Removed Framer motion animation to adhere to use client / motion rules cleanly
 function KpiCard({ title, value, subtitle, icon: Icon, gradient, glow, trend, trendUp = true }: KpiCardProps) {
     return (
         <div className="h-full transition-transform hover:-translate-y-1 hover:scale-[1.02] duration-300">
@@ -82,7 +82,8 @@ function useStudentMarks(studentId?: string) {
                 .from('exam_marks')
                 .select('marks_obtained, total_marks, subjects(name), exams(name)')
                 .eq('student_id', studentId);
-            return (data ?? []).map((m: { subjects: { name: string } | { name: string }[], exams: { name: string } | { name: string }[], total_marks: number, marks_obtained: number }) => ({
+            
+            return (data ?? []).map((m: any) => ({
                 subject: Array.isArray(m.subjects) ? m.subjects[0]?.name : m.subjects?.name ?? 'N/A',
                 exam: Array.isArray(m.exams) ? m.exams[0]?.name : m.exams?.name ?? 'Exam',
                 score: m.total_marks ? Math.round((m.marks_obtained / m.total_marks) * 100) : 0,
@@ -253,7 +254,7 @@ export function ParentDashboard({ profile }: { profile: { id: string; full_name?
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const totalFee = children?.reduce((sum, child) => sum + (Number((child as DashboardChild).monthly_fee) || 0), 0) || 0;
+    const totalFee = (children as unknown as DashboardChild[])?.reduce((sum, child) => sum + (Number(child.monthly_fee) || 0), 0) || 0;
 
     const filteredChildren = (children as unknown as DashboardChild[])?.filter((child) => {
         if (!searchQuery) return true;
@@ -267,6 +268,17 @@ export function ParentDashboard({ profile }: { profile: { id: string; full_name?
     return (
         <PageTransition>
             <div className="space-y-8">
+                {/* ── Notice Board ── */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-4 w-1 rounded-full bg-primary" />
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">School Announcements</h2>
+                    </div>
+                    <div className="max-w-4xl">
+                        <NoticeBoardWidget role="PARENT" />
+                    </div>
+                </div>
+
                 {/* ── Core KPIs ── */}
                 <div>
                     <div className="flex items-center gap-2 mb-4">
@@ -332,31 +344,31 @@ export function ParentDashboard({ profile }: { profile: { id: string; full_name?
                             </div>
                             
                             <div className="flex items-center bg-muted/50 p-1 rounded-lg border w-full sm:w-auto">
-                            <Button
-                                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                                size="sm"
-                                className="h-7 px-3 rounded-md shadow-none"
-                                onClick={() => setViewMode('grid')}
-                            >
-                                <LayoutGrid className="h-4 w-4 mr-1.5" />
-                                Cards
-                            </Button>
-                            <Button
-                                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                                size="sm"
-                                className="h-7 px-3 rounded-md shadow-none"
-                                onClick={() => setViewMode('table')}
-                            >
-                                <List className="h-4 w-4 mr-1.5" />
-                                Table
-                            </Button>
+                                <Button
+                                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    className="h-7 px-3 rounded-md shadow-none"
+                                    onClick={() => setViewMode('grid')}
+                                >
+                                    <LayoutGrid className="h-4 w-4 mr-1.5" />
+                                    Cards
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    className="h-7 px-3 rounded-md shadow-none"
+                                    onClick={() => setViewMode('table')}
+                                >
+                                    <List className="h-4 w-4 mr-1.5" />
+                                    Table
+                                </Button>
                             </div>
                         </div>
                     </div>
 
                     {isLoading ? (
                         <StaggerList className="grid gap-5 lg:grid-cols-2">
-                            {[0, 1].map(i => <Skeleton key={i} className="h-80 rounded-2xl" />)}
+                            {[0, 1].map(i => <StaggerItem key={i}><Skeleton className="h-80 rounded-2xl" /></StaggerItem>)}
                         </StaggerList>
                     ) : children?.length === 0 ? (
                         <Card className="border-dashed border-2 bg-muted/10">
@@ -410,13 +422,13 @@ export function ParentDashboard({ profile }: { profile: { id: string; full_name?
                             </div>
                         </Card>
                     ) : (
-                        <div className="grid gap-6 lg:grid-cols-2">
+                        <StaggerList className="grid gap-6 lg:grid-cols-2">
                             {(filteredChildren as unknown as DashboardChild[])?.map((child) => (
-                                <div key={child.id}>
+                                <StaggerItem key={child.id}>
                                     <ChildCard child={child} />
-                                </div>
+                                </StaggerItem>
                             ))}
-                        </div>
+                        </StaggerList>
                     )}
                 </div>
             </div>

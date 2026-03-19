@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
 export interface StudentBasic {
     id: string;
     full_name: string;
     roll_number: string;
+    photo_url?: string | null;
 }
 
 /**
@@ -12,6 +14,7 @@ export interface StudentBasic {
  * Used in Attendance and Mark Sheet pages.
  */
 export function useStudentsByClass(classId: string) {
+    useRealtimeInvalidate({ table: 'students', queryKey: ['students', 'byClass', classId] });
     return useQuery({
         queryKey: ['students', 'byClass', classId],
         queryFn: async (): Promise<StudentBasic[]> => {
@@ -19,7 +22,7 @@ export function useStudentsByClass(classId: string) {
             const supabase = createClient();
             const { data, error } = await supabase
                 .from('students')
-                .select('id, full_name, roll_number')
+                .select('id, full_name, roll_number, photo_url')
                 .eq('class_id', classId)
                 .eq('status', 'ACTIVE')
                 .order('roll_number', { ascending: true });

@@ -5,8 +5,12 @@ import { PromoteStudentsDialog } from '@/features/students/components/promote-st
 import { StudentsTable } from '@/features/students/components/students-table';
 import { PageTransition } from '@/components/ui/motion';
 import { Users } from 'lucide-react';
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 
 export default function StudentsPage() {
+    const { data: profile } = useAuthProfile();
+    const isAdmin = profile?.role === 'ADMIN';
+
     return (
         <PageTransition>
             <div className="space-y-7">
@@ -24,10 +28,12 @@ export default function StudentsPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        <PromoteStudentsDialog />
-                        <AddStudentDialog />
-                    </div>
+                    {isAdmin && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <PromoteStudentsDialog />
+                            <AddStudentDialog />
+                        </div>
+                    )}
                 </div>
 
                 {/* Data Table */}

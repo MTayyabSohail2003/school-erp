@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 import { useGetExams } from '@/features/exams/api/use-exams';
 import { useGetSubjects } from '@/features/exams/api/use-subjects';
-import { useClasses } from '@/features/classes/hooks/use-classes';
+import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes';
 import { useGetMarks, useUpsertMarks } from '../api/use-marks';
 import { calculateGrade, type MarkEntry } from '../schemas/mark.schema';
 import { useStudentsByClass } from '@/features/students/hooks/use-students-by-class';
@@ -41,7 +41,7 @@ export function MarkSheetPage() {
     const [marksMap, setMarksMap] = useState<Record<string, { obtained: number; total: number }>>({});
 
     const { data: exams } = useGetExams();
-    const { data: classes } = useClasses();
+    const { data: classes } = useTeacherClasses();
     const { data: subjects } = useGetSubjects(selectedClassId);
     const { data: students } = useStudentsByClass(selectedClassId);
     const { data: existingMarks, isLoading: marksLoading } = useGetMarks(selectedExamId, selectedClassId);

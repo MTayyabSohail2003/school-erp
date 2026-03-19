@@ -7,7 +7,7 @@ export const feesKeys = {
     all: ['fees-dashboard'] as const,
     stats: (month: string) => [...feesKeys.all, 'stats', month] as const,
     analytics: (months: string[]) => [...feesKeys.all, 'analytics', ...months] as const,
-    students: (month: string, filters: any) => [...feesKeys.all, 'students', month, filters] as const,
+    students: (month: string, filters?: Record<string, unknown>) => [...feesKeys.all, 'students', month, filters || {}] as const,
 };
 
 export function useFeeDashboardStats(monthYear: string) {
@@ -49,7 +49,15 @@ export function useFeeStudents(monthYear: string, filters?: { classId?: string, 
             const { data: studentsData, error: studentError } = await studentQuery;
             if (studentError) throw new Error(studentError.message);
 
-            let activeStudents = studentsData as any[];
+            let activeStudents = (studentsData as unknown as {
+                id: string;
+                full_name: string;
+                roll_number: string;
+                class_id: string;
+                monthly_fee: number;
+                status: string;
+                classes: { name: string; section: string } | null;
+            }[] || []);
 
             if (filters?.search) {
                 const term = filters.search.toLowerCase();

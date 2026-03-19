@@ -4,8 +4,9 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { NotificationTemplates } from '@/features/notifications/utils/notification-templates';
-import { notifyAllAdmins } from '@/features/notifications/utils/notification.utils';
+import { broadcastNotification, sendDirectNotification } from '@/features/notifications/actions/notification-actions';
 
 // Types
 export type LeaveRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -86,11 +87,17 @@ export async function createLeaveRequest(formData: z.infer<typeof createLeaveSch
         }
 
         // 4. Fetch student name for the notification message
-        const { data: student } = await supabase
+        // Use admin client to follow system logic regardless of Parent RLS
+        const adminSupabase = createAdminClient();
+        const { data: student, error: studentError } = await adminSupabase
             .from('students')
             .select('full_name, parent_id')
             .eq('id', data.student_id)
             .single();
+        
+        if (studentError) {
+            console.error('Error fetching student for leave notice:', studentError);
+        }
 
         // 5. Insert Request
         const { error } = await supabase
@@ -114,7 +121,10 @@ export async function createLeaveRequest(formData: z.infer<typeof createLeaveSch
 
         // 6. Notify all admins (non-blocking)
         if (student?.full_name) {
-            await notifyAllAdminsServerSide(supabase, NotificationTemplates.LEAVE_REQUEST_SUBMITTED(student.full_name));
+            console.log('Broadcasting leave notification for:', student.full_name);
+            await broadcastNotification(['ADMIN'], NotificationTemplates.LEAVE_REQUEST_SUBMITTED(student.full_name));
+        } else {
+            console.warn('Cannot send notification: Student full_name is missing', { student });
         }
 
         revalidatePath('/dashboard/attendance/leaves');
@@ -126,32 +136,13 @@ export async function createLeaveRequest(formData: z.infer<typeof createLeaveSch
     }
 }
 
-// Server-side helper to notify admins
-async function notifyAllAdminsServerSide(supabase: Awaited<ReturnType<typeof getSupabase>>, template: { title: string; message: string; type: string; link?: string }) {
-    const { data: admins } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'ADMIN');
+// ... (Removed local notifyAllAdminsServerSide)
 
-    if (!admins || admins.length === 0) return;
-
-    await supabase.from('notifications').insert(
-        admins.map((admin: { id: string }) => ({
-            recipient_id: admin.id,
-            title: template.title,
-            message: template.message,
-            type: template.type,
-            link: template.link,
-            is_read: false,
-        })),
-    );
-}
-
-export async function getLeaveRequests() {
+export async function getLeaveRequests(date?: string) {
     try {
         const supabase = await getSupabase();
 
-        const { data, error } = await supabase
+        let query = supabase
             .from('leave_requests')
             .select(`
                 *,
@@ -163,6 +154,13 @@ export async function getLeaveRequests() {
                 applicant:users!leave_requests_applied_by_fkey (full_name)
             `)
             .order('created_at', { ascending: false });
+
+        // Filter by date if provided (match where start_date equals the selected date)
+        if (date) {
+            query = query.eq('start_date', date);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('Error fetching leave requests:', error);
@@ -214,14 +212,7 @@ export async function updateLeaveRequestStatus(id: string, status: LeaveRequestS
                 ? NotificationTemplates.LEAVE_REQUEST_APPROVED(studentName)
                 : NotificationTemplates.LEAVE_REQUEST_REJECTED(studentName);
 
-            await supabase.from('notifications').insert({
-                recipient_id: leaveRequest.applied_by,
-                title: template.title,
-                message: template.message,
-                type: template.type,
-                link: template.link,
-                is_read: false,
-            });
+            await sendDirectNotification(leaveRequest.applied_by, template);
         }
 
         revalidatePath('/dashboard/attendance/leaves');
@@ -229,5 +220,31 @@ export async function updateLeaveRequestStatus(id: string, status: LeaveRequestS
 
     } catch {
         return { error: 'An unexpected error occurred while updating status.' };
+    }
+}
+
+export async function deleteLeaveRequest(id: string) {
+    try {
+        const supabase = await getSupabase();
+
+        // Check permissions/auth
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        const { error } = await supabase
+            .from('leave_requests')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error deleting leave request:', error);
+            return { error: 'Failed to delete leave request. ' + error.message };
+        }
+
+        revalidatePath('/dashboard/attendance/leaves');
+        return { success: true };
+    } catch (e: unknown) {
+        const error = e as Error;
+        return { error: 'An unexpected error occurred: ' + error.message };
     }
 }

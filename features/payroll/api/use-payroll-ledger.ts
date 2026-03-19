@@ -22,3 +22,14 @@ export const useRecordPayout = () => {
         },
     });
 };
+
+export const useDeletePayout = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: payrollLedgerApi.deletePayout,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: LEDGER_KEY });
+        },
+    });
+};

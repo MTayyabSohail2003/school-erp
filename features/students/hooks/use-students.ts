@@ -2,16 +2,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { studentsApi } from '../api/students.api';
 import { type StudentFormData } from '../schemas/student.schema';
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
+import { broadcastNotification } from '@/features/notifications/actions/notification-actions';
+import { NotificationTemplates } from '@/features/notifications/utils/notification-templates';
 
 export const studentKeys = {
     all: ['students'] as const,
 };
 
-export function useStudents(parentId?: string) {
+export function useStudents(options?: { parentId?: string; classIds?: string[] }) {
     useRealtimeInvalidate({ table: 'students', queryKey: studentKeys.all });
     return useQuery({
-        queryKey: parentId ? [...studentKeys.all, parentId] : studentKeys.all,
-        queryFn: () => studentsApi.getStudents(parentId),
+        queryKey: options ? [...studentKeys.all, options] : studentKeys.all,
+        queryFn: () => studentsApi.getStudents(options),
     });
 }
 
@@ -20,6 +22,10 @@ export function useCreateStudent() {
 
     return useMutation({
         mutationFn: (data: StudentFormData) => studentsApi.createStudent(data),
+        onSuccess: async (data, variables) => {
+            // Notify admins
+            await broadcastNotification(['ADMIN'], NotificationTemplates.NEW_STUDENT_REGISTERED(variables.full_name));
+        },
         onMutate: async (newStudent) => {
             // Optimistic Update
             await queryClient.cancelQueries({ queryKey: studentKeys.all });

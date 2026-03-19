@@ -6,6 +6,15 @@ export type ParentUser = {
     full_name: string;
     email: string;
     phone_number: string | null;
+    students: {
+        id: string;
+        full_name: string;
+        roll_number: string;
+        classes: {
+            name: string;
+            section: string;
+        };
+    }[];
 };
 
 export function useGetParents() {
@@ -20,7 +29,16 @@ export function useGetParents() {
                     id,
                     email,
                     full_name,
-                    phone_number
+                    phone_number,
+                    students (
+                        id,
+                        full_name,
+                        roll_number,
+                        classes (
+                            name,
+                            section
+                        )
+                    )
                 `)
                 .eq('role', 'PARENT')
                 .order('full_name', { ascending: true });
@@ -29,7 +47,7 @@ export function useGetParents() {
                 throw new Error(error.message);
             }
 
-            return data as ParentUser[];
+            return data as unknown as ParentUser[];
         },
     });
 }

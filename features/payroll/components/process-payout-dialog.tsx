@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Wallet } from 'lucide-react';
+import { Loader2, Wallet, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MonthPicker } from '@/components/ui/month-picker';
 
 import { useRecordPayout } from '../api/use-payroll-ledger';
 
@@ -26,6 +27,8 @@ interface ProcessPayoutDialogProps {
         full_name: string;
         monthly_salary: number;
     } | null;
+    ledger?: { teacher_id: string; month_year: string }[];
+    selectedMonth?: string;
 }
 
 // Get current month in YYYY-MM format
@@ -36,10 +39,12 @@ function getCurrentMonthYear(): string {
     return `${year}-${month}`;
 }
 
-export function ProcessPayoutDialog({ isOpen, setIsOpen, teacher }: ProcessPayoutDialogProps) {
-    const [monthYear, setMonthYear] = useState(getCurrentMonthYear());
+export function ProcessPayoutDialog({ isOpen, setIsOpen, teacher, ledger, selectedMonth }: ProcessPayoutDialogProps) {
+    const [monthYear, setMonthYear] = useState(selectedMonth || getCurrentMonthYear());
     const [deductions, setDeductions] = useState<string>('0');
     const recordPayout = useRecordPayout();
+
+    const isAlreadyPaid = Boolean(ledger?.some(l => l.teacher_id === teacher?.user_id && l.month_year === monthYear));
 
     const baseSalary = teacher?.monthly_salary ?? 0;
     const deductionAmount = Number(deductions) || 0;
@@ -77,7 +82,8 @@ export function ProcessPayoutDialog({ isOpen, setIsOpen, teacher }: ProcessPayou
         setIsOpen(open);
         if (!open) {
             setDeductions('0');
-            setMonthYear(getCurrentMonthYear());
+        } else {
+            setMonthYear(selectedMonth || getCurrentMonthYear());
         }
     };
 
@@ -94,13 +100,20 @@ export function ProcessPayoutDialog({ isOpen, setIsOpen, teacher }: ProcessPayou
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-5 py-4">
-                    <div className="space-y-2">
-                        <Label>Month (YYYY-MM)</Label>
-                        <Input
-                            type="month"
+                <div className="space-y-4 py-4">
+                    {isAlreadyPaid && (
+                        <div className="flex items-start gap-2 p-3 bg-red-50 text-red-600 border border-red-200 rounded-md text-sm font-medium">
+                            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                            <p>A payout has already been recorded for this staff member in <strong>{monthYear}</strong>.</p>
+                        </div>
+                    )}
+
+                    <div className="space-y-2 flex flex-col">
+                        <Label>Payout Month</Label>
+                        <MonthPicker
                             value={monthYear}
-                            onChange={(e) => setMonthYear(e.target.value)}
+                            onChange={setMonthYear}
+                            className="w-full"
                         />
                     </div>
 
@@ -131,7 +144,7 @@ export function ProcessPayoutDialog({ isOpen, setIsOpen, teacher }: ProcessPayou
                     <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={recordPayout.isPending}>
                         Cancel
                     </Button>
-                    <Button onClick={handlePayout} disabled={recordPayout.isPending || netPaid < 0}>
+                    <Button onClick={handlePayout} disabled={recordPayout.isPending || netPaid < 0 || isAlreadyPaid}>
                         {recordPayout.isPending ? (
                             <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
                         ) : 'Process Payout'}

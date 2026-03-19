@@ -1,43 +1,103 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useRef } from 'react';
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
+
+export type NoticeAudience = 'TEACHER' | 'PARENT' | 'ALL';
 
 export type Notice = {
     id: string;
     title: string;
     body: string;
     posted_by: string;
+    target_audience: NoticeAudience;
     created_at: string;
 };
 
-const NOTICES_KEY = ['notices'] as const;
+export const NOTICES_KEY = ['notices'] as const;
 
-// Fetch the latest 20 notices
-export const useNotices = () => {
+const fetchNotices = async (audience?: NoticeAudience, date?: string): Promise<Notice[]> => {
+    const supabase = createClient();
+    let query = supabase
+        .from('notices')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    if (audience) {
+        query = query.in('target_audience', [audience, 'ALL']);
+    }
+
+    if (date) {
+        // Filter by date (YYYY-MM-DD)
+        const start = `${date}T00:00:00Z`;
+        const end = `${date}T23:59:59Z`;
+        query = query.gte('created_at', start).lte('created_at', end);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data as Notice[];
+};
+
+// All notices (admin view)
+export const useNotices = (date?: string) =>
+    useQuery({ 
+        queryKey: date ? [...NOTICES_KEY, { date }] : NOTICES_KEY, 
+        queryFn: () => fetchNotices(undefined, date) 
+    });
+
+// Teacher-only notices
+export const useTeacherNotices = (date?: string) =>
+    useQuery({
+        queryKey: date ? [...NOTICES_KEY, 'TEACHER', { date }] : [...NOTICES_KEY, 'TEACHER'],
+        queryFn: () => fetchNotices('TEACHER', date),
+    });
+
+// Parent-only notices
+export const useParentNotices = (date?: string) =>
+    useQuery({
+        queryKey: date ? [...NOTICES_KEY, 'PARENT', { date }] : [...NOTICES_KEY, 'PARENT'],
+        queryFn: () => fetchNotices('PARENT', date),
+    });
+
+/**
+ * Hook to fetch notices based on the current user's role context.
+ * Used for the global announcement banner.
+ */
+export const useContextNotices = () => {
+    const { data: profile } = useAuthProfile();
+    const role = profile?.role;
+
     return useQuery({
-        queryKey: NOTICES_KEY,
-        queryFn: async (): Promise<Notice[]> => {
-            const supabase = createClient();
-            const { data, error } = await supabase
-                .from('notices')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(20);
-            if (error) throw new Error(error.message);
-            return data as Notice[];
+        queryKey: role ? [...NOTICES_KEY, 'CONTEXT', role] : [...NOTICES_KEY, 'CONTEXT'],
+        queryFn: () => {
+            const audience = role === 'TEACHER' ? 'TEACHER' : role === 'PARENT' ? 'PARENT' : undefined;
+            return fetchNotices(audience);
         },
+        enabled: !!profile,
     });
 };
 
-// Post a new notice
+// Post a new notice (calls server action for notification broadcast)
 export const usePostNotice = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ title, body }: { title: string; body: string }) => {
+        mutationFn: async ({
+            title,
+            body,
+            target_audience,
+        }: {
+            title: string;
+            body: string;
+            target_audience: NoticeAudience;
+        }) => {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
-            const { error } = await supabase.from('notices').insert({ title, body, posted_by: user.id });
+            const { error } = await supabase
+                .from('notices')
+                .insert({ title, body, posted_by: user.id, target_audience });
             if (error) throw new Error(error.message);
         },
         onSuccess: () => {
@@ -61,7 +121,22 @@ export const useDeleteNotice = () => {
     });
 };
 
-// Realtime subscription — invalidates the query on INSERT, UPDATE, DELETE
+// Bulk delete notices
+export const useBulkDeleteNotices = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (ids: string[]) => {
+            const supabase = createClient();
+            const { error } = await supabase.from('notices').delete().in('id', ids);
+            if (error) throw new Error(error.message);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: NOTICES_KEY });
+        },
+    });
+};
+
+// Realtime subscription — invalidates all notice queries on any change
 export const useNoticesRealtime = () => {
     const queryClient = useQueryClient();
     const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);

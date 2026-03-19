@@ -24,6 +24,42 @@ export const classesApi = {
     },
 
     /**
+     * Fetches only those classes where a teacher is involved (In-charge or Period teacher).
+     */
+    getTeacherClasses: async (teacherId: string): Promise<ClassRecord[]> => {
+        const supabase = createClient();
+        
+        // 1. Classes where teacher is in-charge
+        const { data: inCharge, error: err1 } = await supabase
+            .from('classes')
+            .select('id, name, section, class_teacher_id, is_primary')
+            .eq('class_teacher_id', teacherId);
+
+        // 2. Classes where teacher has periods
+        const { data: periods, error: err2 } = await supabase
+            .from('timetable')
+            .select('class_id, classes(id, name, section, class_teacher_id, is_primary)')
+            .eq('teacher_id', teacherId);
+
+        if (err1 || err2) throw new Error(err1?.message || err2?.message);
+
+        const classMap = new Map<string, ClassRecord>();
+        (inCharge ?? []).forEach(c => classMap.set(c.id, c));
+        (periods ?? []).forEach(p => {
+            const classesRaw = p.classes as unknown as ClassRecord | ClassRecord[];
+            const c = Array.isArray(classesRaw) ? classesRaw[0] : (classesRaw as ClassRecord);
+            if (c) classMap.set(c.id, c);
+        });
+
+        return Array.from(classMap.values()).sort((a, b) => {
+            const numA = parseInt(a.name.match(/\d+/)?.[0] || '0');
+            const numB = parseInt(b.name.match(/\d+/)?.[0] || '0');
+            if (numA === numB) return a.name.localeCompare(b.name);
+            return numA - numB;
+        });
+    },
+
+    /**
      * Pure function to create a new class.
      */
     createClass: async (classData: { name: string; section?: string | null; class_teacher_id?: string | null; is_primary?: boolean }): Promise<ClassRecord> => {
@@ -57,5 +93,21 @@ export const classesApi = {
         const supabase = createClient();
         const { error } = await supabase.from('classes').delete().eq('id', id);
         if (error) throw new Error(error.message);
+    },
+
+    /**
+     * Updates an existing class.
+     */
+    updateClass: async (id: string, updates: Partial<ClassRecord>): Promise<ClassRecord> => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+            .from('classes')
+            .update(updates)
+            .eq('id', id)
+            .select('id, name, section, class_teacher_id, is_primary')
+            .single();
+
+        if (error) throw new Error(error.message);
+        return data;
     },
 };

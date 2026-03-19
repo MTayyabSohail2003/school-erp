@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { classFormSchema, type ClassFormData } from '@/features/classes/schemas/class.schema';
@@ -50,6 +50,31 @@ export function AddClassDialog() {
             is_primary: false,
         },
     });
+
+    // Automated Primary Mode Detection
+    const classNameValue = form.watch('name');
+    useEffect(() => {
+        const lowerName = classNameValue.toLowerCase();
+        const primaryKeywords = ['nursery', 'prep', '1', '2', '3', '4'];
+        const secondaryKeywords = ['5', '6', '7', '8', '9', '10'];
+
+        const hasPrimary = primaryKeywords.some(key => {
+            // Check if it's the exact number or starts with "class [number]"
+            const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'i');
+            return regex.test(lowerName);
+        });
+
+        const hasSecondary = secondaryKeywords.some(key => {
+            const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'i');
+            return regex.test(lowerName);
+        });
+
+        if (hasPrimary && !hasSecondary) {
+            form.setValue('is_primary', true);
+        } else if (hasSecondary) {
+            form.setValue('is_primary', false);
+        }
+    }, [classNameValue, form]);
 
     async function onSubmit(values: ClassFormData) {
         // Ensure class_teacher_id is null if it's an empty string or undefined

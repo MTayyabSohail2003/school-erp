@@ -5,15 +5,19 @@ export const studentsApi = {
     /**
      * Pure function to fetch all students with their class details.
      */
-    getStudents: async (parentId?: string): Promise<(Student & { classes: { name: string; section: string }, users: { full_name: string } })[]> => {
+    getStudents: async (options?: { parentId?: string, classIds?: string[] }): Promise<(Student & { classes: { name: string; section: string }, users: { full_name: string } })[]> => {
         const supabase = createClient();
         let query = supabase
             .from('students')
             .select('*, classes(name, section), users!students_parent_id_fkey(full_name)')
             .eq('status', 'ACTIVE');
 
-        if (parentId) {
-            query = query.eq('parent_id', parentId);
+        if (options?.parentId) {
+            query = query.eq('parent_id', options.parentId);
+        }
+
+        if (options?.classIds && options.classIds.length > 0) {
+            query = query.in('class_id', options.classIds);
         }
 
         const { data, error } = await query.order('created_at', { ascending: false });

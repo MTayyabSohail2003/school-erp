@@ -93,13 +93,13 @@ export const feesDashboardApi = {
         }
 
         if (id.startsWith('draft-')) {
-            const insertPayload = {
+            const insertPayload: Partial<FeeChallan> = {
                 ...payload,
                 student_id: studentId,
                 month_year: monthYear,
                 amount_due: totalDue,
                 due_date: `${monthYear}-10`,
-            } as any;
+            };
             const { error } = await supabase.from('fee_challans').insert(insertPayload);
             if (error) throw new Error(error.message);
         } else {

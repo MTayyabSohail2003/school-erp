@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants/globals';
 import { format } from 'date-fns';
+import { NoticeBoardWidget } from '@/features/notices/components/notice-board-widget';
 
 const ttStyle = {
     contentStyle: {
@@ -46,8 +47,8 @@ function KpiCard({ icon: Icon, label, value, sub, color }: { icon: React.Element
     );
 }
 
-export function TeacherDashboard({ profile }: { profile: { full_name?: string } }) {
-    const { data: stats, isLoading } = useTeacherChartStats();
+export function TeacherDashboard({ profile }: { profile: { id: string; full_name?: string } }) {
+    const { data: stats, isLoading } = useTeacherChartStats(profile.id);
 
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -57,8 +58,10 @@ export function TeacherDashboard({ profile }: { profile: { full_name?: string } 
         ? Math.round((stats.todayPresent / stats.totalStudents) * 100)
         : 0;
 
+    const classFilter = stats?.managingClasses?.[0] ? `?class=${stats.managingClasses[0].id}` : '';
+
     const RADIAN = Math.PI / 180;
-    const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number }) => {
         if (percent < 0.06) return null;
         const r = innerRadius + (outerRadius - innerRadius) * 0.55;
         return (
@@ -77,20 +80,48 @@ export function TeacherDashboard({ profile }: { profile: { full_name?: string } 
                     <div className="absolute right-0 top-0 h-full w-64 opacity-10 bg-[radial-gradient(circle_at_right,_white_0%,_transparent_65%)]" />
                     <p className="text-sm font-medium opacity-80">{format(new Date(), 'EEEE, MMMM dd, yyyy')}</p>
                     <h1 className="text-2xl font-bold mt-1">{greeting}, {firstName}! 👋</h1>
-                    <p className="text-sm opacity-75 mt-1">Here's your school day at a glance.</p>
-                    <div className="flex items-center gap-3 mt-4">
-                        <div className="bg-white/20 rounded-lg px-3 py-1.5 text-sm font-medium">
-                            📊 {attendanceRate}% Attendance Rate Today
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-3">
+                        <p className="text-sm opacity-75 mr-2">Your managing classes:</p>
+                        {stats?.managingClasses && stats.managingClasses.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                                {stats.managingClasses.map(c => (
+                                    <div key={c.id} className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+                                        <BookOpen className="h-3.5 w-3.5 text-blue-100/90" />
+                                        <span className="text-xs font-bold tracking-tight">{c.name} - {c.section}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : !isLoading && (
+                            <div className="flex items-center gap-2 bg-rose-500/20 px-3 py-1 rounded-full border border-rose-500/30 backdrop-blur-sm">
+                                <UserX className="h-3.5 w-3.5 text-rose-100" />
+                                <span className="text-xs font-bold text-rose-50 tracking-tight">No Classes Assigned</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-5">
+                        <div className="bg-white/20 rounded-lg px-3 py-1.5 text-sm font-medium border border-white/10">
+                            📊 {attendanceRate}% Overall Attendance Rate
                         </div>
                     </div>
                 </div>
 
+                {/* ── Notice Board & Announcements ── */}
+                <StaggerItem>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-1 rounded-full bg-primary" />
+                            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Latest Announcements</h2>
+                        </div>
+                        <NoticeBoardWidget role="TEACHER" />
+                    </div>
+                </StaggerItem>
+
                 {/* ── KPIs ── */}
                 <StaggerList className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StaggerItem><KpiCard icon={Users} label="Total Students" value={isLoading ? '...' : stats?.totalStudents ?? 0} sub="Active enrollments" color="bg-blue-500" /></StaggerItem>
+                    <StaggerItem><KpiCard icon={Users} label="Class Students" value={isLoading ? '...' : stats?.totalStudents ?? 0} sub="Active in your class" color="bg-blue-500" /></StaggerItem>
                     <StaggerItem><KpiCard icon={CheckSquare} label="Present Today" value={isLoading ? '...' : stats?.todayPresent ?? 0} sub="Marked present" color="bg-emerald-500" /></StaggerItem>
                     <StaggerItem><KpiCard icon={UserX} label="Absent Today" value={isLoading ? '...' : stats?.todayAbsent ?? 0} sub="Require follow-up" color="bg-red-500" /></StaggerItem>
-                    <StaggerItem><KpiCard icon={BookMarked} label="Total Exams" value={isLoading ? '...' : stats?.pendingExams ?? 0} sub="Recorded in system" color="bg-amber-500" /></StaggerItem>
+                    <StaggerItem><KpiCard icon={BookMarked} label="Total Exams" value={isLoading ? '...' : stats?.pendingExams ?? 0} sub="System wide" color="bg-amber-500" /></StaggerItem>
                 </StaggerList>
 
                 {/* ── Charts ── */}
@@ -103,8 +134,8 @@ export function TeacherDashboard({ profile }: { profile: { full_name?: string } 
                                     <TrendingUp className="h-4 w-4 text-blue-500" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-sm font-semibold">Weekly Attendance</CardTitle>
-                                    <CardDescription className="text-xs">Present / Absent / Leave — last 7 days</CardDescription>
+                                    <CardTitle className="text-sm font-semibold">Class Attendance Trend</CardTitle>
+                                    <CardDescription className="text-xs">Weekly breakdown for your assigned class</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
@@ -144,15 +175,15 @@ export function TeacherDashboard({ profile }: { profile: { full_name?: string } 
                                     <CheckSquare className="h-4 w-4 text-emerald-500" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-sm font-semibold">Today&apos;s Breakdown</CardTitle>
-                                    <CardDescription className="text-xs">Attendance status right now</CardDescription>
+                                    <CardTitle className="text-sm font-semibold">Today&apos;s Status</CardTitle>
+                                    <CardDescription className="text-xs">Class breakdown today</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
                         <CardContent className="flex flex-col items-center pb-4">
                             {isLoading ? <Skeleton className="h-[220px] w-full rounded-xl" /> :
                                 stats?.todayBreakdown.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground py-16 text-center">No attendance marked for today yet.</p>
+                                    <p className="text-sm text-muted-foreground py-16 text-center">No attendance marked for your students yet.</p>
                                 ) : (
                                     <>
                                         <ResponsiveContainer width={180} height={180}>
@@ -190,8 +221,8 @@ export function TeacherDashboard({ profile }: { profile: { full_name?: string } 
                                     <BookOpen className="h-4 w-4 text-purple-500" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-sm font-semibold">Subject-wise Average Performance</CardTitle>
-                                    <CardDescription className="text-xs">Class average score per subject (all exams)</CardDescription>
+                                    <CardTitle className="text-sm font-semibold">Subject Performance (Your Class)</CardTitle>
+                                    <CardDescription className="text-xs">Average scores for your assigned class</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
@@ -218,9 +249,9 @@ export function TeacherDashboard({ profile }: { profile: { full_name?: string } 
                     <h2 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Quick Actions</h2>
                     <StaggerList className="grid gap-4 sm:grid-cols-3">
                         {[
-                            { label: 'Mark Attendance', desc: 'Record daily student attendance', href: ROUTES.ATTENDANCE, icon: CheckSquare, gradient: 'from-blue-500/20 to-blue-500/5', border: 'border-blue-500/20', color: 'text-blue-500' },
-                            { label: 'Enter Exam Marks', desc: 'Evaluate and grade recent exams', href: ROUTES.MARKS, icon: Edit3, gradient: 'from-purple-500/20 to-purple-500/5', border: 'border-purple-500/20', color: 'text-purple-500' },
-                            { label: 'View Students', desc: 'Access student profiles', href: ROUTES.STUDENTS, icon: BookOpen, gradient: 'from-emerald-500/20 to-emerald-500/5', border: 'border-emerald-500/20', color: 'text-emerald-500' },
+                            { label: 'Mark Attendance', desc: 'Record daily student attendance', href: `${ROUTES.ATTENDANCE}${classFilter}`, icon: CheckSquare, gradient: 'from-blue-500/20 to-blue-500/5', border: 'border-blue-500/20', color: 'text-blue-500' },
+                            { label: 'Enter Exam Marks', desc: 'Evaluate and grade recent exams', href: `${ROUTES.MARKS}${classFilter}`, icon: Edit3, gradient: 'from-purple-500/20 to-purple-500/5', border: 'border-purple-500/20', color: 'text-purple-500' },
+                            { label: 'View Students', desc: 'Access student profiles', href: `${ROUTES.STUDENTS}${classFilter}`, icon: BookOpen, gradient: 'from-emerald-500/20 to-emerald-500/5', border: 'border-emerald-500/20', color: 'text-emerald-500' },
                         ].map((item) => (
                             <StaggerItem key={item.href}>
                                 <motion.a href={item.href} whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }}

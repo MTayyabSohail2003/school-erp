@@ -39,6 +39,28 @@ export const NotificationTemplates = {
         link: '/dashboard/attendance',
     }),
 
+    // ---- ACADEMICS ----
+    EXAM_SCHEDULED: (examName: string): NotificationTemplate => ({
+        title: 'New Exam Scheduled',
+        message: `${examName} has been scheduled. Check the date sheet for details.`,
+        type: 'INFO',
+        link: ROUTES.EXAMS,
+    }),
+
+    REPORT_CARD_PUBLISHED: (studentName: string): NotificationTemplate => ({
+        title: 'Report Card Published',
+        message: `The academic report card for ${studentName} is now available.`,
+        type: 'SUCCESS',
+        link: '/dashboard/marks',
+    }),
+
+    CLASS_ASSIGNED: (className: string): NotificationTemplate => ({
+        title: 'New Class Assigned',
+        message: `You have been assigned as a teacher for ${className}.`,
+        type: 'SUCCESS',
+        link: ROUTES.DASHBOARD,
+    }),
+
     // ---- FEES & ACCOUNTS ----
     FEE_CHALLAN_GENERATED: (month: string): NotificationTemplate => ({
         title: 'New Fee Challan',
@@ -54,11 +76,55 @@ export const NotificationTemplates = {
         link: ROUTES.FEE,
     }),
 
+    PAYROLL_PROCESSED: (month: string): NotificationTemplate => ({
+        title: 'Salary Disbursed',
+        message: `Your salary for ${month} has been processed and disbursed.`,
+        type: 'SUCCESS',
+        link: ROUTES.DASHBOARD,
+    }),
+
+    // ---- REGISTRATION ----
+    NEW_STAFF_REGISTERED: (staffName: string): NotificationTemplate => ({
+        title: 'New Staff Registered',
+        message: `${staffName} has joined the school as a new staff member.`,
+        type: 'SUCCESS',
+        link: ROUTES.STAFF,
+    }),
+
+    NEW_STUDENT_REGISTERED: (studentName: string): NotificationTemplate => ({
+        title: 'New Student Registered',
+        message: `${studentName} has been successfully registered in the system.`,
+        type: 'SUCCESS',
+        link: ROUTES.STUDENTS,
+    }),
+
     // ---- GENERAL ----
     NEW_NOTICE: (noticeTitle: string): NotificationTemplate => ({
         title: 'New Announcement',
         message: noticeTitle,
         type: 'INFO',
-        link: '/dashboard/communication/notices',
+        link: ROUTES.NOTICE_BOARD,
+    }),
+
+    // ---- NOTICE BOARD ----
+    NOTICE_POSTED_TEACHER: (noticeTitle: string): NotificationTemplate => ({
+        title: '📢 New Notice — Teachers',
+        message: `Admin posted a new notice: "${noticeTitle}". Tap to view the notice board.`,
+        type: 'INFO',
+        link: ROUTES.TEACHER_NOTICE_BOARD,
+    }),
+
+    NOTICE_POSTED_PARENT: (noticeTitle: string): NotificationTemplate => ({
+        title: '📢 New Notice — Parents',
+        message: `A new school announcement has been posted: "${noticeTitle}". Tap to view.`,
+        type: 'INFO',
+        link: ROUTES.PARENT_NOTICE_BOARD,
+    }),
+
+    LEAVE_SUMMARY_POSTED: (date: string, total: number): NotificationTemplate => ({
+        title: '📋 Daily Leave Summary',
+        message: `Leave summary for ${date} has been posted. ${total} request(s) processed today.`,
+        type: 'INFO',
+        link: ROUTES.TEACHER_NOTICE_BOARD,
     }),
 } as const;

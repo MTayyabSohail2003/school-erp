@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { classesApi, type ClassRecord } from '../api/classes.api';
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
+import { toast } from 'sonner';
 
 export const classKeys = {
     all: ['classes'] as const,
@@ -51,6 +52,22 @@ export function useDeleteClass() {
         mutationFn: (id: string) => classesApi.deleteClass(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: classKeys.all });
+        },
+    });
+}
+
+export function useUpdateClass() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, updates }: { id: string; updates: Partial<ClassRecord> }) =>
+            classesApi.updateClass(id, updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: classKeys.all });
+            toast.success('Class updated successfully');
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || 'Failed to update class');
         },
     });
 }

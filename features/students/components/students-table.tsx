@@ -57,19 +57,27 @@ import { AlertCircle, FileText, MoreHorizontal, Pencil, Trash2, Search, ArrowUpD
 import { toast } from 'sonner';
 
 import { EditStudentDialog } from './edit-student-dialog';
-import { Student } from '../schemas/student.schema';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useDeleteStudent } from '../api/use-delete-student';
-
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
+import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes';
 
 export function StudentsTable() {
-    const { data: students, isLoading: studentsLoading, isError, error } = useStudents();
     const { data: profile, isLoading: profileLoading } = useAuthProfile();
+    const isTeacher = profile?.role === 'TEACHER';
+    const isParent = profile?.role === 'PARENT';
+
+    // Fetch managed classes for teacher to filter students
+    const { data: teacherClassesData } = useTeacherClasses();
+    const teacherClasses = teacherClassesData?.map(c => c.id);
+
+    const { data: students, isLoading: studentsLoading, isError, error } = useStudents({
+        parentId: isParent ? profile?.id : undefined,
+        classIds: isTeacher ? teacherClasses : undefined
+    });
     const deleteMutation = useDeleteStudent();
 
     const isLoading = studentsLoading || profileLoading;
-    const isParent = profile?.role === 'PARENT';
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -246,7 +254,7 @@ export function StudentsTable() {
         {
             id: 'actions',
             cell: ({ row }) => {
-                if (isParent) return null;
+                if (isParent || isTeacher) return null;
                 const student = row.original;
                 return (
                     <div className="text-right hidden sm:block">
@@ -510,7 +518,7 @@ export function StudentsTable() {
                             )}
                         </div>
                         <DrawerFooter className="flex-col gap-2 pt-6">
-                            {!isParent && (
+                            {!isParent && !isTeacher && (
                                 <>
                                     <Button
                                         variant="outline"

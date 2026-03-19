@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuthProfile, useUploadAvatar } from '@/features/auth/hooks/use-auth';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -58,12 +59,14 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
             { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
             { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             { name: 'Subjects & Periods', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
+            { name: 'Notice Board', href: ROUTES.TEACHER_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['TEACHER'] },
+            { name: 'Notice Board', href: ROUTES.PARENT_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['PARENT'] },
         ],
     },
     {
         label: 'Timetable',
         items: [
-            { name: 'Master Schedule', href: '/timetable', icon: Calendar, exact: false, roles: ['ADMIN'] },
+            { name: 'Master Schedule', href: '/timetable', icon: Calendar, exact: false, roles: ['ADMIN', 'TEACHER'] },
         ],
     },
     {
@@ -83,7 +86,8 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
                 roles: ['ADMIN', 'TEACHER', 'PARENT'],
                 subItems: [
                     { name: 'Add Classes', href: ROUTES.SETTINGS_CLASSES, exact: false, roles: ['ADMIN'] },
-                    { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+                    { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, exact: false, roles: ['ADMIN'] },
+                    { name: 'Notification System', href: '/dashboard/settings/notifications', exact: false, roles: ['ADMIN'] },
                 ],
             },
         ],
@@ -155,7 +159,7 @@ export default function AppSidebar() {
                             AR-School ERP
                         </span>
                         <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase mt-0.5">
-                            Admin Portal
+                            {profile?.role ? `${profile.role.charAt(0) + profile.role.slice(1).toLowerCase()} Portal` : 'School Portal'}
                         </span>
                     </div>
                 </div>
@@ -205,10 +209,11 @@ export default function AppSidebar() {
                         )}
 
                         {profile?.avatar_url ? (
-                            <img
+                            <Image
                                 src={profile.avatar_url}
                                 alt="Profile Avatar"
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
                             />
                         ) : profile?.full_name ? (
                             <div className="w-full h-full flex items-center justify-center bg-primary/20 text-primary font-bold uppercase tracking-wider text-2xl">

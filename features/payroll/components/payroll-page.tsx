@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Wallet, Edit2, Loader2, Search, Receipt } from 'lucide-react';
+import { Wallet, Edit2, Loader2, Search, Receipt, Trash2 } from 'lucide-react';
 
 import { useGetPayroll, useUpdateSalary } from '../api/use-payroll';
-import { useGetLedger } from '../api/use-payroll-ledger';
+import { useGetLedger, useDeletePayout } from '../api/use-payroll-ledger';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MonthPicker } from '@/components/ui/month-picker';
 import {
     Dialog,
     DialogContent,
@@ -23,6 +24,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { ProcessPayoutDialog } from './process-payout-dialog';
 
@@ -40,8 +52,10 @@ export function PayrollPage() {
     const { data: staff, isLoading } = useGetPayroll();
     const { data: ledger, isLoading: isLoadingLedger } = useGetLedger();
     const updateSalaryMutation = useUpdateSalary();
+    const deletePayoutMutation = useDeletePayout();
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isPayoutOpen, setIsPayoutOpen] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState<StaffRow | null>(null);
@@ -90,6 +104,17 @@ export function PayrollPage() {
         );
     };
 
+    const handleDeletePayout = (id: string) => {
+        deletePayoutMutation.mutate(id, {
+            onSuccess: () => {
+                toast.success('Payout record deleted successfully.');
+            },
+            onError: (err) => {
+                toast.error(err.message || 'Failed to delete payout record.');
+            }
+        });
+    };
+
     const filteredStaff = staff?.filter((t: StaffRow) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
@@ -98,8 +123,7 @@ export function PayrollPage() {
 
     const totalMonthlyPayroll = staff?.reduce((sum: number, t: StaffRow) => sum + (Number(t.monthly_salary) || 0), 0) ?? 0;
     const totalPaidThisMonth = (() => {
-        const thisMonth = new Date().toISOString().slice(0, 7);
-        return ledger?.filter((e) => e.month_year === thisMonth)
+        return ledger?.filter((e) => e.month_year === selectedMonth)
             .reduce((sum, e) => sum + Number(e.net_paid), 0) ?? 0;
     })();
 
@@ -117,6 +141,13 @@ export function PayrollPage() {
                             <p className="text-sm text-muted-foreground">Manage teacher salaries and record monthly payouts</p>
                         </div>
                     </div>
+                    <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-lg border">
+                        <span className="text-sm font-medium text-muted-foreground px-2 whitespace-nowrap hidden sm:inline-block">Viewing</span>
+                        <MonthPicker 
+                            value={selectedMonth} 
+                            onChange={setSelectedMonth} 
+                        />
+                    </div>
                 </div>
 
                 {/* KPI Cards */}
@@ -131,7 +162,7 @@ export function PayrollPage() {
                     </Card>
                     <Card className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900">
                         <CardContent className="p-6">
-                            <p className="text-sm font-medium text-green-700 dark:text-green-400">Paid This Month</p>
+                            <p className="text-sm font-medium text-green-700 dark:text-green-400">Paid in {selectedMonth}</p>
                             <h3 className="text-3xl font-bold text-foreground mt-2">
                                 Rs. {isLoadingLedger ? '-' : totalPaidThisMonth.toLocaleString()}
                             </h3>
@@ -174,6 +205,7 @@ export function PayrollPage() {
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Staff Name</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Contact</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Qualification</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground">Status</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Monthly Salary</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                                             </tr>
@@ -198,6 +230,13 @@ export function PayrollPage() {
                                                         <div className="text-xs">{teacher.phone_number}</div>
                                                     </td>
                                                     <td className="px-5 py-4 text-muted-foreground">{teacher.qualification}</td>
+                                                    <td className="px-5 py-4">
+                                                        {ledger?.some(l => l.teacher_id === teacher.user_id && l.month_year === selectedMonth) ? (
+                                                            <Badge className="bg-emerald-100/50 text-emerald-700 hover:bg-emerald-100 ring-1 ring-inset ring-emerald-500/20">PAID</Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-muted-foreground bg-muted/30">UNPAID</Badge>
+                                                        )}
+                                                    </td>
                                                     <td className="px-5 py-4 font-bold text-foreground">
                                                         Rs. {Number(teacher.monthly_salary).toLocaleString()}
                                                     </td>
@@ -241,16 +280,17 @@ export function PayrollPage() {
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Deductions</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Net Paid</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground">Status</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
-                                            {!ledger || ledger.length === 0 ? (
+                                            {(!ledger || ledger.filter(e => e.month_year === selectedMonth).length === 0) ? (
                                                 <tr>
                                                     <td colSpan={6} className="text-center py-8 text-muted-foreground">
-                                                        No payout records yet. Use the "Pay" button on a staff member to record a payout.
+                                                        No payout records found for {selectedMonth}.
                                                     </td>
                                                 </tr>
-                                            ) : ledger.map((entry, idx) => (
+                                            ) : ledger.filter(e => e.month_year === selectedMonth).map((entry, idx) => (
                                                 <motion.tr
                                                     key={entry.id}
                                                     initial={{ opacity: 0 }}
@@ -271,6 +311,32 @@ export function PayrollPage() {
                                                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                                                             {entry.status}
                                                         </Badge>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" disabled={deletePayoutMutation.isPending}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Delete Payout Record?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Are you sure you want to delete this payout record for <strong>{entry.full_name}</strong> ({entry.month_year})? This action cannot be undone.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction 
+                                                                        onClick={() => handleDeletePayout(entry.id)}
+                                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                    >
+                                                                        Delete Record
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </td>
                                                 </motion.tr>
                                             ))}
@@ -323,6 +389,8 @@ export function PayrollPage() {
                 isOpen={isPayoutOpen}
                 setIsOpen={setIsPayoutOpen}
                 teacher={selectedTeacher}
+                ledger={ledger}
+                selectedMonth={selectedMonth}
             />
         </PageTransition>
     );

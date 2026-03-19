@@ -14,12 +14,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
 import {
-    useNotifications,
     useMarkNotificationRead,
     useMarkAllNotificationsRead,
     useNotificationsRealtime,
+    type Notification,
     type NotificationType,
 } from '@/features/notifications/api/use-notifications';
+import { useInfiniteNotifications } from '@/features/notifications/api/use-infinite-notifications';
 
 const TYPE_ICON: Record<NotificationType, React.ElementType> = {
     INFO: Info,
@@ -44,14 +45,21 @@ const TYPE_DOT: Record<NotificationType, string> = {
 
 export function NotificationBell() {
     const router = useRouter();
-    const { data: notifications } = useNotifications();
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+    } = useInfiniteNotifications(20);
+    const notifications = data?.pages.flat() ?? [];
     const markRead = useMarkNotificationRead();
     const markAllRead = useMarkAllNotificationsRead();
 
     // Mount realtime subscription — keeps queries in sync on INSERT/UPDATE
     useNotificationsRealtime();
 
-    const unreadCount = notifications?.filter(n => !n.is_read).length ?? 0;
+    const unreadCount = notifications?.filter((n: Notification) => !n.is_read).length ?? 0;
 
     const handleClick = (id: string, isRead: boolean, link: string | null) => {
         if (!isRead) markRead.mutate(id);
@@ -92,14 +100,18 @@ export function NotificationBell() {
                     )}
                 </div>
                 <ScrollArea className="h-[340px]">
-                    {!notifications || notifications.length === 0 ? (
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-full py-12">
+                            <p className="text-sm text-muted-foreground">Loading…</p>
+                        </div>
+                    ) : !notifications || notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full py-12 text-center px-4">
                             <Bell className="h-8 w-8 text-muted-foreground/40 mb-3" />
                             <p className="text-sm text-muted-foreground">No notifications yet.</p>
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {notifications.map(notification => {
+                            {notifications.map((notification: Notification) => {
                                 const type = notification.type ?? 'INFO';
                                 const Icon = TYPE_ICON[type as NotificationType] ?? Info;
                                 const iconColor = TYPE_COLOR[type as NotificationType] ?? 'text-blue-500';
@@ -138,6 +150,15 @@ export function NotificationBell() {
                                     </div>
                                 );
                             })}
+                            {hasNextPage && (
+                                <button
+                                    className="w-full py-2 text-xs text-primary hover:underline disabled:opacity-50"
+                                    onClick={() => fetchNextPage()}
+                                    disabled={isFetchingNextPage}
+                                >
+                                    {isFetchingNextPage ? 'Loading more…' : 'Load more'}
+                                </button>
+                            )}
                         </div>
                     )}
                 </ScrollArea>

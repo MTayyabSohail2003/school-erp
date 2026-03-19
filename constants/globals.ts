@@ -17,7 +17,8 @@ export const ROUTES = {
     ATTENDANCE: '/dashboard/attendance',
     MARKS: '/dashboard/marks',
     SETTINGS_CLASSES: '/settings/classes',
-    NOTICE_BOARD: '/settings/notices',
+    NOTICE_BOARD: '/settings/notices',           // admin notice board
+    TEACHER_NOTICE_BOARD: '/dashboard/notice-board', // teacher notice board
+    PARENT_NOTICE_BOARD: '/parent/notice-board',     // parent notice board
     FEE: '/dashboard/fees',
-
 } as const;

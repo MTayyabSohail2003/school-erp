@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Trash2, BookOpen, CalendarRange } from 'lucide-react';
 
 import { useGetExams, useDeleteExam } from '../api/use-exams';
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 import { AddExamDialog } from './add-exam-dialog';
 import { PageTransition, StaggerList, StaggerItem } from '@/components/ui/motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,8 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function ExamsPage() {
+    const { data: profile } = useAuthProfile();
+    const isAdmin = profile?.role === 'ADMIN';
     const { data: exams, isLoading } = useGetExams();
     const deleteMutation = useDeleteExam();
 
@@ -44,7 +47,7 @@ export function ExamsPage() {
                             <p className="text-sm text-muted-foreground">Manage exam sessions and schedules</p>
                         </div>
                     </div>
-                    <AddExamDialog />
+                    {isAdmin && <AddExamDialog />}
                 </div>
 
                 {/* Exams list */}
@@ -77,34 +80,36 @@ export function ExamsPage() {
                                         <CardHeader className="pb-2">
                                             <div className="flex items-start justify-between gap-2">
                                                 <CardTitle className="text-base leading-tight">{exam.title}</CardTitle>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete Exam?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This will permanently delete &quot;{exam.title}&quot; and all its associated marks. This cannot be undone.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleDelete(exam.id, exam.title)}
-                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                {isAdmin && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
                                                             >
-                                                                Delete
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Delete Exam?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This will permanently delete &quot;{exam.title}&quot; and all its associated marks. This cannot be undone.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction
+                                                                    onClick={() => handleDelete(exam.id, exam.title)}
+                                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                >
+                                                                    Delete
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                             </div>
                                         </CardHeader>
                                         <CardContent>

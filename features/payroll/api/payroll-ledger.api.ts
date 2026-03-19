@@ -58,4 +58,14 @@ export const payrollLedgerApi = {
 
         if (error) throw new Error(error.message);
     },
+
+    /**
+     * Delete an existing ledger payout record.
+     */
+    deletePayout: async (id: string): Promise<void> => {
+        const supabase = createClient();
+        const { error } = await supabase.from('staff_payroll_ledger').delete().eq('id', id);
+
+        if (error) throw new Error(error.message);
+    },
 };

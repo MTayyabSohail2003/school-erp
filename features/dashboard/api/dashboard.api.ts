@@ -29,6 +29,15 @@ export const dashboardApi = {
             }
         });
 
+        // 2b. Staff Payroll (Current Month)
+        const { data: payroll } = await supabase.from('staff_payroll_ledger').select('net_paid').eq('month_year', currentMonth);
+        let currentMonthStaffPayroll = 0;
+        payroll?.forEach(p => {
+            currentMonthStaffPayroll += Number(p.net_paid);
+        });
+
+        const currentMonthProfit = totalCollected - currentMonthStaffPayroll;
+
         // 3. Overall Defaulters (All Time)
         // Defaulters = PENDING and past due, or OVERDUE
         const { data: allChallans } = await supabase.from('fee_challans').select('amount_due, status, due_date, student_id');
@@ -68,6 +77,8 @@ export const dashboardApi = {
                 currentMonthPending: totalPending,
                 currentMonthPaidCount: studentsPaidCount,
                 currentMonthPendingCount: studentsPendingCount,
+                currentMonthStaffPayroll: currentMonthStaffPayroll,
+                currentMonthProfit: currentMonthProfit,
                 totalArrears: totalArrears,
                 totalDefaultersCount: defaultersSet.size,
             },

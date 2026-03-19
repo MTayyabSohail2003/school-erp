@@ -4,7 +4,7 @@ export const timetableEntrySchema = z.object({
     id: z.string().uuid().optional(),
     class_id: z.string().uuid(),
     teacher_id: z.string().uuid(),
-    subject_id: z.string().uuid(),
+    subject_id: z.string().uuid().nullable(),
     period_id: z.string().uuid(),
     day_of_week: z.number().min(1).max(6), // 1 = Monday, ..., 6 = Saturday
     academic_year: z.string().min(1),

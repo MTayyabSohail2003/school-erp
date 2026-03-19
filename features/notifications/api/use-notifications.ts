@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useRef } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -71,7 +71,7 @@ export const useMarkAllNotificationsRead = () => {
     });
 };
 
-// Realtime subscription — pushes live updates into the cache for the current user
+// Realtime subscription — pushes live updates into both flat and infinite query caches
 export const useNotificationsRealtime = () => {
     const queryClient = useQueryClient();
     const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);
@@ -85,33 +85,66 @@ export const useNotificationsRealtime = () => {
 
             const handleInsert = (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
                 const incoming = payload.new as Notification;
-                queryClient.setQueryData<Notification[]>(NOTIFICATIONS_KEY, (old) => {
-                    if (!old) return [incoming];
-                    return [incoming, ...old];
-                });
+                // Client-side filter — only process rows meant for this user
+                if (incoming.recipient_id !== user.id) return;
+
+                // Update flat query cache
+                queryClient.setQueryData<Notification[]>(NOTIFICATIONS_KEY, (old) =>
+                    old ? [incoming, ...old] : [incoming]
+                );
+
+                // Update infinite query cache — prepend to first page
+                queryClient.setQueryData<InfiniteData<Notification[]>>(
+                    ['notifications', 'infinite'],
+                    (old) => {
+                        if (!old) return old;
+                        const [first, ...rest] = old.pages;
+                        return {
+                            ...old,
+                            pages: [[incoming, ...(first ?? [])], ...rest],
+                        };
+                    }
+                );
             };
 
             const handleUpdate = (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
                 const updated = payload.new as Notification;
-                queryClient.setQueryData<Notification[]>(NOTIFICATIONS_KEY, (old) => {
-                    if (!old) return old;
-                    return old.map((n) => (n.id === updated.id ? updated : n));
-                });
+                // Client-side filter
+                if (updated.recipient_id !== user.id) return;
+
+                // Update flat query cache
+                queryClient.setQueryData<Notification[]>(NOTIFICATIONS_KEY, (old) =>
+                    old ? old.map((n) => (n.id === updated.id ? updated : n)) : old
+                );
+
+                // Update infinite query cache
+                queryClient.setQueryData<InfiniteData<Notification[]>>(
+                    ['notifications', 'infinite'],
+                    (old) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            pages: old.pages.map((page) =>
+                                page.map((n) => (n.id === updated.id ? updated : n))
+                            ),
+                        };
+                    }
+                );
             };
 
+            // No server-side filter — we filter client-side by recipient_id.
+            // This avoids Supabase Realtime's REPLICA IDENTITY requirement for filtered CDC.
             const channel = supabase
-                .channel(`notifications:${user.id}`)
+                .channel(`notifications:user:${user.id}`)
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
                     table: 'notifications',
-                    filter: `recipient_id=eq.${user.id}`,
                 }, handleInsert)
                 .on('postgres_changes', {
                     event: 'UPDATE',
                     schema: 'public',
                     table: 'notifications',
-                    filter: `recipient_id=eq.${user.id}`,
                 }, handleUpdate)
                 .subscribe();
 

@@ -81,5 +81,22 @@ export const timetableApi = {
             .eq('id', id);
 
         if (error) throw new Error(error.message);
+    },
+
+    getAllTimetable: async (academicYear: string): Promise<TimetableWithDetails[]> => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+            .from('timetable')
+            .select(`
+                *,
+                classes (name, section),
+                users (full_name),
+                subjects (name, code),
+                periods (name, start_time, end_time, order_index)
+            `)
+            .eq('academic_year', academicYear);
+
+        if (error) throw new Error(error.message);
+        return data as TimetableWithDetails[];
     }
 };

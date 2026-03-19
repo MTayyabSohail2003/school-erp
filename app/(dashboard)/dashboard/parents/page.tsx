@@ -1,5 +1,6 @@
 import { ParentsTable } from '@/features/parents/components/parents-table';
 import { AddParentDialog } from '@/features/parents/components/add-parent-dialog';
+import { SendRemindersButton } from '@/features/parents/components/send-reminders-button';
 
 export const metadata = {
     title: 'Parents Directory | School ERP',
@@ -17,6 +18,7 @@ export default function ParentsPage() {
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
+                    <SendRemindersButton />
                     <AddParentDialog />
                 </div>
             </div>

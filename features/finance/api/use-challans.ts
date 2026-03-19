@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from './finance.api';
+import { updateChallanStatusAction } from '../actions/challan-actions';
 import { type ChallanStatus } from '../schemas/fee-challan.schema';
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
+import { broadcastNotification } from '@/features/notifications/actions/notification-actions';
+import { NotificationTemplates } from '@/features/notifications/utils/notification-templates';
 
 const CHALLANS_KEY = ['fee-challans'] as const;
 
@@ -17,8 +20,11 @@ export const useUpdateChallanStatus = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, status, paymentMethod }: { id: string; status: ChallanStatus; paymentMethod?: 'CASH' | 'BANK' }) =>
-            financeApi.updateChallanStatus(id, status, paymentMethod),
+        mutationFn: async ({ id, status, paymentMethod }: { id: string; status: ChallanStatus; paymentMethod?: 'CASH' | 'BANK' }) => {
+            const result = await updateChallanStatusAction(id, status, paymentMethod);
+            if (!result.success) throw new Error(result.error);
+            return result;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['fee-challans'] });
         },
@@ -30,8 +36,13 @@ export const useGenerateChallans = () => {
 
     return useMutation({
         mutationFn: (monthYear: string) => financeApi.generateChallansForMonth(monthYear),
-        onSuccess: () => {
+        onSuccess: async (data, monthYear) => {
             queryClient.invalidateQueries({ queryKey: ['fee-challans'] });
+            
+            // Broadcast notification to all parents
+            if (data.count > 0) {
+                await broadcastNotification(['PARENT'], NotificationTemplates.FEE_CHALLAN_GENERATED(monthYear));
+            }
         },
     });
 };

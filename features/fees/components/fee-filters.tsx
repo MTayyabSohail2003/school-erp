@@ -3,6 +3,7 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { MonthPicker } from '@/components/ui/month-picker';
 import { Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
@@ -61,10 +62,9 @@ export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
 
             <div className="flex flex-wrap items-center gap-3">
                 {/* Month Picker */}
-                <Input 
-                    type="month" 
+                <MonthPicker
                     value={filters.monthYear}
-                    onChange={(e) => updateFilter('monthYear', e.target.value)}
+                    onChange={(val) => updateFilter('monthYear', val)}
                     className="w-40 bg-background"
                 />
 

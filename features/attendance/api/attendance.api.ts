@@ -49,7 +49,26 @@ export const attendanceApi = {
         if (error) throw new Error(error.message);
         return data as AttendanceRecord[];
     },
-
+ 
+    /**
+     * Fetch attendance records for multiple students on a specific date.
+     * Useful for parent portal's daily view.
+     */
+    getAttendanceByStudentsAndDate: async (
+        studentIds: string[],
+        date: string
+    ): Promise<AttendanceRecord[]> => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+            .from('attendance')
+            .select('*')
+            .in('student_id', studentIds)
+            .eq('record_date', date);
+ 
+        if (error) throw new Error(error.message);
+        return data as AttendanceRecord[];
+    },
+ 
     /**
      * Bulk upsert attendance — one record per student for the given date.
      * Uses composite unique key (student_id, record_date) for conflict resolution.
