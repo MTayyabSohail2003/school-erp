@@ -11,11 +11,6 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "AR-School ERP — Admin Portal",
   description: "School Management System — Students, Staff, Attendance, Exams & Fees",
-  icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
-    shortcut: "/logo.png",
-  },
 };
 
 export default function RootLayout({
