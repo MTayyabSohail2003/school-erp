@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Megaphone, X, ArrowRight } from 'lucide-react';
@@ -14,6 +15,17 @@ export function AnnouncementBanner() {
     const { data: notices } = useContextNotices();
     const { data: profile } = useAuthProfile();
     const [dismissed, setDismissed] = useState<string | null>(null);
+
+    // Load dismissed ID from localStorage on mount
+    React.useEffect(() => {
+        const saved = localStorage.getItem('announcement_banner_dismissed');
+        if (saved) setDismissed(saved);
+    }, []);
+
+    const handleDismiss = (id: string) => {
+        setDismissed(id);
+        localStorage.setItem('announcement_banner_dismissed', id);
+    };
 
     // Show only the latest notice if not dismissed
     const latest = notices?.[0];
@@ -63,8 +75,8 @@ export function AnnouncementBanner() {
                             {formatDistanceToNow(new Date(latest.created_at), { addSuffix: true })}
                         </span>
                         <button
-                            onClick={() => setDismissed(latest.id)}
-                            className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                            onClick={() => handleDismiss(latest.id)}
+                            className="text-muted-foreground hover:text-foreground transition-colors p-1 cursor-pointer"
                             aria-label="Dismiss notice"
                         >
                             <X className="h-4 w-4" />

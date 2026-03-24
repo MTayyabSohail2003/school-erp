@@ -4,20 +4,18 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { classFormSchema, type ClassFormData } from '@/features/classes/schemas/class.schema';
-import { useCreateClass, useClasses } from '@/features/classes/hooks/use-classes';
-
+import { useUpdateClass, useClasses } from '@/features/classes/hooks/use-classes';
+import { type ClassRecord } from '@/features/classes/api/classes.api';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     Form,
@@ -28,11 +26,16 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-export function AddClassDialog() {
-    const [open, setOpen] = useState(false);
-    const createClassMutation = useCreateClass();
+interface EditClassDialogProps {
+    isOpen: boolean;
+    setIsOpen: (isOpen: boolean) => void;
+    classData: ClassRecord | null;
+}
+
+export function EditClassDialog({ isOpen, setIsOpen, classData }: EditClassDialogProps) {
+    const updateClassMutation = useUpdateClass();
     const { data: existingClasses } = useClasses();
 
     const form = useForm<ClassFormData>({
@@ -40,47 +43,32 @@ export function AddClassDialog() {
         defaultValues: {
             name: '',
             section: '',
-            class_teacher_id: null,
             is_primary: false,
         },
     });
 
-    // Automated Primary Mode Detection
-    const classNameValue = form.watch('name');
     useEffect(() => {
-        const lowerName = classNameValue.toLowerCase();
-        const primaryKeywords = ['nursery', 'prep', '1', '2', '3', '4'];
-        const secondaryKeywords = ['5', '6', '7', '8', '9', '10'];
-
-        const hasPrimary = primaryKeywords.some(key => {
-            // Check if it's the exact number or starts with "class [number]"
-            const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'i');
-            return regex.test(lowerName);
-        });
-
-        const hasSecondary = secondaryKeywords.some(key => {
-            const regex = new RegExp(`(^|\\s)${key}(\\s|$)`, 'i');
-            return regex.test(lowerName);
-        });
-
-        if (hasPrimary && !hasSecondary) {
-            form.setValue('is_primary', true);
-        } else if (hasSecondary) {
-            form.setValue('is_primary', false);
+        if (classData && isOpen) {
+            form.reset({
+                name: classData.name,
+                section: classData.section || '',
+                is_primary: classData.is_primary,
+            });
         }
-    }, [classNameValue, form]);
+    }, [classData, isOpen, form]);
 
     async function onSubmit(values: ClassFormData) {
-        // Ensure class_teacher_id is null if it's an empty string or undefined
+        if (!classData) return;
+
         const formattedValues = {
             ...values,
             section: values.section?.trim() || null,
-            class_teacher_id: values.class_teacher_id ?? null,
             is_primary: values.is_primary ?? false,
         };
 
-        // Guard: Prevent duplicate class name + section combination
+        // Guard: Prevent duplicate class name + section combination (ignoring the current record)
         const isDuplicate = existingClasses?.some(c => 
+            c.id !== classData.id &&
             c.name.toLowerCase() === formattedValues.name.trim().toLowerCase() && 
             (c.section || '').toLowerCase() === (formattedValues.section || '').toLowerCase()
         );
@@ -90,31 +78,24 @@ export function AddClassDialog() {
             return;
         }
 
-        createClassMutation.mutate(formattedValues, {
-            onSuccess: () => {
-                toast.success(`Class ${values.name}${values.section ? ` - ${values.section}` : ''} added successfully.`);
-                setOpen(false);
-                form.reset();
-            },
-            onError: (error: Error) => {
-                toast.error(error.message || 'Failed to add class.');
-            },
-        });
+        updateClassMutation.mutate(
+            { id: classData.id, updates: formattedValues },
+            {
+                onSuccess: () => {
+                    setIsOpen(false);
+                    form.reset();
+                },
+            }
+        );
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Class
-                </Button>
-            </DialogTrigger>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="sm:max-w-[400px]">
                 <DialogHeader>
-                    <DialogTitle>Add Class</DialogTitle>
+                    <DialogTitle>Edit Class</DialogTitle>
                     <DialogDescription>
-                        Create a new class and section configuration.
+                        Modify the details for {classData?.name}.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -161,7 +142,6 @@ export function AddClassDialog() {
                                 </FormItem>
                             )}
                         />
-
  
                         <FormField
                             control={form.control}
@@ -189,16 +169,16 @@ export function AddClassDialog() {
                         <div className="pt-4 flex justify-end">
                             <Button
                                 type="submit"
-                                disabled={createClassMutation.isPending}
+                                disabled={updateClassMutation.isPending}
                                 className="w-full sm:w-auto"
                             >
-                                {createClassMutation.isPending ? (
+                                {updateClassMutation.isPending ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         Saving...
                                     </>
                                 ) : (
-                                    'Add Class'
+                                    'Save Changes'
                                 )}
                             </Button>
                         </div>

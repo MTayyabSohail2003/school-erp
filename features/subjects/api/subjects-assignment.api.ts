@@ -6,7 +6,7 @@ export const subjectsAssignmentApi = {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('subjects')
-            .select('*')
+            .select('id, name, code, class_id, master_id')
             .eq('class_id', classId)
             .order('name', { ascending: true });
 
@@ -54,6 +54,7 @@ export const subjectsAssignmentApi = {
                 name,
                 code,
                 class_id,
+                master_id,
                 classes:class_id (
                     name,
                     section
@@ -65,6 +66,7 @@ export const subjectsAssignmentApi = {
         
         type RawAssignment = Subject & { 
             class_id: string; 
+            master_id: string | null;
             classes: { name: string; section: string } | { name: string; section: string }[] | null 
         };
 
@@ -73,6 +75,7 @@ export const subjectsAssignmentApi = {
             name: item.name,
             code: item.code,
             class_id: item.class_id,
+            master_id: item.master_id,
             classes: Array.isArray(item.classes) ? item.classes[0] : item.classes
         }));
     }

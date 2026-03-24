@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanst
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useRef } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { deleteNotificationAction, deleteAllNotificationsAction } from '../actions/delete-notifications.action';
 
 export type NotificationType = 'INFO' | 'WARNING' | 'SUCCESS' | 'ERROR';
 
@@ -71,6 +72,38 @@ export const useMarkAllNotificationsRead = () => {
     });
 };
 
+// Delete a single notification
+export const useDeleteNotification = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (notificationId: string) => {
+            const result = await deleteNotificationAction(notificationId);
+            if (result.error) throw new Error(result.error);
+            return result;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+            queryClient.invalidateQueries({ queryKey: ['notifications', 'infinite'] });
+        },
+    });
+};
+
+// Delete ALL notifications for the current user
+export const useDeleteAllNotifications = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async () => {
+            const result = await deleteAllNotificationsAction();
+            if (result.error) throw new Error(result.error);
+            return result;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+            queryClient.invalidateQueries({ queryKey: ['notifications', 'infinite'] });
+        },
+    });
+};
+
 // Realtime subscription — pushes live updates into both flat and infinite query caches
 export const useNotificationsRealtime = () => {
     const queryClient = useQueryClient();
@@ -132,6 +165,32 @@ export const useNotificationsRealtime = () => {
                 );
             };
 
+            const handleDelete = (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+                const deletedRecord = payload.old as { id?: string };
+                const deletedId = deletedRecord.id;
+                
+                if (!deletedId) return;
+
+                // Update flat query cache
+                queryClient.setQueryData<Notification[]>(NOTIFICATIONS_KEY, (old) =>
+                    old ? old.filter((n) => n.id !== deletedId) : old
+                );
+
+                // Update infinite query cache
+                queryClient.setQueryData<InfiniteData<Notification[]>>(
+                    ['notifications', 'infinite'],
+                    (old) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            pages: old.pages.map((page) =>
+                                page.filter((n) => n.id !== deletedId)
+                            ),
+                        };
+                    }
+                );
+            };
+
             // No server-side filter — we filter client-side by recipient_id.
             // This avoids Supabase Realtime's REPLICA IDENTITY requirement for filtered CDC.
             const channel = supabase
@@ -146,6 +205,11 @@ export const useNotificationsRealtime = () => {
                     schema: 'public',
                     table: 'notifications',
                 }, handleUpdate)
+                .on('postgres_changes', {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'notifications',
+                }, handleDelete)
                 .subscribe();
 
             channelRef.current = channel;

@@ -34,6 +34,15 @@ export const periodsApi = {
 
     deletePeriod: async (id: string): Promise<void> => {
         const supabase = createClient();
+        
+        // Fix: Delete related timetable entries first to avoid foreign key constraint error
+        const { error: timetableError } = await supabase
+            .from('timetable')
+            .delete()
+            .eq('period_id', id);
+
+        if (timetableError) throw new Error(timetableError.message);
+
         const { error } = await supabase
             .from('periods')
             .delete()

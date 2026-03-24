@@ -8,7 +8,7 @@ import { type ClassRecord } from '@/features/classes/api/classes.api';
 import { AssignPeriodDialog } from './assign-period-dialog';
 import { toast } from 'sonner';
 
-import { Plus, Zap, Loader2, Users, UserPlus, GraduationCap, ChevronRight } from 'lucide-react';
+import { Plus, Zap, Loader2, Users, UserPlus, GraduationCap, ChevronRight, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,6 +53,27 @@ export function ClassTimetableGrid({ classRecord, academicYear, timetable, selec
 
     const handleCellClick = (periodId: string, day: number) => {
         if (!selectedBrush) return;
+
+        // CHECK FOR TEACHER CONFLICT DYNAMICALLY
+        // 1. Is this teacher a primary in-charge?
+        const isPrimaryInCharge = allClasses?.some(c => c.class_teacher_id === selectedBrush.teacherId && c.is_primary);
+        if (isPrimaryInCharge) {
+            toast.error(`Error: ${selectedBrush.teacherName} is a Primary Class In-Charge (Available for their class only).`);
+            return;
+        }
+
+        // 2. Is this teacher already busy at this specific slot elsewhere?
+        const hasSlotConflict = allTimetable?.some(entry => 
+            entry.teacher_id === selectedBrush.teacherId && 
+            entry.period_id === periodId && 
+            entry.day_of_week === day &&
+            entry.class_id !== classRecord.id
+        );
+
+        if (hasSlotConflict) {
+            toast.error(`Error: ${selectedBrush.teacherName} is already scheduled for this period in another class.`);
+            return;
+        }
 
         bulkUpsert.mutate([{
             class_id: classRecord.id,
@@ -109,6 +130,33 @@ export function ClassTimetableGrid({ classRecord, academicYear, timetable, selec
         dayOfWeek: number;
         existingEntry?: TimetableWithDetails;
     } | null>(null);
+
+    const [repeatSourceDay, setRepeatSourceDay] = useState<number>(1);
+    const [repeatTargetDay, setRepeatTargetDay] = useState<number>(2);
+
+    const handleRepeatDay = () => {
+        if (repeatSourceDay === repeatTargetDay) {
+            toast.error('Source and target days must be different.');
+            return;
+        }
+        const sourceEntries = timetable.filter(e => e.day_of_week === repeatSourceDay);
+        if (sourceEntries.length === 0) {
+            toast.error(`No periods assigned on ${DAYS[repeatSourceDay - 1].name} to repeat.`);
+            return;
+        }
+        const entries = sourceEntries.map(e => ({
+            class_id: classRecord.id,
+            period_id: e.period_id,
+            day_of_week: repeatTargetDay,
+            teacher_id: e.teacher_id,
+            subject_id: e.subject_id,
+            academic_year: academicYear,
+        }));
+        bulkUpsert.mutate(entries, {
+            onSuccess: () => toast.success(`Copied ${entries.length} period(s) to ${DAYS[repeatTargetDay - 1].name}.`),
+            onError: (err: Error) => toast.error(err.message || 'Failed to repeat day.'),
+        });
+    };
 
     const handleQuickFill = () => {
         if (!classRecord.class_teacher_id) {
@@ -371,7 +419,66 @@ export function ClassTimetableGrid({ classRecord, academicYear, timetable, selec
                         </Button>
                     </div>
 
-                    <div className="relative border rounded-xl overflow-hidden bg-card shadow-sm w-full max-w-full">
+                    {/* REPEAT DAY PANEL */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl border border-primary/10 bg-primary/[0.02]">
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/10">
+                                <Copy className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-widest text-foreground">Repeat Day</p>
+                                <p className="text-[10px] text-muted-foreground">Clone all assigned periods from one day to another.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
+                            <div className="flex-1 space-y-1">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground pl-1">Source Day</label>
+                                <select
+                                    className="w-full h-10 text-xs bg-background border border-input rounded-xl px-3 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                                    value={repeatSourceDay}
+                                    onChange={(e) => setRepeatSourceDay(Number(e.target.value))}
+                                >
+                                    {DAYS.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex items-end pb-0.5 justify-center">
+                                <span className="text-xs text-muted-foreground font-bold">→</span>
+                            </div>
+
+                            <div className="flex-1 space-y-1">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground pl-1">Target Day</label>
+                                <select
+                                    className="w-full h-10 text-xs bg-background border border-input rounded-xl px-3 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"
+                                    value={repeatTargetDay}
+                                    onChange={(e) => setRepeatTargetDay(Number(e.target.value))}
+                                >
+                                    {DAYS.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-10 px-5 rounded-xl text-xs font-bold border-primary/20 hover:bg-primary/5 transition-all active:scale-95 self-end"
+                                onClick={handleRepeatDay}
+                                disabled={bulkUpsert.isPending}
+                            >
+                                {bulkUpsert.isPending
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                    : <Copy className="h-3.5 w-3.5 mr-1" />
+                                }
+                                Repeat
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="relative border rounded-xl overflow-hidden bg-card shadow-sm w-full max-w-full min-w-0">
                         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
                             <table className="w-full text-sm text-left border-collapse">
                                 <thead className="bg-muted/40 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">

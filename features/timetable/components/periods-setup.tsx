@@ -12,6 +12,7 @@ import { useGetPeriods } from '../hooks/use-get-periods';
 import { useCreatePeriod } from '../hooks/use-create-period';
 import { useDeletePeriod } from '../hooks/use-delete-period';
 import { useBulkCreatePeriods } from '../hooks/use-bulk-create-periods';
+import { useTimetableRealtime } from '../hooks/use-timetable-realtime';
 
 import {
     Table,
@@ -28,6 +29,16 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
     Form,
     FormControl,
@@ -56,6 +67,7 @@ const bulkGeneratorSchema = z.object({
 });
 
 export function PeriodsSetup() {
+    useTimetableRealtime();
     const { data: periods, isLoading } = useGetPeriods();
     const createMutation = useCreatePeriod();
     const bulkMutation = useBulkCreatePeriods();
@@ -63,6 +75,9 @@ export function PeriodsSetup() {
 
     const [open, setOpen] = useState(false);
     const [bulkOpen, setBulkOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleteName, setDeleteName] = useState('');
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const form = useForm<z.infer<typeof periodSchema>>({
         resolver: zodResolver(periodSchema),
@@ -147,11 +162,23 @@ export function PeriodsSetup() {
     };
 
     const handleDelete = (id: string, name: string) => {
-        if (!window.confirm(`Are you sure you want to delete ${name}? This will remove it from all timetables.`)) return;
+        setDeleteId(id);
+        setDeleteName(name);
+        setIsDeleteDialogOpen(true);
+    };
 
-        deleteMutation.mutate(id, {
-            onSuccess: () => toast.success('Period deleted.'),
-            onError: (error: Error) => toast.error(error.message || 'Failed to delete period.'),
+    const confirmDelete = () => {
+        if (!deleteId) return;
+        
+        deleteMutation.mutate(deleteId, {
+            onSuccess: () => {
+                toast.success('Period deleted.');
+                setIsDeleteDialogOpen(false);
+                setDeleteId(null);
+            },
+            onError: (error: Error) => {
+                toast.error(error.message || 'Failed to delete period.');
+            },
         });
     };
 
@@ -378,6 +405,28 @@ export function PeriodsSetup() {
                     </div>
                 )}
             </CardContent>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the period <strong>{deleteName}</strong> and remove it from all class timetables. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setDeleteId(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deleteMutation.isPending}
+                        >
+                            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                            Delete Period
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     );
 }

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants/globals';
 import { format } from 'date-fns';
-import { NoticeBoardWidget } from '@/features/notices/components/notice-board-widget';
+import { useTimetableRealtime } from '@/features/timetable/hooks/use-timetable-realtime';
 
 const ttStyle = {
     contentStyle: {
@@ -48,6 +48,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: { icon: React.Element
 }
 
 export function TeacherDashboard({ profile }: { profile: { id: string; full_name?: string } }) {
+    useTimetableRealtime();
     const { data: stats, isLoading } = useTeacherChartStats(profile.id);
 
     const hour = new Date().getHours();
@@ -104,17 +105,6 @@ export function TeacherDashboard({ profile }: { profile: { id: string; full_name
                         </div>
                     </div>
                 </div>
-
-                {/* ── Notice Board & Announcements ── */}
-                <StaggerItem>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <div className="h-4 w-1 rounded-full bg-primary" />
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Latest Announcements</h2>
-                        </div>
-                        <NoticeBoardWidget role="TEACHER" />
-                    </div>
-                </StaggerItem>
 
                 {/* ── KPIs ── */}
                 <StaggerList className="grid grid-cols-2 lg:grid-cols-4 gap-4">

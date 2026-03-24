@@ -14,12 +14,6 @@ export type Class = z.infer<typeof classSchema>;
 export const classFormSchema = classSchema.omit({
     id: true,
     created_at: true,
-}).refine(data => {
-    if (data.is_primary && !data.class_teacher_id) return false;
-    return true;
-}, {
-    message: "Class Teacher is required for Primary Mode classes",
-    path: ["class_teacher_id"]
 });
 
 export type ClassFormData = z.infer<typeof classFormSchema>;

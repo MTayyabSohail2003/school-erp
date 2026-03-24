@@ -70,7 +70,7 @@ function CreateParentForm({
 
     return (
         <div className="border rounded-md p-4 bg-muted/40 space-y-3 relative mt-2">
-            <button type="button" onClick={onCancel} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={onCancel} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground cursor-pointer">
                 <X className="h-4 w-4" />
             </button>
             <h4 className="text-sm font-semibold flex items-center gap-2">

@@ -25,9 +25,10 @@ export function AddExamDialog() {
     const [open, setOpen] = useState(false);
     const createMutation = useCreateExam();
 
+    const today = new Date().toISOString().split('T')[0];
     const form = useForm<ExamFormData>({
         resolver: zodResolver(examFormSchema),
-        defaultValues: { title: '', start_date: '', end_date: '', term: 'UNIT_TEST' },
+        defaultValues: { title: '', start_date: today, end_date: today, term: 'UNIT_TEST' },
     });
 
     const onSubmit = (data: ExamFormData) => {

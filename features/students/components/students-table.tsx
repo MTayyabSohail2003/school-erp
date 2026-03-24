@@ -87,8 +87,8 @@ export function StudentsTable() {
 
     const uniqueClasses = React.useMemo(() => {
         if (!students) return [];
-        const classes = new Set(students.map((s: any) => s.classes?.name).filter(Boolean));
-        return Array.from(classes).sort((a: any, b: any) => {
+        const classes = new Set(students.map((s) => s.classes?.name).filter(Boolean));
+        return Array.from(classes).sort((a: string, b: string) => {
             const numA = parseInt(a.match(/\d+/)?.[0] || '0');
             const numB = parseInt(b.match(/\d+/)?.[0] || '0');
             if (numA === numB) return a.localeCompare(b);
@@ -100,9 +100,9 @@ export function StudentsTable() {
         if (!students) return [];
         let filtered = students;
         if (activeTab !== 'All') {
-            filtered = students.filter((s: any) => s.classes?.name === activeTab);
+            filtered = students.filter((s) => s.classes?.name === activeTab);
         }
-        const sections = new Set(filtered.map((s: any) => s.classes?.section).filter(Boolean));
+        const sections = new Set(filtered.map((s) => s.classes?.section).filter(Boolean));
         return Array.from(sections).sort() as string[];
     }, [students, activeTab]);
 
@@ -196,7 +196,7 @@ export function StudentsTable() {
             header: 'Class',
             filterFn: (row, columnId, filterValue) => {
                 if (!filterValue || typeof filterValue !== 'object') return true;
-                const { className, section } = filterValue as any;
+                const { className, section } = filterValue as { className: string; section: string };
                 const matchClass = !className || className === 'All' || row.original.classes?.name === className;
                 const matchSection = !section || section === 'All' || row.original.classes?.section === section;
                 return matchClass && matchSection;
@@ -303,6 +303,25 @@ export function StudentsTable() {
             globalFilter,
         },
     });
+
+    if (isTeacher && teacherClasses?.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 bg-muted/20 border-2 border-dashed border-muted rounded-3xl text-center space-y-4 animate-in fade-in zoom-in duration-500">
+                <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <AlertCircle className="h-10 w-10 text-primary" />
+                </div>
+                <div className="max-w-xs">
+                    <h3 className="text-xl font-bold tracking-tight">Access Restricted</h3>
+                    <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        You have not been assigned to any classes yet. Please contact your administrator to get access to student records.
+                    </p>
+                </div>
+                <Button variant="outline" onClick={() => window.location.reload()} className="rounded-xl font-bold">
+                    Check Assignment
+                </Button>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return <div className="mt-8"><Loader size="lg" text="Loading student records..." /></div>;

@@ -59,6 +59,8 @@ import { toast } from 'sonner';
 
 import { EditStaffDialog } from './edit-staff-dialog';
 import { AssignSubjectsDialog } from './assign-subjects-dialog';
+import { PasswordConfirmDialog } from '@/components/ui/password-confirm-dialog';
+import { submitForceDeleteStaff } from '@/features/staff/api/force-delete-staff.action';
 
 export function StaffTable() {
     const { data: staff, isLoading, isError, error } = useGetStaff();
@@ -70,6 +72,7 @@ export function StaffTable() {
 
     // Action States
     const [staffToDelete, setStaffToDelete] = React.useState<{ id: string; name: string } | null>(null);
+    const [forceDeleteData, setForceDeleteData] = React.useState<{ id: string; name: string } | null>(null);
     const [staffToEdit, setStaffToEdit] = React.useState<any | null>(null);
     const [staffToAssignSubjects, setStaffToAssignSubjects] = React.useState<any | null>(null);
     const [drawerStaff, setDrawerStaff] = React.useState<any | null>(null);
@@ -85,10 +88,32 @@ export function StaffTable() {
                 setDrawerStaff(null);
             },
             onError: (err) => {
-                toast.error(err.message || 'Failed to delete staff.', { id: loadingToast });
-                setStaffToDelete(null);
+                const msg = err.message || '';
+                if (msg.toLowerCase().includes('foreign key') || msg.toLowerCase().includes('violates') || msg.toLowerCase().includes('timetable') || msg.toLowerCase().includes('classes')) {
+                    toast.dismiss(loadingToast);
+                    setForceDeleteData({ id: staffToDelete.id, name: staffToDelete.name });
+                    setStaffToDelete(null);
+                    setDrawerStaff(null);
+                } else {
+                    toast.error(msg || 'Failed to delete staff.', { id: loadingToast });
+                    setStaffToDelete(null);
+                }
             },
         });
+    };
+
+    const handleForceDelete = async (password: string) => {
+        if (!forceDeleteData) return;
+        const result = await submitForceDeleteStaff(forceDeleteData.id, password);
+        
+        if (!result.success) {
+            toast.error(result.error);
+            return;
+        }
+
+        toast.success(`Staff member ${forceDeleteData.name} and all associated data force-deleted securely.`);
+        setForceDeleteData(null);
+        window.location.reload();
     };
 
     const columns: ColumnDef<any>[] = React.useMemo(() => [
@@ -451,6 +476,23 @@ export function StaffTable() {
                 isOpen={!!staffToAssignSubjects}
                 setIsOpen={(open) => !open && setStaffToAssignSubjects(null)}
                 teacher={staffToAssignSubjects}
+            />
+
+            <PasswordConfirmDialog
+                isOpen={!!forceDeleteData}
+                onOpenChange={(open) => !open && setForceDeleteData(null)}
+                title="Force Delete Staff Member"
+                description={
+                    <>
+                        <p className="mb-2">
+                            The teacher <strong>{forceDeleteData?.name}</strong> cannot be deleted normally because they have assigned classes or timetable periods.
+                        </p>
+                        <p className="font-semibold text-destructive">
+                            CAUTION: Proceeding will permanently delete this staff member, their login access, AND remove them from all assigned classes and timetables.
+                        </p>
+                    </>
+                }
+                onConfirm={handleForceDelete}
             />
         </div>
     );

@@ -25,7 +25,7 @@ export function ParentNoticeBoardPage() {
     const searchParams = useSearchParams();
     const noticeId = searchParams.get('noticeId');
 
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
     const dateQuery = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
     const { data: notices, isLoading } = useParentNotices(dateQuery);

@@ -95,7 +95,7 @@ export function NoticeBoardPage() {
         }
     }, [profile, isAdmin, router]);
 
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const dateQuery = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
 
     const { data: notices, isLoading } = useNotices(dateQuery);

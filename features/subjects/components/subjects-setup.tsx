@@ -126,7 +126,9 @@ export function SubjectsSetup() {
                             [newMaster.id],
                             [{ id: newMaster.id, name: newMaster.name, code: newMaster.code }]
                         ).then(() => {
-                            toast.success(`Success: ${newMaster.name} added and assigned.`);
+                            queryClient.invalidateQueries({ queryKey: ['subjects', 'class', values.targetClassId] });
+                            queryClient.invalidateQueries({ queryKey: ['subjects', 'all-assignments'] });
+                            toast.success(`Success: ${newMaster.name} added and assigned to class.`);
                         }).catch(e => toast.error(`Master created, but assignment failed: ${e.message}`));
                     } else {
                         toast.success('Added to collection.');
@@ -158,6 +160,8 @@ export function SubjectsSetup() {
                         masterIds,
                         newMasters
                     ).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['subjects', 'class', values.targetClassId] });
+                        queryClient.invalidateQueries({ queryKey: ['subjects', 'all-assignments'] });
                         toast.success(`Success: ${newMasters.length} subjects added and assigned.`);
                     }).catch(e => toast.error(`Master created, but assignment failed: ${e.message}`));
                 } else {
@@ -216,6 +220,7 @@ export function SubjectsSetup() {
                     setDeleteItem(null);
                     // Invalidate specifically the class subjects query
                     queryClient.invalidateQueries({ queryKey: ['subjects', 'class', selectedClassId] });
+                    queryClient.invalidateQueries({ queryKey: ['subjects', 'all-assignments'] });
                 })
                 .catch((err: Error) => toast.error(err.message));
         }
@@ -395,17 +400,27 @@ export function SubjectsSetup() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                            {masterPool.map(subject => (
-                                <div key={subject.id} className="relative group p-4 rounded-xl border bg-background hover:border-emerald-500/50 hover:shadow-md transition-all duration-300 overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => handleDeleteMaster(subject.id, subject.name)} className="text-muted-foreground hover:text-destructive">
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
+                            {masterPool.map(subject => {
+                                const assignedClassesCount = allAssignments?.filter(a => a.master_id === subject.id || a.name === subject.name).length || 0;
+                                return (
+                                    <div key={subject.id} className="relative group p-4 rounded-xl border bg-background hover:border-emerald-500/50 hover:shadow-md transition-all duration-300 overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => handleDeleteMaster(subject.id, subject.name)} className="text-muted-foreground hover:text-destructive">
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                        <h3 className="font-bold text-sm pr-4 truncate">{subject.name.toUpperCase()}</h3>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{subject.code?.toUpperCase() || 'No Code'}</p>
+                                            {assignedClassesCount > 0 && (
+                                                <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                                    {assignedClassesCount} Classes
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </div>
-                                    <h3 className="font-bold text-sm pr-4 truncate">{subject.name.toUpperCase()}</h3>
-                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-1">{subject.code?.toUpperCase() || 'No Code'}</p>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>
@@ -473,22 +488,30 @@ export function SubjectsSetup() {
                                         <div className="flex-1 overflow-y-auto py-4">
                                             <div className="grid grid-cols-2 gap-2">
                                                 {masterPool?.map(m => {
-                                                    const isAssigned = classSubjects?.some(cs => cs.name === m.name);
+                                                    const isLocalAssigned = classSubjects?.some(cs => cs.master_id === m.id || cs.name === m.name);
+                                                    const others = allAssignments?.filter(a => (a.master_id === m.id || a.name === m.name) && a.class_id !== selectedClassId);
+                                                    const isGloballyAssigned = !!others?.length;
+                                                    const isUnavailable = isLocalAssigned || isGloballyAssigned;
+
                                                     return (
                                                         <div 
                                                             key={m.id} 
-                                                            onClick={() => !isAssigned && setSelectedMasterIds(prev => 
+                                                            onClick={() => !isUnavailable && setSelectedMasterIds(prev => 
                                                                 prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
                                                             )}
                                                             className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-3 ${
-                                                                isAssigned ? 'opacity-50 cursor-not-allowed bg-muted border-transparent' :
-                                                                selectedMasterIds.includes(m.id) ? 'border-blue-500 bg-blue-50/50' : 'border-transparent bg-muted/30 hover:bg-muted/50'
+                                                                isUnavailable ? 'opacity-50 cursor-not-allowed bg-muted border-transparent shadow-inner' :
+                                                                selectedMasterIds.includes(m.id) ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-transparent bg-muted/30 hover:bg-muted/50'
                                                             }`}
                                                         >
-                                                            <Checkbox checked={selectedMasterIds.includes(m.id) || isAssigned} disabled={isAssigned} />
+                                                            <Checkbox checked={selectedMasterIds.includes(m.id) || isLocalAssigned || isGloballyAssigned} disabled={isUnavailable} />
                                                             <div className="min-w-0">
                                                                 <p className="font-bold text-xs truncate">{m.name}</p>
-                                                                {isAssigned && <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">Already Assigned</span>}
+                                                                {isLocalAssigned ? (
+                                                                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter block font-mono">In this Class</span>
+                                                                ) : others && others.length > 0 ? (
+                                                                    <span className="text-[8px] font-bold text-rose-600 uppercase tracking-tighter block truncate">Already Assigned elsewhere</span>
+                                                                ) : null}
                                                             </div>
                                                         </div>
                                                     );
@@ -497,7 +520,7 @@ export function SubjectsSetup() {
                                         </div>
 
                                         <div className="pt-4 border-t flex justify-between items-center">
-                                            <p className="text-xs font-bold text-muted-foreground">{selectedMasterIds.length} subjects selected</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{selectedMasterIds.length} NEW subjects selected</p>
                                             <div className="flex gap-2">
                                                 <Button variant="outline" onClick={() => setAssignOpen(false)} className="font-bold">Cancel</Button>
                                                 <Button onClick={onAssign} className="font-black bg-blue-600" disabled={selectedMasterIds.length === 0 || assignMutation.isPending}>

@@ -4,6 +4,7 @@ export type Subject = {
     id: string;
     name: string;
     code: string | null;
+    master_id?: string | null;
 };
 
 export interface SubjectAssignmentWithClass {
@@ -11,6 +12,7 @@ export interface SubjectAssignmentWithClass {
     name: string;
     code: string | null;
     class_id: string;
+    master_id: string | null;
     classes: {
         name: string;
         section: string;

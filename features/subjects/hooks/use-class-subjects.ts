@@ -4,7 +4,7 @@ import { type Subject } from '../api/subjects.api';
 
 export function useClassSubjects(classId: string) {
     return useQuery<Subject[]>({
-        queryKey: ['subjects', classId],
+        queryKey: ['subjects', 'class', classId],
         queryFn: () => subjectsAssignmentApi.getClassSubjects(classId),
         enabled: !!classId,
     });

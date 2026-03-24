@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, User, CalendarDays, Plus } from 'lucide-react';
+import { Calendar, User, CalendarDays, Plus, RefreshCcw } from 'lucide-react';
 
 import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes';
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
@@ -10,6 +10,8 @@ import { useGetPeriods } from '../hooks/use-get-periods';
 import { useGetSubjects } from '@/features/subjects/hooks/use-get-subjects';
 import { useGetClassTimetable } from '../hooks/use-get-class-timetable';
 import { useGetTeacherTimetable } from '../hooks/use-get-teacher-timetable';
+import { useTimetableRealtime } from '../hooks/use-timetable-realtime';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,11 +20,14 @@ import { Button } from '@/components/ui/button';
 import { PageTransition } from '@/components/ui/motion';
 import { ClassTimetableGrid } from './class-timetable-grid';
 import { TeacherTimetableGrid } from './teacher-timetable-grid';
+import { BulkScheduleModal } from './bulk-schedule-modal';
 
 // In a real app this would likely come from context or DB config
 const CURRENT_ACADEMIC_YEAR = '2026-2027';
 
 export function TimetablePage() {
+    const queryClient = useQueryClient();
+    useTimetableRealtime();
     const { data: profile } = useAuthProfile();
     const isAdmin = profile?.role === 'ADMIN';
     const isTeacher = profile?.role === 'TEACHER';
@@ -55,7 +60,7 @@ export function TimetablePage() {
 
     return (
         <PageTransition>
-            <div className="w-full max-w-full overflow-x-hidden min-w-0 space-y-6">
+            <div className="w-full min-w-0 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
@@ -67,8 +72,22 @@ export function TimetablePage() {
                         </div>
                     </div>
 
-                    {isAdmin && (
+                    <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => {
+                                queryClient.invalidateQueries({ queryKey: ['timetable'] });
+                                queryClient.invalidateQueries({ queryKey: ['periods'] });
+                            }}
+                            className="h-10 w-10 border-primary/20 hover:bg-primary/5 transition-all"
+                            title="Refresh Timetable"
+                        >
+                            <RefreshCcw className="h-4 w-4 text-primary" />
+                        </Button>
+                        {isAdmin && (
                         <div className="flex items-center gap-2">
+                            <BulkScheduleModal />
                             {/* Pro Builder Trigger */}
                             <Dialog>
                                 <DialogTrigger asChild>
@@ -159,6 +178,7 @@ export function TimetablePage() {
                             </Dialog>
                         </div>
                     )}
+                    </div>
                 </div>
 
                 {selectedBrush && (

@@ -45,12 +45,13 @@ export function LeaveRequestForm({ students, onSuccess }: LeaveRequestFormProps)
     const queryClient = useQueryClient();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const today = new Date().toISOString().split('T')[0];
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             student_id: '',
-            start_date: '',
-            end_date: '',
+            start_date: today,
+            end_date: today,
             reason: '',
         },
     });

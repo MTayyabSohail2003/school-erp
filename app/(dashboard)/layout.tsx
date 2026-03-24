@@ -9,6 +9,7 @@ import { Header } from '@/components/layout/header';
 import { Loader } from '@/components/ui/loader';
 import { AnnouncementBanner } from '@/features/notices/components/announcement-banner';
 import { NotificationToastListener } from '@/features/notifications/components/notification-toast-listener';
+import { ROUTES } from '@/constants/globals';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { data: profile, isLoading } = useAuthProfile();
@@ -28,17 +29,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 // Parents can only view auto challans, mark sheets, attendance, leave requests, their children's profiles & exams.
                 const allowedParentRoutes = [
                     '/dashboard/finance/challans',
-                    '/dashboard/students',
-                    '/dashboard/exams',
-                    '/dashboard/marks',
-                    '/dashboard/attendance',
-                    '/settings/notices' // Assuming notices will be open to parents as well
+                    ROUTES.STUDENTS,
+                    ROUTES.EXAMS,
+                    ROUTES.MARKS,
+                    ROUTES.ATTENDANCE,
+                    ROUTES.PARENT_NOTICE_BOARD,
                 ];
 
-                const isAllowed = allowedParentRoutes.some(route => pathname.startsWith(route)) || pathname === '/dashboard';
+                const isAllowed = allowedParentRoutes.some(route => pathname.startsWith(route)) || pathname === ROUTES.DASHBOARD;
 
                 if (!isAllowed) {
-                    router.replace('/dashboard');
+                    router.replace(ROUTES.DASHBOARD);
                 }
             }
         }
@@ -55,11 +56,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
         <SidebarProvider style={{ '--sidebar-width': '240px', '--sidebar-width-icon': '64px' } as React.CSSProperties}>
             <AppSidebar />
-            <div className="flex w-full flex-col min-h-screen">
+            <div className="flex w-full min-w-0 flex-col min-h-screen">
                 <Header />
                 <AnnouncementBanner />
                 <NotificationToastListener />
-                <main className="flex-1 p-6 lg:p-8 z-0">
+                <main className="flex-1 min-w-0 p-6 lg:p-8 z-0">
                     <div className="w-full h-full">
                         {children}
                     </div>

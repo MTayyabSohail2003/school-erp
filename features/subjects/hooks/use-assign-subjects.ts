@@ -9,8 +9,9 @@ export function useAssignSubjects() {
         mutationFn: ({ classId, masterIds, masterSubjects }: { classId: string; masterIds: string[]; masterSubjects: SubjectMaster[] }) => 
             subjectsAssignmentApi.bulkAssignSubjects(classId, masterIds, masterSubjects),
         onSuccess: (_, { classId }) => {
-            queryClient.invalidateQueries({ queryKey: ['subjects', classId] });
-            queryClient.invalidateQueries({ queryKey: ['subjects'] }); // fallback for global lists
+            queryClient.invalidateQueries({ queryKey: ['subjects', 'class', classId] });
+            queryClient.invalidateQueries({ queryKey: ['subjects', 'all-assignments'] });
+            queryClient.invalidateQueries({ queryKey: ['subjects'] }); // fallback
         },
     });
 }

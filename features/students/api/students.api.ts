@@ -16,7 +16,8 @@ export const studentsApi = {
             query = query.eq('parent_id', options.parentId);
         }
 
-        if (options?.classIds && options.classIds.length > 0) {
+        if (options?.classIds) {
+            if (options.classIds.length === 0) return [];
             query = query.in('class_id', options.classIds);
         }
 

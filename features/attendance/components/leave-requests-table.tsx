@@ -37,7 +37,7 @@ const getStatusBadge = (status: string) => {
 };
 
 export function LeaveRequestsTable({ userRole }: LeaveRequestsTableProps) {
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [isPosting, startPosting] = useTransition();
 
     const canManage = userRole === 'ADMIN';

@@ -33,7 +33,7 @@ export function TeacherTimetableGrid({ timetable, classes, teacherId }: TeacherT
     });
 
     return (
-        <div className="relative border rounded-xl overflow-hidden bg-card shadow-sm w-full max-w-full">
+        <div className="relative border rounded-xl overflow-hidden bg-card shadow-sm w-full max-w-full min-w-0">
             <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
                 <table className="w-full text-sm text-left border-collapse">
                     <thead className="bg-muted/40 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">

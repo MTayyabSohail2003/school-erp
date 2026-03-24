@@ -16,7 +16,6 @@ import { GraduationCap, User, Award, BookOpen, TrendingUp, LayoutGrid, List, Use
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { NoticeBoardWidget } from '@/features/notices/components/notice-board-widget';
 
 const ttStyle = {
     contentStyle: {
@@ -250,7 +249,7 @@ function ChildCard({ child }: { child: DashboardChild }) {
 }
 
 export function ParentDashboard({ profile }: { profile: { id: string; full_name?: string } }) {
-    const { data: children, isLoading } = useStudents(profile.id);
+    const { data: children, isLoading } = useStudents({ parentId: profile.id });
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -268,17 +267,6 @@ export function ParentDashboard({ profile }: { profile: { id: string; full_name?
     return (
         <PageTransition>
             <div className="space-y-8">
-                {/* ── Notice Board ── */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-4 w-1 rounded-full bg-primary" />
-                        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">School Announcements</h2>
-                    </div>
-                    <div className="max-w-4xl">
-                        <NoticeBoardWidget role="PARENT" />
-                    </div>
-                </div>
-
                 {/* ── Core KPIs ── */}
                 <div>
                     <div className="flex items-center gap-2 mb-4">

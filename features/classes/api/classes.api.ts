@@ -92,7 +92,18 @@ export const classesApi = {
     deleteClass: async (id: string): Promise<void> => {
         const supabase = createClient();
         const { error } = await supabase.from('classes').delete().eq('id', id);
-        if (error) throw new Error(error.message);
+        if (error) {
+            if (error.code === '23503') {
+                if (error.message.includes('students')) {
+                    throw new Error('Cannot delete this class: Active students are currently enrolled. Please reassign or remove them first.');
+                }
+                if (error.message.includes('timetable')) {
+                    throw new Error('Cannot delete this class: It has an active timetable. Please clear the timetable first.');
+                }
+                throw new Error('Cannot delete this class because it is linked to other active records.');
+            }
+            throw new Error(error.message);
+        }
     },
 
     /**

@@ -13,13 +13,17 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
+import { Trash2 } from 'lucide-react';
 import {
     useMarkNotificationRead,
     useMarkAllNotificationsRead,
     useNotificationsRealtime,
+    useDeleteNotification,
+    useDeleteAllNotifications,
     type Notification,
     type NotificationType,
 } from '@/features/notifications/api/use-notifications';
+import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 import { useInfiniteNotifications } from '@/features/notifications/api/use-infinite-notifications';
 
 const TYPE_ICON: Record<NotificationType, React.ElementType> = {
@@ -55,6 +59,11 @@ export function NotificationBell() {
     const notifications = data?.pages.flat() ?? [];
     const markRead = useMarkNotificationRead();
     const markAllRead = useMarkAllNotificationsRead();
+    const deleteMutation = useDeleteNotification();
+    const deleteAllMutation = useDeleteAllNotifications();
+    const { data: profile } = useAuthProfile();
+
+    const isAdmin = profile?.role === 'ADMIN';
 
     // Mount realtime subscription — keeps queries in sync on INSERT/UPDATE
     useNotificationsRealtime();
@@ -90,14 +99,25 @@ export function NotificationBell() {
                             </span>
                         )}
                     </h3>
-                    {unreadCount > 0 && (
-                        <button
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
-                            onClick={() => markAllRead.mutate()}
-                        >
-                            <Check className="w-3 h-3" /> Mark all read
-                        </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {unreadCount > 0 && (
+                            <button
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                                onClick={() => markAllRead.mutate()}
+                            >
+                                <Check className="w-3 h-3" /> Mark all read
+                            </button>
+                        )}
+                        {isAdmin && notifications.length > 0 && (
+                            <button
+                                className="text-xs text-destructive hover:underline flex items-center gap-1 font-medium"
+                                onClick={() => deleteAllMutation.mutate()}
+                                disabled={deleteAllMutation.isPending}
+                            >
+                                <Trash2 className="w-3 h-3" /> {deleteAllMutation.isPending ? 'Clearing...' : 'Clear All'}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <ScrollArea className="h-[340px]">
                     {isLoading ? (
@@ -146,6 +166,19 @@ export function NotificationBell() {
                                                     {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                                                 </p>
                                             </div>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deleteMutation.mutate(notification.id);
+                                                    }}
+                                                    disabled={deleteMutation.isPending}
+                                                    className="shrink-0 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors ml-2"
+                                                    title="Delete notification"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 );
