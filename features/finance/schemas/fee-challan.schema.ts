@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const challanStatusEnum = z.enum(['PENDING', 'PAID', 'OVERDUE']);
+export const challanStatusEnum = z.enum(['PENDING', 'PAID', 'OVERDUE', 'PARTIAL']);
 export type ChallanStatus = z.infer<typeof challanStatusEnum>;
 
 export const feeChallanSchema = z.object({
@@ -10,11 +10,15 @@ export const feeChallanSchema = z.object({
     month_year: z.string().regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM"),
     amount_due: z.number().min(0),
     arrears: z.number().min(0).default(0),
+    fines: z.number().min(0).default(0),
+    discount: z.number().min(0).default(0),
     paid_amount: z.number().min(0).default(0),
     status: challanStatusEnum.default('PENDING'),
     due_date: z.string(),
     paid_date: z.string().nullable().optional(),
-    payment_method: z.enum(['CASH', 'BANK']).nullable().optional(),
+    payment_method: z.enum(['CASH', 'BANK', 'ONLINE']).nullable().optional(),
+    paid_notes: z.string().nullable().optional(),
+    fine_notes: z.string().nullable().optional(),
 });
 
 export type FeeChallan = z.infer<typeof feeChallanSchema> & {

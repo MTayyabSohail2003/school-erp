@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useGetStaff } from '../api/use-get-staff';
+import { useGetStaff, STAFF_KEY } from '../api/use-get-staff';
 import { useDeleteStaff } from '../api/use-delete-staff';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     ColumnDef,
     flexRender,
@@ -57,12 +58,15 @@ import {
 import { AlertCircle, FileText, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Shield, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
 import { EditStaffDialog } from './edit-staff-dialog';
 import { AssignSubjectsDialog } from './assign-subjects-dialog';
 import { PasswordConfirmDialog } from '@/components/ui/password-confirm-dialog';
 import { submitForceDeleteStaff } from '@/features/staff/api/force-delete-staff.action';
 
 export function StaffTable() {
+    const queryClient = useQueryClient();
     const { data: staff, isLoading, isError, error } = useGetStaff();
     const deleteMutation = useDeleteStaff();
 
@@ -113,7 +117,9 @@ export function StaffTable() {
 
         toast.success(`Staff member ${forceDeleteData.name} and all associated data force-deleted securely.`);
         setForceDeleteData(null);
-        window.location.reload();
+        
+        // Invalidate staff query to update UI dynamically without reload
+        queryClient.invalidateQueries({ queryKey: STAFF_KEY });
     };
 
     const columns: ColumnDef<any>[] = React.useMemo(() => [
@@ -133,12 +139,21 @@ export function StaffTable() {
             },
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase hidden sm:flex">
-                        {(row.getValue('full_name') as string).substring(0, 2)}
-                    </div>
+                    <ImagePreviewDialog 
+                        src={row.original.avatar_url} 
+                        title={row.getValue('full_name')} 
+                        description="Staff Profile Detail"
+                    >
+                        <Avatar className="h-9 w-9 border-2 border-primary/10 transition-transform group-hover:scale-110 duration-500">
+                            <AvatarImage src={row.original.avatar_url} />
+                            <AvatarFallback className="bg-primary/5 text-primary text-xs font-black">
+                                {(row.getValue('full_name') as string).substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
+                    </ImagePreviewDialog>
                     <div>
-                        <div className="font-semibold text-foreground">{row.getValue('full_name')}</div>
-                        <div className="text-xs text-muted-foreground md:hidden">{row.original.email}</div>
+                        <div className="font-semibold text-foreground tracking-tight">{row.getValue('full_name')}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest md:hidden">{row.original.email}</div>
                     </div>
                 </div>
             ),

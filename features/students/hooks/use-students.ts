@@ -9,7 +9,7 @@ export const studentKeys = {
     all: ['students'] as const,
 };
 
-export function useStudents(options?: { parentId?: string; classIds?: string[] }) {
+export function useStudents(options?: { parentId?: string; classIds?: string[]; status?: 'ACTIVE' | 'GRADUATED' | 'LEAVER' | 'INACTIVE' }) {
     useRealtimeInvalidate({ table: 'students', queryKey: studentKeys.all });
     return useQuery({
         queryKey: options ? [...studentKeys.all, options] : studentKeys.all,

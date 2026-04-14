@@ -63,18 +63,9 @@ export const financeApi = {
         return data as unknown as FeeChallan[];
     },
 
-    updateChallanStatus: async (id: string, status: ChallanStatus, paymentMethod?: 'CASH' | 'BANK') => {
+    updateChallanStatus: async (id: string, payload: Partial<FeeChallan>) => {
         const supabase = createClient();
-        const payload: Partial<FeeChallan> = { status };
         
-        if (status === 'PAID') {
-            payload.paid_date = new Date().toISOString().split('T')[0];
-            if (paymentMethod) payload.payment_method = paymentMethod;
-        } else {
-            payload.paid_date = null;
-            payload.payment_method = null;
-        }
-
         const { error } = await supabase
             .from('fee_challans')
             .update(payload)
@@ -107,15 +98,16 @@ export const financeApi = {
         // 4. Fetch all UNPAID challans from months BEFORE this one (arrears)
         const { data: unpaidPast } = await supabase
             .from('fee_challans')
-            .select('student_id, amount_due, arrears')
-            .in('status', ['PENDING', 'OVERDUE'])
+            .select('student_id, amount_due, fines, paid_amount, discount')
+            .in('status', ['PENDING', 'OVERDUE', 'PARTIAL'])
             .lt('month_year', monthYear);
 
         // Build a map: student_id -> total outstanding (amount_due + their own arrears)
         const arrearsMap = new Map<string, number>();
         for (const c of unpaidPast ?? []) {
             const existing = arrearsMap.get(c.student_id) ?? 0;
-            arrearsMap.set(c.student_id, existing + c.amount_due);
+            const balance = (c.amount_due || 0) + (c.fines || 0) - (c.paid_amount || 0) - (c.discount || 0);
+            arrearsMap.set(c.student_id, existing + balance);
         }
 
         // 5. Build inserts

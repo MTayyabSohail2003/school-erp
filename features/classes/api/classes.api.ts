@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { getClassRank } from '../utils/class-sorting';
 
 export type ClassRecord = {
     id: string;
@@ -52,10 +53,10 @@ export const classesApi = {
         });
 
         return Array.from(classMap.values()).sort((a, b) => {
-            const numA = parseInt(a.name.match(/\d+/)?.[0] || '0');
-            const numB = parseInt(b.name.match(/\d+/)?.[0] || '0');
-            if (numA === numB) return a.name.localeCompare(b.name);
-            return numA - numB;
+            const rankA = getClassRank(a.name);
+            const rankB = getClassRank(b.name);
+            if (rankA === rankB) return a.name.localeCompare(b.name);
+            return rankA - rankB;
         });
     },
 

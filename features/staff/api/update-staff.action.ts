@@ -30,6 +30,7 @@ export async function updateStaffAction(userId: string, data: StaffUpdateData) {
             .update({
                 full_name: parsed.full_name,
                 phone_number: parsed.phone_number,
+                avatar_url: parsed.avatar_url,
                 status: parsed.status,
             })
             .eq('id', userId);

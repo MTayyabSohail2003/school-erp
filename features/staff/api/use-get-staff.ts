@@ -21,13 +21,14 @@ export function useGetStaff() {
                     phone_number,
                     created_at,
                     status,
+                    avatar_url,
                     teacher_profiles (
                         qualification,
                         monthly_salary,
                         resume_url
                     )
                 `)
-                .eq('role', 'TEACHER')
+                .in('role', ['TEACHER', 'ADMIN'])
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -48,10 +49,11 @@ export function useGetStaff() {
                     phone_number: user.phone_number,
                     created_at: user.created_at,
                     status: user.status || 'ACTIVE',
+                    avatar_url: user.avatar_url,
                     qualification: profile?.qualification || '',
                     monthly_salary: profile?.monthly_salary || 0,
                     resume_url: profile?.resume_url || null,
-                } as unknown as Staff;
+                } as any;
             });
         },
     });

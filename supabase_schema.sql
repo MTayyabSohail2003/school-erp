@@ -6,7 +6,7 @@
 -- ============================================================================
 CREATE TYPE user_role AS ENUM ('ADMIN', 'TEACHER', 'PARENT');
 CREATE TYPE attendance_status AS ENUM ('PRESENT', 'ABSENT', 'LEAVE');
-CREATE TYPE fee_status AS ENUM ('PENDING', 'PAID', 'OVERDUE');
+CREATE TYPE fee_status AS ENUM ('PENDING', 'PAID', 'OVERDUE', 'PARTIAL');
 
 -- ============================================================================
 -- 2. TABLES
@@ -420,3 +420,60 @@ USING (public.is_admin() OR public.is_teacher());
 CREATE POLICY "Admins and Teachers can update leave requests"
 ON public.leave_requests FOR UPDATE TO authenticated
 USING (public.is_admin() OR public.is_teacher());
+
+-- ============================================================================
+-- U. DYNAMIC RESULT MANAGEMENT SYSTEM
+-- ============================================================================
+
+-- 1. ACADEMIC YEARS
+CREATE TABLE public.academic_years (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE, -- e.g., '2024-2025'
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.academic_years ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Academic years readable by authenticated users" ON public.academic_years FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can manage academic years" ON public.academic_years FOR ALL TO authenticated USING (public.is_admin());
+
+-- 2. TERMS
+CREATE TABLE public.terms (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    academic_year_id UUID NOT NULL REFERENCES public.academic_years(id) ON DELETE CASCADE,
+    name TEXT NOT NULL, -- e.g., 'First Term', 'Mid Term', 'Final Term'
+    start_date DATE,
+    end_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(academic_year_id, name)
+);
+
+ALTER TABLE public.terms ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Terms readable by authenticated users" ON public.terms FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can manage terms" ON public.terms FOR ALL TO authenticated USING (public.is_admin());
+
+-- 3. STUDENT RESULTS
+CREATE TABLE public.student_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
+    class_id UUID NOT NULL REFERENCES public.classes(id) ON DELETE CASCADE,
+    term_id UUID NOT NULL REFERENCES public.terms(id) ON DELETE CASCADE,
+    subject_id UUID NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
+    total_marks NUMERIC NOT NULL,
+    obtained_marks NUMERIC NOT NULL,
+    percentage NUMERIC GENERATED ALWAYS AS ((obtained_marks / total_marks) * 100) STORED,
+    grade TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(student_id, term_id, subject_id)
+);
+
+ALTER TABLE public.student_results ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins and Teachers can manage results" ON public.student_results FOR ALL TO authenticated USING (public.is_admin() OR public.is_teacher());
+CREATE POLICY "Parents can view their children's results" ON public.student_results FOR SELECT TO authenticated 
+USING (
+    student_id IN (
+        SELECT id FROM public.students WHERE parent_id = auth.uid()
+    )
+);

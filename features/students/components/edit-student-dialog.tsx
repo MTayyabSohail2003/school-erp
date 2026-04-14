@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
 
 import { ImageCropper } from '@/components/ui/image-cropper';
 import {
@@ -36,6 +38,7 @@ import { useClasses } from '@/features/classes/hooks/use-classes';
 import { useGetParents } from '@/features/parents/api/use-get-parents';
 import { useUpdateStudent } from '../api/use-update-student';
 import { storageApi } from '@/features/storage/api/storage.api';
+import { base64ToFile } from '@/utils/file-utils';
 import { Loader2, UploadCloud } from 'lucide-react';
 
 // A lightweight schema for the update form (no document re-upload needed here)
@@ -43,7 +46,7 @@ const editStudentSchema = z.object({
     roll_number: z.string().min(1, 'Roll number is required'),
     full_name: z.string().min(2, 'Name must be at least 2 characters'),
     parent_id: z.string().uuid('Select a valid parent').optional().nullable(),
-    status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER']).optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'LEAVER', 'GRADUATED']).optional(),
     b_form_url: z.string().url().optional().nullable(),
     photo_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
@@ -61,7 +64,7 @@ type EditStudentProps = {
         roll_number: string;
         full_name: string;
         parent_id?: string | null;
-        status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER';
+        status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER' | 'GRADUATED';
         b_form_url?: string | null;
         photo_url?: string | null;
         date_of_birth: string;
@@ -138,9 +141,23 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
         }
     };
 
-    const handleCropComplete = (base64Image: string) => {
-        form.setValue('photo_url', base64Image);
-        toast.success('Photo cropped and updated locally. Click Save Changes to confirm.', { duration: 4000 });
+    const handleCropComplete = async (base64Image: string) => {
+        try {
+            setIsUploading(true);
+            // Convert Base64 to File object for bucket upload
+            const fileName = `photo_${form.getValues('roll_number') || Date.now()}.png`;
+            const file = base64ToFile(base64Image, fileName);
+            
+            // Upload to Supabase Storage (vault/photos subfolder)
+            const url = await storageApi.uploadDocument(file, 'documents', 'vault/photos');
+            
+            form.setValue('photo_url', url);
+            toast.success('Photo cropped and uploaded to profile vault. Click Save Changes to confirm.');
+        } catch (error: unknown) {
+            toast.error((error as Error).message || 'Failed to upload photo.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const onSubmit = (data: EditStudentForm) => {
@@ -317,9 +334,20 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                             </div>
                             <div className="flex items-center gap-4">
                                 {form.watch('photo_url') && (
-                                    <div className="shrink-0">
-                                        <img src={form.watch('photo_url') as string} alt="Student Preview" className="w-16 h-16 object-cover rounded-full border shadow-sm bg-background" />
-                                    </div>
+                                    <ImagePreviewDialog 
+                                        src={form.watch('photo_url') as string} 
+                                        title={`${form.watch('full_name')} - Portrait`}
+                                        description="Profile Preview"
+                                    >
+                                        <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-full border shadow-sm bg-background cursor-zoom-in transition-transform hover:scale-105 active:scale-95 duration-300">
+                                            <Image
+                                                src={form.watch('photo_url') as string}
+                                                alt="Student Portrait"
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    </ImagePreviewDialog>
                                 )}
                                 <div className="flex-1">
                                     <Input
@@ -347,7 +375,21 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                                 className="text-xs"
                             />
                             {form.watch('b_form_url') && (
-                                <p className="text-xs text-green-600 font-medium tracking-tight">✓ Document securely stored in vault.</p>
+                                <div className="flex items-center justify-between mt-2">
+                                    <p className="text-xs text-green-600 font-medium tracking-tight flex items-center">
+                                        <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center mr-2">✓</span>
+                                        Document securely stored in vault.
+                                    </p>
+                                    <ImagePreviewDialog 
+                                        src={form.watch('b_form_url') as string} 
+                                        title={`${form.watch('full_name')} - Vault`}
+                                        description="B-Form / ID Verification"
+                                    >
+                                        <Button type="button" variant="link" size="sm" className="h-6 text-[10px] font-black uppercase text-primary tracking-widest px-0 italic">
+                                            Preview
+                                        </Button>
+                                    </ImagePreviewDialog>
+                                </div>
                             )}
                         </div>
 

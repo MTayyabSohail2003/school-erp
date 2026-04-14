@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { classesApi, type ClassRecord } from '../api/classes.api';
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
+import { getClassRank } from '../utils/class-sorting';
 import { toast } from 'sonner';
 
 export const classKeys = {
@@ -11,7 +12,10 @@ export function useClasses() {
     useRealtimeInvalidate({ table: 'classes', queryKey: classKeys.all });
     return useQuery({
         queryKey: classKeys.all,
-        queryFn: classesApi.getClasses,
+        queryFn: async () => {
+            const data = await classesApi.getClasses();
+            return data.sort((a, b) => getClassRank(a.name) - getClassRank(b.name));
+        },
     });
 }
 
@@ -29,7 +33,7 @@ export function useCreateClass() {
                     ...newClass,
                     id: crypto.randomUUID(), // stable temp id for optimistic update
                 };
-                return old ? [...old, optimisticClass].sort((a, b) => a.name.localeCompare(b.name)) : [optimisticClass];
+                return old ? [...old, optimisticClass].sort((a, b) => getClassRank(a.name) - getClassRank(b.name)) : [optimisticClass];
             });
 
             return { previousClasses };

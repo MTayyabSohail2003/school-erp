@@ -4,6 +4,7 @@ import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
+import { AuthListener } from "@/components/auth/auth-listener";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -36,6 +37,7 @@ export default function RootLayout({
           >
             <TooltipProvider>
               {children}
+              <AuthListener />
               <Toaster position="top-right" richColors />
             </TooltipProvider>
           </ThemeProvider>

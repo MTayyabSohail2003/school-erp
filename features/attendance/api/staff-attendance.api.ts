@@ -15,7 +15,7 @@ export const staffAttendanceApi = {
         const { data: staff, error: staffError } = await supabase
             .from('users')
             .select('id, full_name, email')
-            .eq('role', 'TEACHER')
+            .in('role', ['TEACHER', 'ADMIN'])
             .order('full_name', { ascending: true });
 
         if (staffError) throw new Error(staffError.message);
@@ -23,13 +23,20 @@ export const staffAttendanceApi = {
         // Get existing attendance records for this date
         const { data: records, error: recordsError } = await supabase
             .from('staff_attendance')
-            .select('*, users(full_name, email)')
+            .select(`
+                id,
+                user_id,
+                record_date,
+                status,
+                marked_by,
+                users!user_id(full_name, email)
+            `)
             .eq('record_date', date)
             .in('user_id', (staff ?? []).map((s) => s.id));
 
         if (recordsError) throw new Error(recordsError.message);
 
-        return (records ?? []) as StaffAttendanceWithUser[];
+        return (records ?? []) as any[];
     },
 
     /**

@@ -113,6 +113,8 @@ export function StudentAttendanceView() {
     const unmarkedCount = studentList.length - Object.keys(statusMap).length;
 
     const isTeacher = profile?.role === 'TEACHER';
+    const isAdmin = profile?.role === 'ADMIN';
+    const canMark = isTeacher || isAdmin;
 
     return (
         <PageTransition>
@@ -126,12 +128,12 @@ export function StudentAttendanceView() {
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">Daily Attendance</h1>
                             <p className="text-sm text-muted-foreground">
-                                {isTeacher ? 'Mark attendance for your class' : 'Overview of student attendance'}
+                                {canMark ? 'Mark attendance for students' : 'Overview of student attendance'}
                             </p>
                         </div>
                     </div>
 
-                    {isTeacher && (
+                    {canMark && (
                         <Button
                             onClick={handleSave}
                             disabled={upsertMutation.isPending || studentList.length === 0}
@@ -259,14 +261,17 @@ export function StudentAttendanceView() {
                                                     <img
                                                         src={student.photo_url}
                                                         alt={student.full_name}
-                                                        className="h-8 w-8 rounded-full object-cover shrink-0 border border-primary/20 shadow-sm"
+                                                        className="h-10 w-10 rounded-full object-cover shrink-0 border-2 border-primary/10 shadow-sm"
                                                     />
                                                 ) : (
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
-                                                        {student.roll_number}
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-black ring-2 ring-primary/5">
+                                                        {student.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                                     </div>
                                                 )}
-                                                <span className="text-sm font-medium truncate">{student.full_name}</span>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-sm font-bold truncate text-foreground/90">{student.full_name}</span>
+                                                    <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">Roll: {student.roll_number}</span>
+                                                </div>
                                             </div>
 
                                             {/* Status toggles */}
@@ -274,8 +279,8 @@ export function StudentAttendanceView() {
                                                 {(Object.keys(STATUS_CONFIG) as AttendanceStatus[]).map((status) => (
                                                     <button
                                                         key={status}
-                                                        onClick={() => isTeacher && setStatus(student.id, status)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 ${isTeacher ? 'cursor-pointer' : 'cursor-default'} ${currentStatus === status
+                                                        onClick={() => canMark && setStatus(student.id, status)}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 ${canMark ? 'cursor-pointer' : 'cursor-default'} ${currentStatus === status
                                                             ? STATUS_CONFIG[status].className
                                                             : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40'
                                                             }`}

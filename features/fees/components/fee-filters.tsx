@@ -48,32 +48,32 @@ export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
     };
 
     return (
-        <div className="bg-card p-4 rounded-xl border shadow-sm sticky top-16 z-10 space-y-4 md:space-y-0 md:flex flex-wrap items-center gap-4">
+        <div className="bg-card/30 backdrop-blur-sm p-4 rounded-2xl border border-border/40 shadow-xl flex flex-wrap items-center gap-4 transition-all hover:bg-card/40">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative flex-1 min-w-[240px] group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
-                    placeholder="Search by name or roll number..." 
+                    placeholder="Search by student name or roll..." 
                     value={filters.search}
                     onChange={(e) => updateFilter('search', e.target.value)}
-                    className="pl-9 w-full bg-background"
+                    className="pl-9 w-full bg-background/50 border-2 rounded-xl focus-visible:ring-primary/20 h-11 font-medium"
                 />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
                 {/* Month Picker */}
                 <MonthPicker
                     value={filters.monthYear}
                     onChange={(val) => updateFilter('monthYear', val)}
-                    className="w-40 bg-background"
+                    className="w-44 bg-background/50 border-2 rounded-xl h-11"
                 />
 
                 {/* Class Filter */}
                 <Select value={filters.classId} onValueChange={(val) => updateFilter('classId', val)}>
-                    <SelectTrigger className="w-36 bg-background">
+                    <SelectTrigger className="w-40 bg-background/50 border-2 rounded-xl h-11 font-black uppercase text-[10px] tracking-widest">
                         <SelectValue placeholder="All Classes" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-2">
                         <SelectItem value="All">All Classes</SelectItem>
                         {uniqueClasses.map(([name, id]) => (
                             <SelectItem key={id} value={id}>{name}</SelectItem>
@@ -83,10 +83,10 @@ export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
 
                 {/* Section Filter */}
                 <Select value={filters.section} onValueChange={(val) => updateFilter('section', val)}>
-                    <SelectTrigger className="w-32 bg-background">
+                    <SelectTrigger className="w-32 bg-background/50 border-2 rounded-xl h-11 font-black uppercase text-[10px] tracking-widest">
                         <SelectValue placeholder="All Sections" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-2">
                         <SelectItem value="All">All Sections</SelectItem>
                         {sections.map(sec => (
                             <SelectItem key={sec} value={sec}>Section {sec}</SelectItem>
@@ -96,25 +96,30 @@ export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
 
                 {/* Status Filter */}
                 <Select value={filters.status} onValueChange={(val) => updateFilter('status', val)}>
-                    <SelectTrigger className="w-36 bg-background">
+                    <SelectTrigger className="w-40 bg-background/50 border-2 rounded-xl h-11 font-black uppercase text-[10px] tracking-widest">
                         <SelectValue placeholder="All Status" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-2">
                         <SelectItem value="All">All Status</SelectItem>
                         <SelectItem value="PAID">Paid</SelectItem>
-                        <SelectItem value="PENDING">Pending (Partial / None)</SelectItem>
+                        <SelectItem value="PARTIAL">Partial Payment</SelectItem>
+                        <SelectItem value="PENDING">Pending (None)</SelectItem>
                         <SelectItem value="OVERDUE">Overdue</SelectItem>
                     </SelectContent>
                 </Select>
 
                 {/* Reset Buttons */}
-                <Button variant="ghost" className="text-xs" onClick={() => onChange({
-                    classId: 'All',
-                    section: 'All',
-                    status: 'All',
-                    search: '',
-                    monthYear: filters.monthYear
-                })}>
+                <Button 
+                    variant="ghost" 
+                    className="h-10 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors" 
+                    onClick={() => onChange({
+                        classId: 'All',
+                        section: 'All',
+                        status: 'All',
+                        search: '',
+                        monthYear: filters.monthYear
+                    })}
+                >
                     Reset
                 </Button>
             </div>

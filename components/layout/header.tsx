@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Search, User, MoreHorizontal, Grid3x3, LogOut, LucideIcon } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { NotificationBell } from '@/features/notifications/components/notification-bell';
+import { GlobalSearch } from './global-search';
 
 export function Header() {
     const logoutMutation = useLogout();
@@ -71,15 +72,9 @@ export function Header() {
                 </div>
             </div>
 
-            {/* Center - Search Bar */}
+            {/* Center - Page Search */}
             <div className="flex-1 max-w-2xl mx-auto px-4 sm:px-8 hidden md:flex items-center">
-                <div className="relative w-full group">
-                    <Input
-                        placeholder="Search..."
-                        className="w-full h-10 pl-5 pr-10 rounded-full bg-accent/50 text-foreground border-transparent focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-0 shadow-sm font-medium"
-                    />
-                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                </div>
+                <GlobalSearch />
             </div>
 
             {/* Right — actions & profile */}

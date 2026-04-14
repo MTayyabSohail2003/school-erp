@@ -32,8 +32,14 @@ export function StaffAttendanceView() {
 
     useEffect(() => {
         if (attendanceData) {
+            console.log('[Attendance Debug] Raw DB Records:', attendanceData);
             const map: Record<string, AttendanceStatus> = {};
-            attendanceData.forEach((rec) => { map[rec.user_id] = rec.status; });
+            attendanceData.forEach((rec) => { 
+                if (rec.user_id) {
+                    map[rec.user_id] = rec.status;
+                }
+            });
+            console.log('[Attendance Debug] Computed Status Map:', map);
             setStatusMap(map);
         }
     }, [attendanceData, selectedDate]);
@@ -53,17 +59,26 @@ export function StaffAttendanceView() {
         }));
 
         if (records.length === 0) {
-            toast.error('No attendance marked yet.');
+            toast.error('No staff attendance marked yet.');
             return;
         }
 
-        upsertMutation.mutate(records, {
-            onSuccess: () => toast.success('Staff attendance saved!'),
-            onError: (err) => toast.error(err.message),
+        const promise = upsertMutation.mutateAsync(records);
+
+        toast.promise(promise, {
+            loading: 'Saving attendance records...',
+            success: 'Staff attendance saved successfully!',
+            error: (err) => `Failed to save: ${err.message}`,
         });
     };
 
-    const staffMembers = staffList ?? [];
+    // Deduplicate staff list by ID to prevent "Double Row" UI glitches
+    const staffMembers = (staffList ?? []).reduce((acc: any[], current) => {
+        const x = acc.find(item => item.id === current.id);
+        if (!x) return acc.concat([current]);
+        return acc;
+    }, []);
+
     const presentCount = Object.values(statusMap).filter((s) => s === 'PRESENT').length;
     const absentCount = Object.values(statusMap).filter((s) => s === 'ABSENT').length;
     const leaveCount = Object.values(statusMap).filter((s) => s === 'LEAVE').length;

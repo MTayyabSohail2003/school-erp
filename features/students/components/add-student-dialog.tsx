@@ -1,18 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { studentFormSchema, type StudentFormData } from '@/features/students/schemas/student.schema';
-import { useCreateStudent } from '@/features/students/hooks/use-students';
 import { useGetParents } from '@/features/parents/api/use-get-parents';
 import { useClasses } from '@/features/classes/hooks/use-classes';
 import { storageApi } from '@/features/storage/api/storage.api';
+import { base64ToFile } from '@/utils/file-utils';
 import { createParentAction } from '@/features/parents/api/create-parent.action';
+import { registerStudentAction } from '@/features/students/api/student-actions';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
 
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { Button } from '@/components/ui/button';
@@ -110,9 +113,9 @@ export function AddStudentDialog() {
     const [cropModalOpen, setCropModalOpen] = useState(false);
     const [tempCropImage, setTempCropImage] = useState<string>('');
 
-    const createStudentMutation = useCreateStudent();
     const { data: classes, isLoading: isClassesLoading } = useClasses();
     const { data: parents, isLoading: isParentsLoading } = useGetParents();
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const queryClient = useQueryClient();
 
     const [isCreatingParent, setIsCreatingParent] = useState(false);
@@ -123,9 +126,11 @@ export function AddStudentDialog() {
             roll_number: '',
             full_name: '',
             status: 'ACTIVE',
-            date_of_birth: new Date().toISOString().split('T')[0],
+            date_of_birth: '', // Clear default for validation
             class_id: '',
             parent_id: '',
+            b_form_id: '',
+            academic_year: new Date().getFullYear().toString(),
             b_form_url: null,
             old_cert_url: null,
             photo_url: null,
@@ -135,9 +140,9 @@ export function AddStudentDialog() {
 
     // Auto-prefix Roll Number based on Class
     const watchedClassId = form.watch('class_id');
-    const prevClassId = React.useRef<string>('');
+    const prevClassId = useRef<string>('');
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!watchedClassId || watchedClassId === prevClassId.current) return;
         
         const selectedClass = classes?.find(c => c.id === watchedClassId);
@@ -183,10 +188,23 @@ export function AddStudentDialog() {
         }
     };
 
-    const handleCropComplete = (base64Image: string) => {
-        // Direct Base64 save for db scalability instead of bucket upload
-        form.setValue('photo_url', base64Image);
-        toast.success('Photo cropped and added to profile.');
+    const handleCropComplete = async (base64Image: string) => {
+        try {
+            setIsUploading(true);
+            // Convert Base64 to File object for bucket upload
+            const fileName = `photo_${form.getValues('roll_number') || Date.now()}.png`;
+            const file = base64ToFile(base64Image, fileName);
+            
+            // Upload to Supabase Storage (vault/photos subfolder)
+            const url = await storageApi.uploadDocument(file, 'documents', 'vault/photos');
+            
+            form.setValue('photo_url', url);
+            toast.success('Photo cropped and uploaded to profile vault.');
+        } catch (error: unknown) {
+            toast.error((error as Error).message || 'Failed to upload photo.');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     // Step Validation Logic
@@ -194,9 +212,9 @@ export function AddStudentDialog() {
         let fieldsToValidate: (keyof StudentFormData)[] = [];
 
         if (step === 1) {
-            fieldsToValidate = ['roll_number', 'full_name', 'date_of_birth'];
+            fieldsToValidate = ['roll_number', 'full_name', 'date_of_birth', 'b_form_id'];
         } else if (step === 2) {
-            fieldsToValidate = ['class_id', 'parent_id', 'monthly_fee'];
+            fieldsToValidate = ['class_id', 'academic_year', 'parent_id', 'monthly_fee'];
         }
 
         const isValid = await form.trigger(fieldsToValidate);
@@ -215,17 +233,21 @@ export function AddStudentDialog() {
             return;
         }
 
-        createStudentMutation.mutate(values, {
-            onSuccess: () => {
-                toast.success('Student registered successfully.');
-                setOpen(false);
-                setStep(1); // Reset step on successful close
-                form.reset();
-            },
-            onError: (error: unknown) => {
-                toast.error((error as Error).message || 'Failed to register student.');
-            },
-        });
+        setIsSubmitting(true);
+        try {
+            const res = await registerStudentAction(values);
+            if (!res.success) throw new Error(res.error);
+            
+            toast.success(res.message);
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            setOpen(false);
+            setStep(1);
+            form.reset();
+        } catch (error: unknown) {
+            toast.error((error as Error).message || 'Failed to register student.');
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     // Reset state when dialong closes manually
@@ -295,56 +317,87 @@ export function AddStudentDialog() {
                                     />
                                 </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name="full_name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Full Name</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="John Doe" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="full_name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Full Name</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="John Doe" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="b_form_id"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>B-Form ID</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="35201-XXXXXXX-X" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </div>
                         )}
 
                         {/* STEP 2: Academic & Parent */}
                         {step === 2 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                                <FormField
-                                    control={form.control}
-                                    name="class_id"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <div className="flex items-center justify-between">
-                                                <FormLabel>Assign Class <span className="text-destructive">*</span></FormLabel>
-                                                <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" asChild>
-                                                    <Link href="/settings/classes">
-                                                        <Plus className="h-3 w-3 mr-1" /> New Class
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                            <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isClassesLoading}>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="class_id"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <div className="flex items-center justify-between">
+                                                    <FormLabel>Assign Class <span className="text-destructive">*</span></FormLabel>
+                                                    <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" asChild>
+                                                        <Link href="/settings/classes">
+                                                            <Plus className="h-3 w-3 mr-1" /> New Class
+                                                        </Link>
+                                                    </Button>
+                                                </div>
+                                                <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isClassesLoading}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue placeholder={isClassesLoading ? 'Loading classes...' : 'Select a class'} />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {classes?.map((c) => (
+                                                            <SelectItem key={c.id} value={c.id}>
+                                                                {c.name} - {c.section}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="academic_year"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Academic Year</FormLabel>
                                                 <FormControl>
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder={isClassesLoading ? 'Loading classes...' : 'Select a class'} />
-                                                    </SelectTrigger>
+                                                    <Input placeholder="2025" {...field} />
                                                 </FormControl>
-                                                <SelectContent>
-                                                    {classes?.map((c) => (
-                                                        <SelectItem key={c.id} value={c.id}>
-                                                            {c.name} - {c.section}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
 
                                 <FormField
                                     control={form.control}
@@ -425,9 +478,20 @@ export function AddStudentDialog() {
                                     </p>
                                     <div className="flex items-center gap-4">
                                         {form.watch('photo_url') && (
-                                            <div className="shrink-0">
-                                                <img src={form.watch('photo_url') as string} alt="Student Preview" className="w-16 h-16 object-cover rounded-full border shadow-sm bg-background" />
-                                            </div>
+                                            <ImagePreviewDialog 
+                                                src={form.watch('photo_url') as string} 
+                                                title={`${form.watch('full_name') || 'New Student'} - Profile Preview`}
+                                                description="Uploaded Portrait Photo"
+                                            >
+                                                <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-full border shadow-sm bg-background transition-transform hover:scale-105 active:scale-95 duration-300">
+                                                    <Image
+                                                        src={form.watch('photo_url') as string}
+                                                        alt="Student Preview"
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                            </ImagePreviewDialog>
                                         )}
                                         <div className="flex-1">
                                             <Input
@@ -457,10 +521,21 @@ export function AddStudentDialog() {
                                         className="text-xs bg-background"
                                     />
                                     {form.watch('b_form_url') && (
-                                        <p className="text-xs text-green-600 font-medium tracking-tight flex items-center mt-2">
-                                            <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center mr-2">✓</span>
-                                            Document securely stored in vault.
-                                        </p>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <p className="text-xs text-green-600 font-medium tracking-tight flex items-center">
+                                                <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center mr-2">✓</span>
+                                                Document securely stored in vault.
+                                            </p>
+                                            <ImagePreviewDialog 
+                                                src={form.watch('b_form_url') as string} 
+                                                title="B-Form / ID Document Preview"
+                                                description="Verification Preview"
+                                            >
+                                                <Button type="button" variant="link" size="sm" className="h-6 text-[10px] font-black uppercase text-primary tracking-widest px-0">
+                                                    Preview Document
+                                                </Button>
+                                            </ImagePreviewDialog>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -488,10 +563,10 @@ export function AddStudentDialog() {
                                 <Button
                                     type="button"
                                     onClick={form.handleSubmit(onSubmit)}
-                                    disabled={createStudentMutation.isPending || isUploading}
+                                    disabled={isSubmitting || isUploading}
                                     className="bg-primary"
                                 >
-                                    {createStudentMutation.isPending || isUploading ? (
+                                    {isSubmitting || isUploading ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                             Processing...

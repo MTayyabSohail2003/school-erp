@@ -53,6 +53,7 @@ export async function createStaffAction(data: StaffFormData) {
             email: parsed.email,
             full_name: parsed.full_name,
             phone_number: parsed.phone_number,
+            avatar_url: parsed.avatar_url || null,
             role: 'TEACHER',
             status: parsed.status || 'ACTIVE',
         });

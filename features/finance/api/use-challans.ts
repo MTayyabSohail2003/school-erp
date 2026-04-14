@@ -20,8 +20,16 @@ export const useUpdateChallanStatus = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ id, status, paymentMethod }: { id: string; status: ChallanStatus; paymentMethod?: 'CASH' | 'BANK' }) => {
-            const result = await updateChallanStatusAction(id, status, paymentMethod);
+        mutationFn: async ({ id, ...data }: { 
+            id: string; 
+            status: ChallanStatus; 
+            paymentMethod?: 'CASH' | 'BANK' | 'ONLINE';
+            paidAmount?: number;
+            fines?: number;
+            discount?: number;
+            paidNotes?: string;
+        }) => {
+            const result = await updateChallanStatusAction(id, data);
             if (!result.success) throw new Error(result.error);
             return result;
         },

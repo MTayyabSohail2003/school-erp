@@ -6,15 +6,26 @@ import { type FeeChallan, type ChallanStatus } from '../schemas/fee-challan.sche
 import { sendDirectNotification } from '@/features/notifications/actions/notification-actions';
 import { NotificationTemplates } from '@/features/notifications/utils/notification-templates';
 
-export async function updateChallanStatusAction(id: string, status: ChallanStatus, paymentMethod?: 'CASH' | 'BANK') {
+export async function updateChallanStatusAction(
+    id: string, 
+    data: {
+        status: ChallanStatus;
+        paymentMethod?: 'CASH' | 'BANK' | 'ONLINE';
+        paidAmount?: number;
+        fines?: number;
+        discount?: number;
+        paidNotes?: string;
+    }
+) {
     try {
         const supabase = createAdminClient();
         
-        // 1. Fetch challan and student info for notification
+        // 1. Fetch current challan info
         const { data: challan } = await supabase
             .from('fee_challans')
             .select(`
                 amount_due,
+                arrears,
                 student:students (
                     full_name,
                     parent_id
@@ -23,9 +34,19 @@ export async function updateChallanStatusAction(id: string, status: ChallanStatu
             .eq('id', id)
             .single();
 
-        const payload: Partial<FeeChallan & { paid_date: string | null; payment_method: string | null }> = { status };
+        if (!challan) throw new Error('Challan not found');
+
+        const { status, paymentMethod, paidAmount, fines, discount, paidNotes } = data;
         
-        if (status === 'PAID') {
+        const payload: Partial<FeeChallan> = { 
+            status,
+            fines: fines ?? 0,
+            discount: discount ?? 0,
+            paid_amount: paidAmount ?? 0,
+            paid_notes: paidNotes ?? null,
+        };
+        
+        if (status === 'PAID' || status === 'PARTIAL') {
             payload.paid_date = new Date().toISOString().split('T')[0];
             if (paymentMethod) payload.payment_method = paymentMethod;
         } else {
@@ -33,7 +54,7 @@ export async function updateChallanStatusAction(id: string, status: ChallanStatu
             payload.payment_method = null;
         }
 
-        // 2. Update status
+        // 2. Update challan record
         const { error } = await supabase
             .from('fee_challans')
             .update(payload)

@@ -1,7 +1,10 @@
 'use client';
 
 import { AddStudentDialog } from '@/features/students/components/add-student-dialog';
+import { BulkAddStudentsDialog } from '@/features/students/components/bulk-add-students-dialog';
 import { PromoteStudentsDialog } from '@/features/students/components/promote-students-dialog';
+import { BatchPromotionDialog } from '@/features/students/components/batch-promotion-dialog';
+import { BulkUpdateFeesDialog } from '@/features/students/components/bulk-update-fees-dialog';
 import { StudentsTable } from '@/features/students/components/students-table';
 import { PageTransition } from '@/components/ui/motion';
 import { Users } from 'lucide-react';
@@ -30,7 +33,9 @@ export default function StudentsPage() {
 
                     {isAdmin && (
                         <div className="flex flex-wrap items-center gap-3">
-                            <PromoteStudentsDialog />
+                            <BulkUpdateFeesDialog />
+                            <BatchPromotionDialog />
+                            <BulkAddStudentsDialog />
                             <AddStudentDialog />
                         </div>
                     )}

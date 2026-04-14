@@ -32,7 +32,10 @@ export function FeeDashboard() {
     const [selectedChallan, setSelectedChallan] = useState<DashboardChallan | null>(null);
 
     // Queries
-    const { data: stats, isLoading: isLoadingStats } = useFeeDashboardStats(filters.monthYear);
+    const { data: stats, isLoading: isLoadingStats } = useFeeDashboardStats(
+        filters.monthYear, 
+        filters.classId === 'All' ? undefined : filters.classId
+    );
     const { data: studentsData, isLoading: isLoadingStudents } = useFeeStudents(filters.monthYear, filters);
     
     // Last 6 months for analytics

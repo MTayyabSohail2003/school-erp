@@ -5,12 +5,18 @@ export const studentsApi = {
     /**
      * Pure function to fetch all students with their class details.
      */
-    getStudents: async (options?: { parentId?: string, classIds?: string[] }): Promise<(Student & { classes: { name: string; section: string }, users: { full_name: string } })[]> => {
+    getStudents: async (options?: { parentId?: string, classIds?: string[], status?: 'ACTIVE' | 'GRADUATED' | 'LEAVER' | 'INACTIVE' }): Promise<(Student & { classes: { name: string; section: string }, users: { full_name: string } })[]> => {
         const supabase = createClient();
         let query = supabase
             .from('students')
-            .select('*, classes(name, section), users!students_parent_id_fkey(full_name)')
-            .eq('status', 'ACTIVE');
+            .select('*, classes(name, section), users!students_parent_id_fkey(full_name)');
+        
+        if (options?.status) {
+            query = query.eq('status', options.status);
+        } else {
+            // Default to ACTIVE for backward compatibility unless specified
+            query = query.eq('status', 'ACTIVE');
+        }
 
         if (options?.parentId) {
             query = query.eq('parent_id', options.parentId);

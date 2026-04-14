@@ -47,9 +47,10 @@ export function ChallansPage() {
     });
 
     // Calculate stats for the visible month/filter
-    const totalCollected = filteredChallans?.filter(c => c.status === 'PAID').reduce((acc, c) => acc + c.amount_due, 0) || 0;
-    const totalPending = filteredChallans?.filter(c => c.status !== 'PAID').reduce((acc, c) => acc + c.amount_due, 0) || 0;
-    const totalExpected = totalCollected + totalPending;
+    // Calculate stats based on actual paid amounts and balances
+    const totalCollected = filteredChallans?.reduce((acc, c) => acc + (c.paid_amount || 0), 0) || 0;
+    const totalExpected = filteredChallans?.reduce((acc, c) => acc + (c.amount_due + (c.fines || 0) - (c.discount || 0)), 0) || 0;
+    const totalPending = totalExpected - totalCollected;
 
     // Generate month options dynamically
     const today = new Date();
@@ -65,11 +66,13 @@ export function ChallansPage() {
     const getStatusBadge = (status: ChallanStatus) => {
         switch (status) {
             case 'PAID':
-                return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1"><CheckCircle className="h-3 w-3" /> Paid</Badge>;
+                return <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 rounded-full px-2.5 font-bold uppercase text-[10px]"><CheckCircle className="h-3 w-3" /> Paid</Badge>;
+            case 'PARTIAL':
+                return <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 gap-1 rounded-full px-2.5 font-bold uppercase text-[10px]"><Banknote className="h-3 w-3" /> Partial</Badge>;
             case 'OVERDUE':
-                return <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 gap-1"><AlertTriangle className="h-3 w-3" /> Overdue</Badge>;
+                return <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 gap-1 rounded-full px-2.5 font-bold uppercase text-[10px]"><AlertTriangle className="h-3 w-3" /> Overdue</Badge>;
             default:
-                return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1"><Clock className="h-3 w-3" /> Pending</Badge>;
+                return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1 rounded-full px-2.5 font-bold uppercase text-[10px]"><Clock className="h-3 w-3" /> Pending</Badge>;
         }
     };
 
@@ -191,8 +194,8 @@ export function ChallansPage() {
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Student</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Class</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Month</th>
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Amount Due</th>
-                                        <th className="px-5 py-3 font-semibold text-muted-foreground text-orange-600 dark:text-orange-400">Arrears</th>
+                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Total Due</th>
+                                        <th className="px-5 py-3 font-semibold text-muted-foreground">Collected</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground">Status</th>
                                         <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                                     </tr>
@@ -225,17 +228,23 @@ export function ChallansPage() {
                                             <td className="px-5 py-4 font-medium">
                                                 {format(parseISO(`${challan.month_year}-01`), 'MMM yyyy')}
                                             </td>
-                                            <td className="px-5 py-4 font-bold text-foreground">
-                                                Rs. {challan.amount_due.toLocaleString()}
+                                            <td className="px-5 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-foreground">Rs. {(challan.amount_due + (challan.fines || 0) - (challan.discount || 0)).toLocaleString()}</span>
+                                                    {(challan.arrears || 0) > 0 && <span className="text-[10px] font-bold text-orange-500 uppercase tracking-tighter">Incl. Arrears: Rs. {challan.arrears?.toLocaleString()}</span>}
+                                                    {(challan.fines || 0) > 0 && <span className="text-[10px] font-bold text-blue-500 uppercase tracking-tighter">Incl. Fines: Rs. {challan.fines?.toLocaleString()}</span>}
+                                                </div>
                                             </td>
                                             <td className="px-5 py-4">
-                                                {(challan.arrears ?? 0) > 0 ? (
-                                                    <span className="text-orange-600 dark:text-orange-400 font-semibold text-xs">
-                                                        +Rs. {challan.arrears!.toLocaleString()}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-muted-foreground text-xs">—</span>
-                                                )}
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-emerald-600">Rs. {(challan.paid_amount || 0).toLocaleString()}</span>
+                                                    {challan.paid_notes && (
+                                                        <div className="flex items-center gap-1 mt-1 group cursor-help" title={challan.paid_notes}>
+                                                            <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                                                            <span className="text-[10px] text-muted-foreground font-medium italic truncate max-w-[80px]">{challan.paid_notes}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-5 py-4">
                                                 {getStatusBadge(challan.status)}

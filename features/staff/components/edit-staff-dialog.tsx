@@ -6,6 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { storageApi } from '@/features/storage/api/storage.api';
+import { ImageCropper } from '@/components/ui/image-cropper';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
+import { base64ToFile } from '@/utils/file-utils';
+import Image from 'next/image';
 
 import {
     Dialog,
@@ -47,11 +51,16 @@ type EditStaffProps = {
         monthly_salary: number;
         status?: 'ACTIVE' | 'INACTIVE' | 'LEAVER';
         resume_url?: string | null;
+        avatar_url?: string | null;
     } | null;
 };
 
 export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffProps) {
     const [isUploading, setIsUploading] = useState(false);
+    // Cropper State
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [tempCropImage, setTempCropImage] = useState<string>('');
+    
     const updateMutation = useUpdateStaff();
 
     const form = useForm({
@@ -63,12 +72,23 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
             monthly_salary: staffMember?.monthly_salary || 0,
             status: (staffMember?.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE' | 'LEAVER',
             resume_url: staffMember?.resume_url || null,
+            avatar_url: staffMember?.avatar_url || null,
         },
     });
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'resume_url') => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'resume_url' | 'avatar_url') => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (fieldName === 'avatar_url') {
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                setTempCropImage(reader.result?.toString() || "");
+                setCropModalOpen(true);
+            });
+            reader.readAsDataURL(file);
+            return;
+        }
 
         try {
             setIsUploading(true);
@@ -77,6 +97,21 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
             toast.success('Document uploaded to vault securely.');
         } catch (error: any) {
             toast.error(error.message || 'Failed to upload document.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleCropComplete = async (base64Image: string) => {
+        try {
+            setIsUploading(true);
+            const fileName = `staff_photo_${staffMember?.id || Date.now()}.png`;
+            const file = base64ToFile(base64Image, fileName);
+            const url = await storageApi.uploadDocument(file, 'documents', 'vault/staff');
+            form.setValue('avatar_url', url as any);
+            toast.success('Photo cropped and uploaded to staff vault. Save changes to confirm.');
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to upload photo.');
         } finally {
             setIsUploading(false);
         }
@@ -196,6 +231,39 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
                         <div className="border rounded-md p-4 bg-muted/40 space-y-3">
                             <div className="flex items-center gap-2 text-sm font-medium">
                                 <UploadCloud className="w-4 h-4 text-primary" />
+                                Update Profile Photo
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {form.watch('avatar_url') && (
+                                    <ImagePreviewDialog 
+                                        src={form.watch('avatar_url') as string} 
+                                        title={`${form.watch('full_name')} - Photo`}
+                                        description="Profile Preview"
+                                    >
+                                        <div className="relative w-16 h-16 shrink-0 overflow-hidden rounded-full border shadow-sm bg-background cursor-pointer">
+                                            <Image 
+                                                src={form.watch('avatar_url') as string} 
+                                                alt="Staff Portrait" 
+                                                fill 
+                                                className="object-cover" 
+                                            />
+                                        </div>
+                                    </ImagePreviewDialog>
+                                )}
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleFileUpload(e, 'avatar_url')}
+                                    disabled={isUploading}
+                                    className="text-xs flex-1"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Document Vault Upload */}
+                        <div className="border rounded-md p-4 bg-muted/40 space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                                <UploadCloud className="w-4 h-4 text-primary" />
                                 Update Document Vault (Resume/CV)
                             </div>
                             <Input
@@ -206,7 +274,18 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
                                 className="text-xs"
                             />
                             {form.watch('resume_url') && (
-                                <p className="text-xs text-green-600 font-medium tracking-tight">✓ Document securely stored in vault.</p>
+                                <div className="flex items-center justify-between mt-2">
+                                    <p className="text-xs text-green-600 font-medium tracking-tight">✓ Document securely stored in vault.</p>
+                                    <ImagePreviewDialog 
+                                        src={form.watch('resume_url') as string} 
+                                        title={`${form.watch('full_name')} - Resume`}
+                                        description="Staff Qualification Proof"
+                                    >
+                                        <Button type="button" variant="link" size="sm" className="h-6 text-[10px] font-black uppercase text-primary px-0 italic">
+                                            Preview
+                                        </Button>
+                                    </ImagePreviewDialog>
+                                </div>
                             )}
                         </div>
 
@@ -232,6 +311,12 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
                         </div>
                     </form>
                 </Form>
+                <ImageCropper 
+                    open={cropModalOpen}
+                    onOpenChange={setCropModalOpen}
+                    imageSrc={tempCropImage}
+                    onCropComplete={handleCropComplete}
+                />
             </DialogContent>
         </Dialog>
     );
