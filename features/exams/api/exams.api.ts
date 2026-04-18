@@ -15,9 +15,14 @@ export const examsApi = {
 
     createExam: async (exam: ExamFormData): Promise<Exam> => {
         const supabase = createClient();
+        
+        // The database exams table does not have a 'term' column.
+        // We omit it from the payload to prevent schema cache errors.
+        const { term, ...dbPayload } = exam;
+
         const { data, error } = await supabase
             .from('exams')
-            .insert([exam])
+            .insert([dbPayload])
             .select()
             .single();
         if (error) throw new Error(error.message);
