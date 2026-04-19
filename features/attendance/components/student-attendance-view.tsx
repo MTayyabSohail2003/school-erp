@@ -3,7 +3,18 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { CalendarDays, Save, Loader2 } from 'lucide-react';
+import { 
+    CalendarDays, 
+    Save, 
+    Loader2, 
+    Search, 
+    Users, 
+    CheckSquare,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight
+} from 'lucide-react';
 import { format } from 'date-fns';
 
 import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes';
@@ -14,6 +25,7 @@ import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 import { useStudentsByClass } from '@/features/students/hooks/use-students-by-class';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
     Select,
     SelectContent,
@@ -51,6 +63,11 @@ export function StudentAttendanceView() {
     // Map of student_id → status (local state before save)
     const [statusMap, setStatusMap] = useState<Record<string, AttendanceStatus>>({});
 
+    // Pagination & Search States
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 10;
+
     const { data: classes, isLoading: classesLoading } = useTeacherClasses();
     const { data: attendanceData, isLoading: attendanceLoading } = useGetAttendance(selectedClassId, selectedDate);
     const upsertMutation = useUpsertAttendance(selectedClassId, selectedDate);
@@ -70,13 +87,26 @@ export function StudentAttendanceView() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [attendanceData]);
 
-    // Reset statusMap when class or date changes
+    // Reset states when class or date changes
     const handleClassOrDateChange = () => {
         setStatusMap({});
+        setCurrentPage(1);
+        setSearchTerm('');
     };
 
     const setStatus = (studentId: string, status: AttendanceStatus) => {
         setStatusMap((prev) => ({ ...prev, [studentId]: status }));
+    };
+
+    const markAllPresent = () => {
+        const newMap = { ...statusMap };
+        filteredStudents.forEach(student => {
+            if (!newMap[student.id]) {
+                newMap[student.id] = 'PRESENT';
+            }
+        });
+        setStatusMap(newMap);
+        toast.info(`Marked ${filteredStudents.length} students as 'Present'`);
     };
 
     const handleSave = () => {
@@ -102,11 +132,25 @@ export function StudentAttendanceView() {
     };
 
     // Derive the students list from attendanceData OR from selected class students
-    // We always need a student list. If attendance was never marked, attendanceData is empty.
-    // So we need to fetch the raw students list too.
     const { data: allStudents } = useStudentsByClass(selectedClassId);
-
     const studentList = allStudents ?? [];
+
+    // Sorting, Filtering & Pagination Logic
+    const filteredStudents = studentList
+        .filter(s => 
+            s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            s.roll_number.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            return (a.roll_number || '').localeCompare(b.roll_number || '', undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+    const totalResults = filteredStudents.length;
+    const totalPages = Math.ceil(totalResults / PAGE_SIZE);
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = Math.min(startIndex + PAGE_SIZE, totalResults);
+    const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+
     const presentCount = Object.values(statusMap).filter((s) => s === 'PRESENT').length;
     const absentCount = Object.values(statusMap).filter((s) => s === 'ABSENT').length;
     const leaveCount = Object.values(statusMap).filter((s) => s === 'LEAVE').length;
@@ -212,51 +256,93 @@ export function StudentAttendanceView() {
                 )}
 
                 {/* ── Student Grid ── */}
-                <Card>
-                    <CardHeader className="border-b pb-3">
-                        <CardTitle className="text-base font-semibold">
-                            {selectedClassId
-                                ? `${studentList.length} Students`
-                                : 'Select a class to view students'}
-                        </CardTitle>
+                <Card className="overflow-hidden border-none shadow-xl bg-card/50 backdrop-blur-md">
+                    <CardHeader className="border-b bg-muted/30 pb-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
+                                <Users className="w-4 h-4 text-primary" />
+                                {selectedClassId
+                                    ? `${totalResults} Students Found`
+                                    : 'Students List'}
+                            </CardTitle>
+
+                            {selectedClassId && canMark && (
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex-1 md:w-64">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Search by name or roll..."
+                                            value={searchTerm}
+                                            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                            className="pl-9 bg-background/50 border-muted-foreground/20 focus:border-primary/50 transition-all rounded-xl h-9 text-xs"
+                                        />
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={markAllPresent}
+                                        disabled={filteredStudents.length === 0}
+                                        className="h-9 border-emerald-500/30 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest gap-2"
+                                    >
+                                        <CheckSquare className="w-3.5 h-3.5" />
+                                        Mark All Present
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         {!selectedClassId && (
-                            <p className="text-center text-muted-foreground py-16 text-sm">
-                                Select a class and date above to begin marking attendance.
-                            </p>
+                            <div className="flex flex-col items-center justify-center py-24 text-center px-6">
+                                <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                                    <CalendarDays className="h-8 w-8 text-muted-foreground/40" />
+                                </div>
+                                <h3 className="text-lg font-bold text-foreground/80">Select Class & Date</h3>
+                                <p className="text-sm text-muted-foreground max-w-xs mt-1">
+                                    Choose a class from the dropdown above to manage daily attendance records.
+                                </p>
+                            </div>
                         )}
 
                         {selectedClassId && attendanceLoading && (
-                            <div className="divide-y divide-border">
+                            <div className="divide-y divide-border/50">
                                 {Array.from({ length: 6 }).map((_, i) => (
-                                    <div key={i} className="flex items-center justify-between px-5 py-3.5">
-                                        <Skeleton className="h-4 w-40" />
-                                        <Skeleton className="h-8 w-64" />
+                                    <div key={i} className="flex items-center justify-between px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <Skeleton className="h-10 w-10 rounded-full" />
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-32" />
+                                                <Skeleton className="h-3 w-20" />
+                                            </div>
+                                        </div>
+                                        <Skeleton className="h-8 w-64 rounded-lg" />
                                     </div>
                                 ))}
                             </div>
                         )}
 
                         {selectedClassId && !attendanceLoading && (
-                            <div className="divide-y divide-border">
-                                {studentList.length === 0 && (
-                                    <p className="text-center text-muted-foreground py-16 text-sm">
-                                        No students enrolled in this class yet.
-                                    </p>
+                            <div className="divide-y divide-border/50 min-h-[400px]">
+                                {paginatedStudents.length === 0 && (
+                                    <div className="flex flex-col items-center justify-center py-24 text-center px-6">
+                                        <Search className="h-12 w-12 text-muted-foreground/20 mb-4" />
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            No students found matching "{searchTerm}"
+                                        </p>
+                                    </div>
                                 )}
-                                {studentList.map((student, index) => {
+                                {paginatedStudents.map((student, index) => {
                                     const currentStatus = statusMap[student.id] ?? null;
                                     return (
                                         <motion.div
                                             key={student.id}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: index * 0.03 }}
-                                            className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-muted/30 transition-colors"
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.02 }}
+                                            className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/10 transition-colors"
                                         >
                                             {/* Student info */}
-                                            <div className="flex items-center gap-3 min-w-0">
+                                            <div className="flex items-center gap-4 min-w-0">
                                                 {student.photo_url ? (
                                                     <img
                                                         src={student.photo_url}
@@ -264,13 +350,20 @@ export function StudentAttendanceView() {
                                                         className="h-10 w-10 rounded-full object-cover shrink-0 border-2 border-primary/10 shadow-sm"
                                                     />
                                                 ) : (
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-black ring-2 ring-primary/5">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary text-xs font-black ring-2 ring-primary/5">
                                                         {student.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                                     </div>
                                                 )}
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-bold truncate text-foreground/90">{student.full_name}</span>
-                                                    <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">Roll: {student.roll_number}</span>
+                                                    <span className="text-sm font-black tracking-tight truncate text-foreground/90">{student.full_name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">
+                                                            {student.roll_number}
+                                                        </span>
+                                                        <Badge variant="outline" className="text-[8px] font-bold py-0 h-4 border-muted-foreground/10 text-muted-foreground/60 rounded-sm">
+                                                            Roll No
+                                                        </Badge>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -280,9 +373,9 @@ export function StudentAttendanceView() {
                                                     <button
                                                         key={status}
                                                         onClick={() => canMark && setStatus(student.id, status)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 ${canMark ? 'cursor-pointer' : 'cursor-default'} ${currentStatus === status
-                                                            ? STATUS_CONFIG[status].className
-                                                            : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40'
+                                                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-200 ${canMark ? 'cursor-pointer active:scale-95' : 'cursor-default'} ${currentStatus === status
+                                                            ? STATUS_CONFIG[status].className + " shadow-lg shadow-primary/5"
+                                                            : 'border-border/60 text-muted-foreground hover:border-primary/20 hover:bg-primary/5'
                                                             }`}
                                                     >
                                                         {STATUS_CONFIG[status].label}
@@ -292,6 +385,74 @@ export function StudentAttendanceView() {
                                         </motion.div>
                                     );
                                 })}
+                            </div>
+                        )}
+
+                        {/* Pagination Footer */}
+                        {selectedClassId && totalPages > 1 && (
+                            <div className="bg-muted/30 px-6 py-4 border-t flex items-center justify-between">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
+                                    Page {currentPage} of {totalPages} &bull; {totalResults} Students
+                                </p>
+                                <div className="flex items-center gap-1.5">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-lg"
+                                        onClick={() => setCurrentPage(1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronsLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-lg"
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    
+                                    <div className="flex items-center gap-1 mx-2">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                                            .map((p, idx, array) => (
+                                                <div key={p} className="flex items-center">
+                                                    {idx > 0 && p !== array[idx - 1] + 1 && (
+                                                        <span className="text-muted-foreground/30 px-1">...</span>
+                                                    )}
+                                                    <Button
+                                                        variant={currentPage === p ? "default" : "ghost"}
+                                                        size="sm"
+                                                        className={`h-8 w-8 rounded-lg font-black text-xs ${currentPage === p ? "bg-primary shadow-lg shadow-primary/20" : ""}`}
+                                                        onClick={() => setCurrentPage(p)}
+                                                    >
+                                                        {p}
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                    </div>
+
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-lg"
+                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-lg"
+                                        onClick={() => setCurrentPage(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        <ChevronsRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </CardContent>

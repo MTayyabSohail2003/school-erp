@@ -55,25 +55,26 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
         label: 'Academics',
         items: [
             { name: 'Attendance', href: ROUTES.ATTENDANCE, icon: CalendarDays, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
-            { name: 'Leave Requests', href: '/dashboard/attendance/leaves', icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
-            { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
-            { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+            // { name: 'Leave Requests', href: '/dashboard/attendance/leaves', icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+            // { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
+            // { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
+            { name: "Results", href: "/dashboard/results", icon: ClipboardList, exact: false, roles: ['ADMIN'] },
             { name: 'Subjects & Periods', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
             { name: 'Notice Board', href: ROUTES.TEACHER_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['TEACHER'] },
             { name: 'Notice Board', href: ROUTES.PARENT_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['PARENT'] },
         ],
     },
-    {
-        label: 'Timetable',
-        items: [
-            { name: 'Master Schedule', href: '/timetable', icon: Calendar, exact: false, roles: ['ADMIN', 'TEACHER'] },
-        ],
-    },
+    // {
+    //     label: 'Timetable',
+    //     items: [
+    //         { name: 'Master Schedule', href: '/timetable', icon: Calendar, exact: false, roles: ['ADMIN', 'TEACHER'] },
+    //     ],
+    // },
     {
         label: 'Finance',
         items: [
             { name: 'Fees Management', href: ROUTES.FEE, icon: WalletCards, exact: false, roles: ['ADMIN'] },
-            { name: 'Defaulters', href: ROUTES.DEFAULTERS, icon: AlertTriangle, exact: false, roles: ['ADMIN'] },
+            // { name: 'Defaulters', href: ROUTES.DEFAULTERS, icon: AlertTriangle, exact: false, roles: ['ADMIN'] },
             { name: 'Staff Payroll', href: ROUTES.PAYROLL, icon: Wallet, exact: false, roles: ['ADMIN'] },
         ],
     },
@@ -86,8 +87,8 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
                 roles: ['ADMIN', 'TEACHER', 'PARENT'],
                 subItems: [
                     { name: 'Add Classes', href: ROUTES.SETTINGS_CLASSES, exact: false, roles: ['ADMIN'] },
-                    { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, exact: false, roles: ['ADMIN'] },
-                    { name: 'Notification System', href: '/dashboard/settings/notifications', exact: false, roles: ['ADMIN'] },
+                    // { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, exact: false, roles: ['ADMIN'] },
+                    // { name: 'Notification System', href: '/dashboard/settings/notifications', exact: false, roles: ['ADMIN'] },
                 ],
             },
         ],
