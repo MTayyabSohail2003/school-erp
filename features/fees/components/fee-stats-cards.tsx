@@ -69,65 +69,48 @@ export function FeeStatsCards({ stats, isLoading }: { stats?: DashboardStats, is
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
             {items.map((item, idx) => {
                 const Icon = item.icon;
                 return (
                     <motion.div
                         key={idx}
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1, duration: 0.5, ease: 'easeOut' }}
-                        whileHover={{ y: -5 }}
+                        transition={{ delay: idx * 0.05 }}
+                        whileHover={{ y: -2 }}
                         className="h-full"
                     >
-                        <Card className={`h-full border border-border/40 bg-card/40 backdrop-blur-xl shadow-2xl overflow-hidden relative group rounded-[2rem] transition-all duration-500 ${item.border}`}>
-                            {/* Animated Background Glow */}
-                            <div className={`absolute -right-10 -top-10 h-32 w-32 bg-gradient-to-br ${item.glow} rounded-full blur-3xl opacity-30 group-hover:opacity-100 transition-opacity duration-700`} />
-                            <div className={`absolute -left-10 -bottom-10 h-24 w-24 bg-gradient-to-tr ${item.glow} rounded-full blur-3xl opacity-10 group-hover:opacity-40 transition-opacity duration-700`} />
-                            
-                            <CardContent className="p-6 flex flex-col justify-between h-full relative z-10">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className={`p-3 rounded-2xl ${item.bg} backdrop-blur-sm border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-500`}>
-                                        <Icon className={`w-5 h-5 ${item.color}`} />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/60 leading-none">{item.title}</span>
+                        <Card className={`h-full border border-border/40 bg-zinc-900/40 dark:bg-card/40 backdrop-blur-xl shadow-xl overflow-hidden relative group rounded-2xl transition-all duration-300 ${item.border} hover:shadow-primary/5`}>
+                            <CardContent className="p-4 flex items-center gap-4 h-full relative z-10">
+                                <div className={`p-3 rounded-xl ${item.bg} backdrop-blur-sm border border-white/10 shadow-inner shrink-0 group-hover:scale-110 transition-transform duration-500`}>
+                                    <Icon className={`w-5 h-5 ${item.color}`} />
                                 </div>
-                                
-                                <div className="space-y-1">
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-2xl sm:text-3xl font-black tracking-tighter text-foreground group-hover:tracking-tight transition-all duration-500">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mb-0.5">{item.title}</p>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <h3 className="text-lg sm:text-xl font-black tracking-tighter text-foreground whitespace-nowrap">
                                             {item.value}
-                                        </span>
+                                        </h3>
+                                        {item.extra && (
+                                            <span className="text-[8px] font-black text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-tighter whitespace-nowrap">
+                                                {collectionRate.toFixed(0)}%
+                                            </span>
+                                        )}
                                     </div>
                                     
                                     {item.extra && (
-                                        <div className="flex items-center gap-1.5 mt-2">
-                                            <div className="flex-1 h-1 bg-muted/40 rounded-full overflow-hidden">
-                                                <motion.div 
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${collectionRate}%` }}
-                                                    transition={{ delay: 0.5, duration: 1 }}
-                                                    className={`h-full bg-gradient-to-r ${item.glow.replace('/20', '')}`} 
-                                                />
-                                            </div>
-                                            <span className="text-[10px] font-black text-emerald-600/80 dark:text-emerald-400/80 whitespace-nowrap">
-                                                {item.extra}
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {!item.extra && (
-                                        <div className="pt-2 flex items-center gap-1 text-[10px] font-bold text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <TrendingUp className="h-3 w-3" />
-                                            Active Record
+                                        <div className="mt-2 h-1 w-full bg-muted/40 rounded-full overflow-hidden border border-white/5 relative">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${collectionRate}%` }}
+                                                transition={{ delay: 0.5, duration: 1.5, ease: "circOut" }}
+                                                className={`h-full bg-gradient-to-r ${item.glow.replace('/20', '')} shadow-[0_0_10px_rgba(16,185,129,0.3)] relative z-10`}
+                                            />
                                         </div>
                                     )}
                                 </div>
                             </CardContent>
-                            
-                            {/* Glow Line Indicator */}
-                            <div className={`absolute bottom-0 left-6 right-6 h-[2px] rounded-full bg-gradient-to-r ${item.glow.replace('/20', '/40')} opacity-0 group-hover:opacity-100 transition-all duration-500 shadow-[0_0_15px_rgba(0,0,0,0.2)]`} />
                         </Card>
                     </motion.div>
                 );

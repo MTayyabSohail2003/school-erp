@@ -21,6 +21,7 @@ export function useGetStaff() {
                     phone_number,
                     created_at,
                     status,
+                    role,
                     avatar_url,
                     teacher_profiles (
                         qualification,
@@ -28,7 +29,7 @@ export function useGetStaff() {
                         resume_url
                     )
                 `)
-                .in('role', ['TEACHER', 'ADMIN'])
+                .eq('role', 'TEACHER')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -49,6 +50,7 @@ export function useGetStaff() {
                     phone_number: user.phone_number,
                     created_at: user.created_at,
                     status: user.status || 'ACTIVE',
+                    role: user.role,
                     avatar_url: user.avatar_url,
                     qualification: profile?.qualification || '',
                     monthly_salary: profile?.monthly_salary || 0,

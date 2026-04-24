@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Mail, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { sendFeeRemindersAction } from '@/features/parents/api/send-fee-reminders.action';
+import { cn } from '@/lib/utils';
 
 interface SingleReminderButtonProps {
     parentId: string;
+    hasStudents: boolean;
 }
 
-export function SingleReminderButton({ parentId }: SingleReminderButtonProps) {
+export function SingleReminderButton({ parentId, hasStudents }: SingleReminderButtonProps) {
     const [isPending, setIsPending] = useState(false);
 
     const handleSendReminder = async (e: React.MouseEvent) => {
@@ -38,10 +40,13 @@ export function SingleReminderButton({ parentId }: SingleReminderButtonProps) {
         <Button 
             variant="ghost" 
             size="icon" 
-            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-            onClick={handleSendReminder}
-            disabled={isPending}
-            title="Send Fee Reminder"
+            className={cn(
+                "h-8 w-8",
+                !hasStudents ? "text-muted-foreground/40 cursor-not-allowed" : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+            )}
+            onClick={hasStudents ? handleSendReminder : undefined}
+            disabled={isPending || !hasStudents}
+            title={hasStudents ? "Send Fee Reminder" : "No students enrolled - Cannot send reminder"}
         >
             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
         </Button>

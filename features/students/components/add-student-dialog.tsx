@@ -16,6 +16,9 @@ import { registerStudentAction } from '@/features/students/api/student-actions';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
+import { classesApi } from '@/features/classes/api/classes.api';
+import { useCreateClass } from '@/features/classes/hooks/use-classes';
+import { UPLOAD_LIMITS } from '@/constants/config';
 
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { Button } from '@/components/ui/button';
@@ -104,6 +107,74 @@ function CreateParentForm({
     );
 }
 
+// Sub-component for inline class creation
+function CreateClassForm({
+    onSuccess,
+    onCancel
+}: {
+    onSuccess: (classId: string) => void;
+    onCancel: () => void;
+}) {
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState({ name: '', section: '', is_primary: false });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.name || !formData.section) {
+            toast.error('Class name and section are required.');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            // Apply uppercase logic
+            let className = formData.name.trim().toUpperCase();
+            const sectionName = formData.section.trim().toUpperCase();
+
+            // Auto-prefix if it's just a number to match main dialog logic
+            if (/^\d+$/.test(className)) {
+                className = `CLASS ${className}`;
+            }
+
+            const formattedData = {
+                ...formData,
+                name: className,
+                section: sectionName
+            };
+            const newClass = await classesApi.createClass(formattedData);
+            toast.success(`Class ${newClass.name} added successfully.`);
+            onSuccess(newClass.id);
+        } catch (error: unknown) {
+            toast.error((error as Error).message || 'Failed to create class');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="border rounded-md p-4 bg-muted/40 space-y-3 relative mt-2">
+            <button type="button" onClick={onCancel} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground cursor-pointer">
+                <X className="h-4 w-4" />
+            </button>
+            <h4 className="text-sm font-semibold flex items-center gap-2 text-emerald-600">
+                <Plus className="h-4 w-4" /> Quick Add Class
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                    <FormLabel className="text-xs">Class Name</FormLabel>
+                    <Input placeholder="e.g. 10" className="h-8 text-xs uppercase" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value.toUpperCase() })} />
+                </div>
+                <div className="space-y-1">
+                    <FormLabel className="text-xs">Section</FormLabel>
+                    <Input placeholder="e.g. A" className="h-8 text-xs uppercase" required value={formData.section} onChange={e => setFormData({ ...formData, section: e.target.value.toUpperCase() })} />
+                </div>
+            </div>
+            <Button type="button" onClick={handleSubmit} disabled={isLoading} size="sm" className="w-full h-8 text-xs mt-2 bg-emerald-600 hover:bg-emerald-700">
+                {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : 'Create Class'}
+            </Button>
+        </div>
+    );
+}
+
 export function AddStudentDialog() {
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState(1);
@@ -119,6 +190,7 @@ export function AddStudentDialog() {
     const queryClient = useQueryClient();
 
     const [isCreatingParent, setIsCreatingParent] = useState(false);
+    const [isCreatingClass, setIsCreatingClass] = useState(false);
 
     const form = useForm<StudentFormData>({
         resolver: zodResolver(studentFormSchema),
@@ -166,6 +238,12 @@ export function AddStudentDialog() {
         if (!file) return;
 
         if (fieldName === 'photo_url') {
+            if (file.size > UPLOAD_LIMITS.MAX_IMAGE_BYTES) {
+                toast.error(`Image too large (Max ${UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB}KB). Please resize or compress your image.`);
+                if (e.target) e.target.value = ''; // Reset input
+                return;
+            }
+
             // Read file for cropping instead of direct upload
             const reader = new FileReader();
             reader.addEventListener("load", () => {
@@ -173,6 +251,13 @@ export function AddStudentDialog() {
                 setCropModalOpen(true);
             });
             reader.readAsDataURL(file);
+            return;
+        }
+
+        // For other documents (B-Form, Certificate)
+        if (file.size > UPLOAD_LIMITS.MAX_DOC_BYTES) {
+            toast.error(`Document too large (Max ${UPLOAD_LIMITS.MAX_DOC_SIZE_KB}KB or ${UPLOAD_LIMITS.MAX_DOC_SIZE_KB / 1024}MB).`);
+            if (e.target) e.target.value = ''; // Reset input
             return;
         }
 
@@ -194,6 +279,12 @@ export function AddStudentDialog() {
             // Convert Base64 to File object for bucket upload
             const fileName = `photo_${form.getValues('roll_number') || Date.now()}.png`;
             const file = base64ToFile(base64Image, fileName);
+
+            // Double-check size after cropping (just in case)
+            if (file.size > UPLOAD_LIMITS.MAX_IMAGE_BYTES) {
+                toast.error(`Cropped image still exceeds ${UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB}KB. Please use a smaller source image.`);
+                return;
+            }
             
             // Upload to Supabase Storage (vault/photos subfolder)
             const url = await storageApi.uploadDocument(file, 'documents', 'vault/photos');
@@ -255,6 +346,7 @@ export function AddStudentDialog() {
         setOpen(newOpen);
         if (!newOpen) {
             setIsCreatingParent(false);
+            setIsCreatingClass(false);
         }
     };
 
@@ -338,7 +430,14 @@ export function AddStudentDialog() {
                                             <FormItem>
                                                 <FormLabel>B-Form ID</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="35201-XXXXXXX-X" {...field} />
+                                                    <Input 
+                                                        placeholder="35201XXXXXXXX" 
+                                                        {...field} 
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            field.onChange(val);
+                                                        }}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -357,15 +456,15 @@ export function AddStudentDialog() {
                                         name="class_id"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between">
                                                     <FormLabel>Assign Class <span className="text-destructive">*</span></FormLabel>
-                                                    <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" asChild>
-                                                        <Link href="/settings/classes">
+                                                    {!isCreatingClass && (
+                                                        <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-primary px-2" onClick={(e) => { e.preventDefault(); setIsCreatingClass(true); }}>
                                                             <Plus className="h-3 w-3 mr-1" /> New Class
-                                                        </Link>
-                                                    </Button>
+                                                        </Button>
+                                                    )}
                                                 </div>
-                                                <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isClassesLoading}>
+                                                <Select onValueChange={field.onChange} value={field.value || undefined} disabled={isClassesLoading || isCreatingClass}>
                                                     <FormControl>
                                                         <SelectTrigger className="w-full">
                                                             <SelectValue placeholder={isClassesLoading ? 'Loading classes...' : 'Select a class'} />
@@ -380,6 +479,16 @@ export function AddStudentDialog() {
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
+                                                {isCreatingClass && (
+                                                    <CreateClassForm
+                                                        onCancel={() => setIsCreatingClass(false)}
+                                                        onSuccess={(newClassId) => {
+                                                            queryClient.invalidateQueries({ queryKey: ['classes'] });
+                                                            form.setValue('class_id', newClassId);
+                                                            setIsCreatingClass(false);
+                                                        }}
+                                                    />
+                                                )}
                                             </FormItem>
                                         )}
                                     />

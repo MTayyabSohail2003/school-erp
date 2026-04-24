@@ -77,69 +77,16 @@ export const financeApi = {
     generateChallansForMonth: async (monthYear: string) => {
         const supabase = createClient();
 
-        // 1. Get all fee structures
-        const { data: structures } = await supabase.from('fee_structures').select('*');
-        if (!structures || structures.length === 0) throw new Error('No fee structures exist');
+        const { data, error } = await supabase.rpc('generate_monthly_challans_v1', {
+            p_month_year: monthYear
+        });
 
-        const feeMap = new Map(structures.map(s => [s.class_id, { id: s.id, fee: s.monthly_fee }]));
+        if (error) throw error;
+        
+        const response = data as { success: boolean; count: number; message: string; error?: string };
+        if (!response.success) throw new Error(response.error || 'Fee generation failed on database side.');
 
-        // 2. Get all students
-        const { data: students } = await supabase.from('students').select('id, class_id, monthly_fee');
-        if (!students) throw new Error('No students found');
-
-        // 3. Get existing challans for this month to avoid duplicates
-        const { data: existing } = await supabase
-            .from('fee_challans')
-            .select('student_id')
-            .eq('month_year', monthYear);
-
-        const existingSet = new Set((existing ?? []).map(e => e.student_id));
-
-        // 4. Fetch all UNPAID challans from months BEFORE this one (arrears)
-        const { data: unpaidPast } = await supabase
-            .from('fee_challans')
-            .select('student_id, amount_due, fines, paid_amount, discount')
-            .in('status', ['PENDING', 'OVERDUE', 'PARTIAL'])
-            .lt('month_year', monthYear);
-
-        // Build a map: student_id -> total outstanding (amount_due + their own arrears)
-        const arrearsMap = new Map<string, number>();
-        for (const c of unpaidPast ?? []) {
-            const existing = arrearsMap.get(c.student_id) ?? 0;
-            const balance = (c.amount_due || 0) + (c.fines || 0) - (c.paid_amount || 0) - (c.discount || 0);
-            arrearsMap.set(c.student_id, existing + balance);
-        }
-
-        // 5. Build inserts
-        const dueDate = `${monthYear}-10`;
-        const inserts: Partial<FeeChallan>[] = [];
-
-        for (const student of students) {
-            if (existingSet.has(student.id)) continue;
-
-            const structure = feeMap.get(student.class_id);
-            if (!structure) continue;
-
-            const arrears = arrearsMap.get(student.id) ?? 0;
-            const baseFee = student.monthly_fee ? Number(student.monthly_fee) : structure.fee;
-
-            inserts.push({
-                student_id: student.id,
-                fee_structure_id: structure.id,
-                month_year: monthYear,
-                arrears,
-                amount_due: baseFee + arrears,
-                status: 'PENDING',
-                due_date: dueDate,
-            });
-        }
-
-        if (inserts.length === 0) return { count: 0, message: 'All challans already generated or no students eligible' };
-
-        // 6. Bulk insert
-        const { error } = await supabase.from('fee_challans').insert(inserts);
-        if (error) throw new Error(error.message);
-
-        return { count: inserts.length, message: `Successfully generated ${inserts.length} challans` };
+        return response;
     },
+
 };

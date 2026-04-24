@@ -37,14 +37,34 @@ export const payrollApi = {
         });
     },
 
-    updateSalary: async (profileId: string, salary: number) => {
+    updateSalary: async (profileId: string, salary: number, monthYear?: string, teacherId?: string) => {
         if (!profileId) throw new Error("No profile found for this teacher. Please create a staff profile first.");
         const supabase = createClient();
-        const { error } = await supabase
+        
+        // 1. Update the global base salary for future/fallback
+        const { error: profileError } = await supabase
             .from('teacher_profiles')
             .update({ monthly_salary: salary })
             .eq('id', profileId);
 
-        if (error) throw new Error(error.message);
+        if (profileError) throw new Error(profileError.message);
+
+        // 2. 🚀 INDUSTRY LEVEL: Snapshot for the specifically selected month
+        // This ensures the selected month and future months see this salary, but past months keep their ledger records
+        if (monthYear && teacherId) {
+            const { error: ledgerError } = await supabase
+                .from('staff_payroll_ledger')
+                .upsert({
+                    teacher_id: teacherId,
+                    month_year: monthYear,
+                    base_salary: salary,
+                    net_paid: 0, // Satisfaction of NOT NULL constraint
+                    status: 'PENDING', // Default to pending if record is new
+                }, { 
+                    onConflict: 'teacher_id, month_year' 
+                });
+
+            if (ledgerError) throw new Error(ledgerError.message);
+        }
     }
 };

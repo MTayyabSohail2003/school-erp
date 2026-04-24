@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Wallet, Edit2, Loader2, Search, Receipt, Trash2, Landmark, AlertCircle, TrendingUp, MessageSquare } from 'lucide-react';
+import { Wallet, Edit2, Loader2, Search, Receipt, Trash2, Landmark, AlertCircle, TrendingUp, MessageSquare, RotateCw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Banknote } from 'lucide-react';
 
 import { useUpdateSalary } from '../api/use-payroll';
-import { useGetPayrollDashboard, useDeletePayout, useGetHistoricalLedger } from '../api/use-payroll-ledger';
+import { useGetPayrollDashboard, useDeletePayout, useGetHistoricalLedger, usePayrollRealtime } from '../api/use-payroll-ledger';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Check, User, CheckCircle, Clock } from 'lucide-react';
@@ -23,6 +24,7 @@ import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MonthPicker } from '@/components/ui/month-picker';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import {
     Dialog,
     DialogContent,
@@ -80,12 +82,18 @@ type StaffRow = {
 
 export function PayrollPage() {
     const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+    
+    usePayrollRealtime();
+    const queryClient = useQueryClient();
+
     const { data: dashboardRecords, isLoading } = useGetPayrollDashboard(selectedMonth);
     
     const updateSalaryMutation = useUpdateSalary();
     const deletePayoutMutation = useDeletePayout();
 
-    const [searchQuery, setSearchQuery] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isPayoutOpen, setIsPayoutOpen] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState<StaffRow | null>(null);
@@ -96,6 +104,7 @@ export function PayrollPage() {
     const [salaryInput, setSalaryInput] = useState<string>('');
 
     const handleEdit = (teacher: StaffRow) => {
+        setSelectedTeacher(teacher);
         setSelectedProfileId(teacher.profile_id);
         setSelectedName(teacher.full_name);
         setSalaryInput(teacher.base_salary.toString());
@@ -114,8 +123,15 @@ export function PayrollPage() {
             return;
         }
 
+        if (!selectedTeacher) return;
+
         updateSalaryMutation.mutate(
-            { profileId: selectedProfileId, salary },
+            { 
+                profileId: selectedProfileId, 
+                salary: salary,
+                monthYear: selectedMonth,
+                teacherId: selectedTeacher.id
+            },
             {
                 onSuccess: () => {
                     toast.success('Salary updated successfully');
@@ -143,7 +159,14 @@ export function PayrollPage() {
         return t.full_name.toLowerCase().includes(q) || t.email?.toLowerCase().includes(q);
     });
 
+    // Pagination logic 🔢
+    const totalPages = Math.ceil((filteredStaff?.length || 0) / ITEMS_PER_PAGE);
+    const paginatedStaff = filteredStaff?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+    // Reset pagination when searching
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedMonth]);
     return (
         <PageTransition>
             <div className="space-y-6">
@@ -187,7 +210,20 @@ export function PayrollPage() {
                         ) : (
                             <Card>
                                 <CardHeader className="border-b pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <CardTitle className="text-lg">Staff Directory</CardTitle>
+                                    <div className="flex items-center gap-4">
+                                        <CardTitle className="text-lg">Staff Directory</CardTitle>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 text-muted-foreground hover:text-primary transition-colors"
+                                            onClick={() => {
+                                                queryClient.invalidateQueries({ queryKey: ['payroll-ledger'] });
+                                                toast.success('Refreshing data...');
+                                            }}
+                                        >
+                                            <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    </div>
                                     <div className="relative w-full sm:w-64">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                         <Input
@@ -215,12 +251,12 @@ export function PayrollPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
-                                            {filteredStaff?.length === 0 ? (
+                                            {paginatedStaff?.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={10} className="text-center py-8 text-muted-foreground">No staff found.</td>
                                                 </tr>
                                             ) : null}
-                                            {(filteredStaff ?? []).map((teacher: StaffRow, idx: number) => (
+                                            {(paginatedStaff ?? []).map((teacher: StaffRow, idx: number) => (
                                                 <motion.tr
                                                     key={teacher.id}
                                                     initial={{ opacity: 0 }}
@@ -456,6 +492,74 @@ export function PayrollPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* Industry-Level Professional Pagination 🔢 */}
+                                {totalPages > 1 && (
+                                    <div className="px-6 py-5 border-t bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                        <div className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground/60">
+                                            Showing <span className="text-foreground">{((currentPage - 1) * ITEMS_PER_PAGE) + 1}</span> to <span className="text-foreground">{Math.min(currentPage * ITEMS_PER_PAGE, filteredStaff?.length || 0)}</span> of <span className="text-foreground">{filteredStaff?.length}</span> Staff Members
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 rounded-lg border-primary/10 bg-background hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                                                onClick={() => setCurrentPage(1)}
+                                                disabled={currentPage === 1}
+                                            >
+                                                <ChevronsLeft className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 rounded-lg border-primary/10 bg-background hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={currentPage === 1}
+                                            >
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            
+                                            <div className="flex items-center gap-1 px-2">
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                                    .filter(p => p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1))
+                                                    .map((p, i, arr) => (
+                                                        <React.Fragment key={p}>
+                                                            {i > 0 && arr[i - 1] !== p - 1 && (
+                                                                <span className="text-muted-foreground/40 text-[10px]">...</span>
+                                                            )}
+                                                            <Button
+                                                                variant={currentPage === p ? "default" : "ghost"}
+                                                                size="sm"
+                                                                className={`h-8 w-8 p-0 rounded-lg text-xs font-black transition-all ${currentPage === p ? "shadow-lg shadow-primary/20" : "hover:bg-primary/5 hover:text-primary"}`}
+                                                                onClick={() => setCurrentPage(p)}
+                                                            >
+                                                                {p}
+                                                            </Button>
+                                                        </React.Fragment>
+                                                    ))}
+                                            </div>
+
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 rounded-lg border-primary/10 bg-background hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={currentPage === totalPages}
+                                            >
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 rounded-lg border-primary/10 bg-background hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                                                onClick={() => setCurrentPage(totalPages)}
+                                                disabled={currentPage === totalPages}
+                                            >
+                                                <ChevronsRight className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </Card>
                         )}
                     </TabsContent>
@@ -515,6 +619,7 @@ export function PayrollPage() {
 
 function HistoricalLedgerTable() {
     const { data: ledgerEntries, isLoading } = useGetHistoricalLedger();
+    const queryClient = useQueryClient();
 
     if (isLoading) {
         return (
@@ -540,9 +645,22 @@ function HistoricalLedgerTable() {
         <Card className="border-border/40 bg-card/40 backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-2xl">
             <CardHeader className="border-b border-border/40 bg-muted/30 pb-4">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle className="text-lg font-black uppercase tracking-widest text-primary/60">Payout Ledger</CardTitle>
-                        <p className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Complete financial audit trail</p>
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <CardTitle className="text-lg font-black uppercase tracking-widest text-primary/60">Payout Ledger</CardTitle>
+                            <p className="text-[10px] font-bold uppercase tracking-tighter opacity-70">Complete financial audit trail</p>
+                        </div>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 text-muted-foreground/40 hover:text-primary transition-colors"
+                            onClick={() => {
+                                queryClient.invalidateQueries({ queryKey: ['payroll-ledger'] });
+                                toast.success('Refreshing payout history...');
+                            }}
+                        >
+                            <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        </Button>
                     </div>
                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                         <Receipt className="w-5 h-5 text-primary" />

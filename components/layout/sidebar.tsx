@@ -8,7 +8,8 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone, LayoutGrid } from 'lucide-react';
+import { UPLOAD_LIMITS } from '@/constants/config';
 import {
     Sidebar,
     SidebarContent,
@@ -62,6 +63,8 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
             { name: 'Subjects & Periods', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
             { name: 'Notice Board', href: ROUTES.TEACHER_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['TEACHER'] },
             { name: 'Notice Board', href: ROUTES.PARENT_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['PARENT'] },
+            { name: 'Add Classes', href: ROUTES.SETTINGS_CLASSES, icon: LayoutGrid, exact: false, roles: ['ADMIN'] },
+
         ],
     },
     // {
@@ -78,21 +81,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
             { name: 'Staff Payroll', href: ROUTES.PAYROLL, icon: Wallet, exact: false, roles: ['ADMIN'] },
         ],
     },
-    {
-        label: 'Settings',
-        items: [
-            {
-                name: 'Settings',
-                icon: Settings,
-                roles: ['ADMIN', 'TEACHER', 'PARENT'],
-                subItems: [
-                    { name: 'Add Classes', href: ROUTES.SETTINGS_CLASSES, exact: false, roles: ['ADMIN'] },
-                    // { name: 'Notice Board', href: ROUTES.NOTICE_BOARD, exact: false, roles: ['ADMIN'] },
-                    // { name: 'Notification System', href: '/dashboard/settings/notifications', exact: false, roles: ['ADMIN'] },
-                ],
-            },
-        ],
-    },
+
 ];
 
 export default function AppSidebar() {
@@ -107,8 +96,8 @@ export default function AppSidebar() {
         const file = acceptedFiles[0];
         if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error("Image must be less than 2MB");
+        if (file.size > UPLOAD_LIMITS.MAX_IMAGE_BYTES) {
+            toast.error(`Image must be less than ${UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB}KB`);
             return;
         }
 

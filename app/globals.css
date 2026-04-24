@@ -51,99 +51,99 @@
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.97 0.005 220);
-  --foreground: oklch(0.15 0.02 220);
+  --background: oklch(0.99 0.005 220);
+  --foreground: oklch(0.12 0.02 220);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 220);
+  --card-foreground: oklch(0.12 0.02 220);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 220);
+  --popover-foreground: oklch(0.12 0.02 220);
 
-  /* Primary — Emerald Green */
-  --primary: oklch(0.62 0.19 160);
-  --primary-foreground: oklch(0.99 0 0);
+  /* Primary — Deep Professional Emerald */
+  --primary: oklch(0.55 0.15 160);
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.95 0.03 160);
-  --secondary-foreground: oklch(0.3 0.1 160);
+  --secondary: oklch(0.96 0.01 160);
+  --secondary-foreground: oklch(0.25 0.08 160);
 
-  --muted: oklch(0.95 0.005 220);
-  --muted-foreground: oklch(0.52 0.03 220);
+  --muted: oklch(0.96 0.005 220);
+  --muted-foreground: oklch(0.45 0.03 220);
 
-  --accent: oklch(0.93 0.06 160);
-  --accent-foreground: oklch(0.3 0.12 160);
+  --accent: oklch(0.94 0.04 160);
+  --accent-foreground: oklch(0.28 0.1 160);
 
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.55 0.22 25);
 
-  --border: oklch(0.9 0.01 220);
-  --input: oklch(0.92 0.01 220);
-  --ring: oklch(0.62 0.19 160);
+  --border: oklch(0.92 0.01 220);
+  --input: oklch(0.94 0.01 220);
+  --ring: oklch(0.55 0.15 160);
 
-  --chart-1: oklch(0.62 0.19 160);
-  --chart-2: oklch(0.65 0.16 200);
-  --chart-3: oklch(0.7 0.14 260);
-  --chart-4: oklch(0.72 0.16 85);
-  --chart-5: oklch(0.65 0.2 30);
+  --chart-1: oklch(0.55 0.15 160);
+  --chart-2: oklch(0.6 0.14 200);
+  --chart-3: oklch(0.65 0.12 260);
+  --chart-4: oklch(0.68 0.14 85);
+  --chart-5: oklch(0.6 0.18 30);
 
-  /* Sidebar Light — matches the white navbar */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.2 0.02 220);
-  --sidebar-primary: oklch(0.62 0.19 160);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.93 0.04 160);
-  --sidebar-accent-foreground: oklch(0.3 0.1 160);
-  --sidebar-border: oklch(0.9 0.01 220);
-  --sidebar-ring: oklch(0.62 0.19 160);
+  /* Sidebar Light — Ultra-clean integration */
+  --sidebar: oklch(0.99 0.005 220);
+  --sidebar-foreground: oklch(0.15 0.02 220);
+  --sidebar-primary: oklch(0.55 0.15 160);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.95 0.02 160);
+  --sidebar-accent-foreground: oklch(0.25 0.08 160);
+  --sidebar-border: oklch(0.92 0.01 220);
+  --sidebar-ring: oklch(0.55 0.15 160);
 }
 
 /* =====================================================================
    DARK MODE — Medium dark slate with emerald green accents
    ===================================================================== */
 .dark {
-  /* Base — medium dark slate (not near-black) */
-  --background: oklch(0.22 0.018 230);
-  --foreground: oklch(0.98 0 0);
+  /* Base — Deep Midnight Marine */
+  --background: oklch(0.18 0.02 230);
+  --foreground: oklch(0.99 0 0);
 
-  /* Cards — slightly lighter than bg */
-  --card: oklch(0.26 0.02 228);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.26 0.02 228);
-  --popover-foreground: oklch(0.98 0 0);
+  /* Cards — Layered depth architecture */
+  --card: oklch(0.22 0.02 230);
+  --card-foreground: oklch(0.99 0 0);
+  --popover: oklch(0.22 0.02 230);
+  --popover-foreground: oklch(0.99 0 0);
 
-  /* Primary — Bright Emerald Green */
-  --primary: oklch(0.68 0.2 160);
-  --primary-foreground: oklch(0.1 0.02 160);
+  /* Primary — Luminous Emerald Green */
+  --primary: oklch(0.72 0.18 160);
+  --primary-foreground: oklch(0.08 0.02 160);
 
-  --secondary: oklch(0.3 0.03 225);
-  --secondary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.26 0.02 225);
+  --secondary-foreground: oklch(0.99 0 0);
 
-  --muted: oklch(0.28 0.02 225);
-  --muted-foreground: oklch(0.65 0 0);
+  --muted: oklch(0.24 0.02 225);
+  --muted-foreground: oklch(0.6 0 0);
 
-  --accent: oklch(0.32 0.06 160);
-  --accent-foreground: oklch(0.78 0.14 160);
+  --accent: oklch(0.3 0.08 160);
+  --accent-foreground: oklch(0.85 0.12 160);
 
-  --destructive: oklch(0.65 0.23 22);
+  --destructive: oklch(0.6 0.2 22);
 
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 11%);
-  --ring: oklch(0.68 0.2 160);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.72 0.18 160);
 
   /* Charts */
-  --chart-1: oklch(0.68 0.2 160);
-  --chart-2: oklch(0.65 0.16 200);
-  --chart-3: oklch(0.7 0.14 260);
-  --chart-4: oklch(0.75 0.16 85);
-  --chart-5: oklch(0.7 0.22 30);
+  --chart-1: oklch(0.72 0.18 160);
+  --chart-2: oklch(0.68 0.15 200);
+  --chart-3: oklch(0.72 0.12 260);
+  --chart-4: oklch(0.78 0.14 85);
+  --chart-5: oklch(0.72 0.2 30);
 
-  /* Sidebar dark — one shade lighter than the page */
-  --sidebar: oklch(0.2 0.02 228);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.68 0.2 160);
-  --sidebar-primary-foreground: oklch(0.1 0.02 160);
-  --sidebar-accent: oklch(0.28 0.04 220);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.68 0.2 160);
+  /* Sidebar dark — One shade deeper than the page for focus */
+  --sidebar: oklch(0.16 0.02 230);
+  --sidebar-foreground: oklch(0.99 0 0);
+  --sidebar-primary: oklch(0.72 0.18 160);
+  --sidebar-primary-foreground: oklch(0.08 0.02 160);
+  --sidebar-accent: oklch(0.24 0.04 220);
+  --sidebar-accent-foreground: oklch(0.99 0 0);
+  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-ring: oklch(0.72 0.18 160);
 }
 
 @layer base {
@@ -195,7 +195,7 @@
   }
 
   .dark .gradient-text {
-    background: linear-gradient(135deg, oklch(0.75 0.2 160), oklch(0.72 0.16 190));
+    background: linear-gradient(135deg, oklch(0.75 0.2 160), oklch(0.78 0.16 190));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -203,15 +203,15 @@
 
   /* Glassmorphism — works great on the dark navy theme */
   .glass-card {
-    background: oklch(1 0 0 / 60%);
-    backdrop-filter: blur(14px);
-    border: 1px solid oklch(0.9 0.01 220 / 50%);
+    background: oklch(1 0 0 / 75%);
+    backdrop-filter: blur(16px);
+    border: 1px solid oklch(0.92 0.01 220 / 50%);
   }
 
   .dark .glass-card {
-    background: oklch(0.2 0.04 225 / 65%);
-    backdrop-filter: blur(14px);
-    border: 1px solid oklch(1 0 0 / 7%);
+    background: oklch(0.22 0.02 230 / 65%);
+    backdrop-filter: blur(16px);
+    border: 1px solid oklch(1 0 0 / 8%);
   }
 
   /* Stat card gradient borders / backgrounds */
@@ -237,7 +237,7 @@
 
   /* Green glow shadow for primary elements */
   .glow-green {
-    box-shadow: 0 0 20px oklch(0.68 0.2 160 / 30%), 0 4px 12px oklch(0 0 0 / 25%);
+    box-shadow: 0 0 20px oklch(0.72 0.18 160 / 25%), 0 4px 12px oklch(0 0 0 / 25%);
   }
 
   /* Active nav pill with green glow */
@@ -245,6 +245,43 @@
     background: oklch(0.68 0.2 160);
     box-shadow: 0 2px 10px oklch(0.68 0.2 160 / 40%);
     color: oklch(0.1 0.02 160);
+  }
+
+  /* ── Premium Expandable Card Utilities ── */
+  
+  /* Left-side accent indicator for active/expanded state */
+  .accent-bar-active {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .accent-bar-active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 4px;
+    background: linear-gradient(to bottom, #f97316, #ea580c);
+    border-radius: 0 4px 4px 0;
+    box-shadow: 2px 0 10px rgba(234, 88, 12, 0.3);
+  }
+
+  /* Vibrant gradient button for toggles */
+  .gradient-toggle-btn {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .gradient-toggle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(234, 88, 12, 0.3);
+    filter: brightness(1.1);
+  }
+
+  .gradient-toggle-btn:active {
+    transform: scale(0.95);
   }
 }
 
@@ -262,18 +299,26 @@
   aside,
   .sidebar-container,
   [data-sidebar="sidebar"],
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"],
   .print\:hidden {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Reset main layout margins so report card takes full page */
   main,
-  [data-sidebar="content"],
-  [data-sidebar="sidebar-provider"] {
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"],
+  #next-app,
+  #__next {
+    display: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Remove borders/shadows from the printable card container itself */

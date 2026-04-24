@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { payrollLedgerApi } from './payroll-ledger.api';
-import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
+import { useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export const payrollKeys = {
     all: ['payroll-ledger'] as const,
@@ -9,7 +10,6 @@ export const payrollKeys = {
 };
 
 export const useGetPayrollDashboard = (monthYear: string) => {
-    useRealtimeInvalidate({ table: 'staff_payroll_ledger', queryKey: payrollKeys.dashboard(monthYear) });
     return useQuery({
         queryKey: payrollKeys.dashboard(monthYear),
         queryFn: () => payrollLedgerApi.getPayrollDashboardData(monthYear),
@@ -18,7 +18,6 @@ export const useGetPayrollDashboard = (monthYear: string) => {
 };
 
 export const useGetHistoricalLedger = () => {
-    useRealtimeInvalidate({ table: 'staff_payroll_ledger', queryKey: payrollKeys.historical() });
     return useQuery({
         queryKey: payrollKeys.historical(),
         queryFn: () => payrollLedgerApi.getHistoricalLedger(),
@@ -46,3 +45,45 @@ export const useDeletePayout = () => {
         },
     });
 };
+
+// Global realtime hook to invalidate cache for multiple sources
+export function usePayrollRealtime() {
+    const queryClient = useQueryClient();
+    
+    useEffect(() => {
+        const supabase = createClient();
+        
+        // Listen to ledger changes (payouts)
+        const ledgerChannel = supabase.channel('payroll-ledger-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'staff_payroll_ledger' },
+                () => queryClient.invalidateQueries({ queryKey: payrollKeys.all })
+            )
+            .subscribe();
+
+        // Listen to salary changes (profiles)
+        const profileChannel = supabase.channel('salary-profiles-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'teacher_profiles' },
+                () => queryClient.invalidateQueries({ queryKey: payrollKeys.all })
+            )
+            .subscribe();
+
+        // Listen to attendance changes
+        const attendanceChannel = supabase.channel('payroll-attendance-realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'staff_attendance' },
+                () => queryClient.invalidateQueries({ queryKey: payrollKeys.all })
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(ledgerChannel);
+            supabase.removeChannel(profileChannel);
+            supabase.removeChannel(attendanceChannel);
+        };
+    }, [queryClient]);
+}

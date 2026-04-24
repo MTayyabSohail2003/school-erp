@@ -30,7 +30,7 @@ export const payrollLedgerApi = {
         const { data: staffData } = await supabase
             .from('users')
             .select(`
-                id, full_name, email, phone_number,
+                id, full_name, email, phone_number, avatar_url,
                 teacher_profiles(id, qualification, monthly_salary)
             `)
             .eq('role', 'TEACHER');
@@ -92,13 +92,25 @@ export const payrollLedgerApi = {
             const positiveDays = presentsCount + leavesCount;
             const attendancePercentage = totalMarked > 0 ? (positiveDays / totalMarked) * 100 : 0;
 
+            // 🚀 INDUSTRY LEVEL: Recursive Salary Lookup
+            // 1. Check current month's recorded salary
+            // 2. If not found, look for the most recent recorded salary in the past
+            // 3. Fallback to profile salary (Initial/Current Base)
+            let currentBaseSalary = targetMonthLedger?.base_salary;
+            
+            if (!currentBaseSalary) {
+                const mostRecentLedger = previousLedgers[previousLedgers.length - 1];
+                currentBaseSalary = mostRecentLedger?.base_salary || (profile?.monthly_salary || 0);
+            }
+
             return {
                 id: staff.id,
                 full_name: staff.full_name,
                 email: staff.email,
                 phone_number: staff.phone_number,
+                avatar_url: staff.avatar_url,
                 profile_id: profile?.id,
-                base_salary: profile?.monthly_salary || 0,
+                base_salary: currentBaseSalary,
                 historicalArrears,
                 attendancePercentage,
                 bonus: targetMonthLedger?.bonus || 0,
@@ -108,8 +120,8 @@ export const payrollLedgerApi = {
                 paid_notes: targetMonthLedger?.paid_notes || '',
                 net_paid: targetMonthLedger?.net_paid || 0,
                 method: targetMonthLedger?.method || 'CASH',
-                arrears_note: lastDebtNote, // Carried forward note from previous partial payments
-                ledger: targetMonthLedger || null, // Current month's actual payout record
+                arrears_note: lastDebtNote, 
+                ledger: targetMonthLedger || null, 
                 status: targetMonthLedger?.status || 'PENDING',
                 attendanceStats: {
                     presents: presentsCount,

@@ -69,7 +69,7 @@ import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes'
 import { Checkbox } from '@/components/ui/checkbox';
 import { type Student } from '../schemas/student.schema';
 
-type StudentWithRelations = Omit<Student, 'id'> & { 
+type StudentWithRelations = Omit<Student, 'id'> & {
     id: string; // id is required in the UI
     classes?: { name: string; section: string };
     users?: { full_name: string };
@@ -181,19 +181,19 @@ export function StudentsTable() {
             },
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
-                    <ImagePreviewDialog 
-                        src={row.original.photo_url} 
-                        title={row.getValue('full_name')} 
+                    <ImagePreviewDialog
+                        src={row.original.photo_url}
+                        title={row.getValue('full_name')}
                         description={`Roll ID: ${row.getValue('roll_number')}`}
                     >
                         <div className="h-8 w-8 rounded-full overflow-hidden border shadow-sm hidden sm:block shrink-0 cursor-pointer ring-offset-2 hover:ring-2 ring-primary/50 transition-all">
                             {row.original.photo_url ? (
-                                <NextImage 
-                                    src={row.original.photo_url} 
-                                    alt="Photo" 
-                                    width={32} 
-                                    height={32} 
-                                    className="h-full w-full object-cover" 
+                                <NextImage
+                                    src={row.original.photo_url}
+                                    alt="Photo"
+                                    width={32}
+                                    height={32}
+                                    className="h-full w-full object-cover"
                                     unoptimized={row.original.photo_url.startsWith('data:')}
                                 />
                             ) : (
@@ -215,6 +215,11 @@ export function StudentsTable() {
             accessorFn: row => (row as StudentWithRelations).users?.full_name || '-',
             header: 'Parent/Guardian',
             cell: ({ row }) => <div className="text-sm hidden md:block">{(row.original as StudentWithRelations).users?.full_name || '-'}</div>,
+        } as ColumnDef<StudentWithRelations>,
+        {
+            accessorKey: 'b_form_id',
+            header: 'B-Form Number / ID',
+            cell: ({ row }) => <div className="text-sm font-mono text-muted-foreground hidden lg:block">{row.getValue('b_form_id') || '-'}</div>,
         } as ColumnDef<StudentWithRelations>,
         {
             id: 'class_section',
@@ -281,15 +286,14 @@ export function StudentsTable() {
                 const url = row.getValue('b_form_url') as string;
                 if (!url) return <span className="text-xs text-muted-foreground hidden md:block">-</span>;
                 return (
-                    <ImagePreviewDialog 
-                        src={url} 
-                        title={`${row.getValue('full_name')} - Vault Document`}
-                        description="B-Form / ID Card Preview"
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="items-center text-xs text-blue-600 hover:underline hidden md:flex font-bold tracking-tight"
                     >
-                        <div className="items-center text-xs text-blue-600 hover:underline hidden md:flex font-bold tracking-tight">
-                            <FileText className="w-3 h-3 mr-1" /> View Vault
-                        </div>
-                    </ImagePreviewDialog>
+                        <FileText className="w-3 h-3 mr-1" /> View Vault
+                    </a>
                 );
             },
         } as ColumnDef<StudentWithRelations>,
@@ -443,8 +447,8 @@ export function StudentsTable() {
     return (
         <div className="space-y-6">
             {/* Status Tabs */}
-            <Tabs 
-                value={selectedStatus} 
+            <Tabs
+                value={selectedStatus}
                 onValueChange={(val) => {
                     const status = val as 'ACTIVE' | 'GRADUATED';
                     setSelectedStatus(status);
@@ -458,14 +462,14 @@ export function StudentsTable() {
                 className="w-full"
             >
                 <TabsList className="bg-muted/50 p-1 h-12 rounded-2xl border w-full sm:w-auto grid grid-cols-2 sm:flex">
-                    <TabsTrigger 
-                        value="ACTIVE" 
+                    <TabsTrigger
+                        value="ACTIVE"
                         className="rounded-xl px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm"
                     >
                         Active Students
                     </TabsTrigger>
-                    <TabsTrigger 
-                        value="GRADUATED" 
+                    <TabsTrigger
+                        value="GRADUATED"
                         className="rounded-xl px-8 font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm"
                     >
                         Graduated
@@ -474,359 +478,359 @@ export function StudentsTable() {
             </Tabs>
 
             <div className="space-y-4">
-            {/* Top Bar for PWA */}
-            <div className="flex flex-col gap-4 py-4 bg-card px-4 border rounded-xl shadow-sm min-w-0">
-                <div className="flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center justify-between">
-                    <div className="relative w-full md:max-w-xs shrink-0">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search students..."
-                            value={globalFilter}
-                            onChange={(event) => setGlobalFilter(event.target.value)}
-                            className="pl-9 bg-background w-full"
-                        />
+                {/* Top Bar for PWA */}
+                <div className="flex flex-col gap-4 py-4 bg-card px-4 border rounded-xl shadow-sm min-w-0">
+                    <div className="flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center justify-between">
+                        <div className="relative w-full md:max-w-xs shrink-0">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search students..."
+                                value={globalFilter}
+                                onChange={(event) => setGlobalFilter(event.target.value)}
+                                className="pl-9 bg-background w-full"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 flex-1 sm:flex-none justify-center rounded-lg font-bold text-sm shrink-0">
+                            <Users className="w-4 h-4" />
+                            {table.getFilteredRowModel().rows.length} Student{table.getFilteredRowModel().rows.length === 1 ? '' : 's'} Found
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 flex-1 sm:flex-none justify-center rounded-lg font-bold text-sm shrink-0">
-                        <Users className="w-4 h-4" />
-                        {table.getFilteredRowModel().rows.length} Student{table.getFilteredRowModel().rows.length === 1 ? '' : 's'} Found
-                    </div>
-                </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    {/* Dynamic Filters based on Status */}
-                    {selectedStatus === 'ACTIVE' ? (
-                        uniqueClasses.length > 0 && (
-                            <div
-                                className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden flex-1"
-                                style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-                            >
-                                <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Classes:</span>
-                                <Button
-                                    variant={activeTab === 'All' ? 'default' : 'secondary'}
-                                    size="sm"
-                                    className="rounded-full shrink-0"
-                                    onClick={() => handleClassTabChange('All')}
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        {/* Dynamic Filters based on Status */}
+                        {selectedStatus === 'ACTIVE' ? (
+                            uniqueClasses.length > 0 && (
+                                <div
+                                    className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden flex-1"
+                                    style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
                                 >
-                                    All Classes
-                                </Button>
-                                {uniqueClasses.map((className) => (
+                                    <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Classes:</span>
                                     <Button
-                                        key={className}
-                                        variant={activeTab === className ? 'default' : 'secondary'}
+                                        variant={activeTab === 'All' ? 'default' : 'secondary'}
                                         size="sm"
                                         className="rounded-full shrink-0"
-                                        onClick={() => handleClassTabChange(className)}
+                                        onClick={() => handleClassTabChange('All')}
                                     >
-                                        {className}
+                                        All Classes
                                     </Button>
-                                ))}
-                            </div>
-                        )
-                    ) : (
-                        uniqueYears.length > 0 && (
-                            <div
-                                className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden flex-1"
-                                style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-                            >
-                                <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Graduation Years:</span>
-                                <Button
-                                    variant={activeYear === 'All' ? 'default' : 'secondary'}
-                                    size="sm"
-                                    className="rounded-full shrink-0"
-                                    onClick={() => handleYearTabChange('All')}
+                                    {uniqueClasses.map((className) => (
+                                        <Button
+                                            key={className}
+                                            variant={activeTab === className ? 'default' : 'secondary'}
+                                            size="sm"
+                                            className="rounded-full shrink-0"
+                                            onClick={() => handleClassTabChange(className)}
+                                        >
+                                            {className}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            uniqueYears.length > 0 && (
+                                <div
+                                    className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden flex-1"
+                                    style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
                                 >
-                                    All Years
-                                </Button>
-                                {uniqueYears.map((year) => (
+                                    <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Graduation Years:</span>
                                     <Button
-                                        key={year}
-                                        variant={activeYear === year ? 'default' : 'secondary'}
+                                        variant={activeYear === 'All' ? 'default' : 'secondary'}
                                         size="sm"
                                         className="rounded-full shrink-0"
-                                        onClick={() => handleYearTabChange(year)}
+                                        onClick={() => handleYearTabChange('All')}
                                     >
-                                        {year}
+                                        All Years
                                     </Button>
-                                ))}
-                            </div>
-                        )
-                    )}
+                                    {uniqueYears.map((year) => (
+                                        <Button
+                                            key={year}
+                                            variant={activeYear === year ? 'default' : 'secondary'}
+                                            size="sm"
+                                            className="rounded-full shrink-0"
+                                            onClick={() => handleYearTabChange(year)}
+                                        >
+                                            {year}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )
+                        )}
 
-                    {/* Bulk Actions */}
-                    {Object.keys(rowSelection).length > 0 && (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
-                            <span className="text-sm font-medium text-muted-foreground hidden sm:inline">
-                                {Object.keys(rowSelection).length} Selected
-                            </span>
+                        {/* Bulk Actions */}
+                        {Object.keys(rowSelection).length > 0 && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <span className="text-sm font-medium text-muted-foreground hidden sm:inline">
+                                    {Object.keys(rowSelection).length} Selected
+                                </span>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={confirmBulkDelete}
+                                    className="gap-2"
+                                    disabled={bulkDeleteMutation.isPending}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Selected'}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+
+                    {/* Dynamic Section Filter Tabs - Only for Active Students */}
+                    {selectedStatus === 'ACTIVE' && uniqueSections.length > 0 && (
+                        <div className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden">
+                            <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Sections:</span>
                             <Button
-                                variant="destructive"
+                                variant={activeSection === 'All' ? 'default' : 'secondary'}
                                 size="sm"
-                                onClick={confirmBulkDelete}
-                                className="gap-2"
-                                disabled={bulkDeleteMutation.isPending}
+                                className="rounded-full shrink-0"
+                                onClick={() => handleSectionTabChange('All')}
                             >
-                                <Trash2 className="w-4 h-4" />
-                                {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Selected'}
+                                All Sections
                             </Button>
+                            {uniqueSections.map((section) => (
+                                <Button
+                                    key={section}
+                                    variant={activeSection === section ? 'default' : 'secondary'}
+                                    size="sm"
+                                    className="rounded-full shrink-0"
+                                    onClick={() => handleSectionTabChange(section)}
+                                >
+                                    Section {section}
+                                </Button>
+                            ))}
                         </div>
                     )}
                 </div>
 
+                {/* Data Table */}
+                <div className="rounded-xl border bg-card shadow-sm overflow-hidden overflow-x-auto max-w-[calc(100vw-32px)] sm:max-w-full">
+                    <Table className="min-w-full">
+                        <TableHeader className="bg-muted/40">
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => {
+                                        // Custom hiding for responsiveness
+                                        const isHiddenOnMobile = ['parent_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(header.column.id);
 
-                {/* Dynamic Section Filter Tabs - Only for Active Students */}
-                {selectedStatus === 'ACTIVE' && uniqueSections.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden">
-                        <span className="text-sm font-medium text-muted-foreground shrink-0 mr-1 hidden md:block">Sections:</span>
-                        <Button
-                            variant={activeSection === 'All' ? 'default' : 'secondary'}
-                            size="sm"
-                            className="rounded-full shrink-0"
-                            onClick={() => handleSectionTabChange('All')}
-                        >
-                            All Sections
-                        </Button>
-                        {uniqueSections.map((section) => (
-                            <Button
-                                key={section}
-                                variant={activeSection === section ? 'default' : 'secondary'}
-                                size="sm"
-                                className="rounded-full shrink-0"
-                                onClick={() => handleSectionTabChange(section)}
-                            >
-                                Section {section}
-                            </Button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Data Table */}
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden overflow-x-auto max-w-[calc(100vw-32px)] sm:max-w-full">
-                <Table className="min-w-full">
-                    <TableHeader className="bg-muted/40">
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    // Custom hiding for responsiveness
-                                    const isHiddenOnMobile = ['parent_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(header.column.id);
-
-                                    return (
-                                        <TableHead key={header.id} className={isHiddenOnMobile ? 'hidden md:table-cell' : ''}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
-                                                )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    onClick={() => {
-                                        // On Mobile, opening drawer
-                                        if (window.innerWidth < 768) {
-                                            setDrawerStudent(row.original as StudentWithRelations);
-                                        }
-                                    }}
-                                    className="cursor-pointer md:cursor-default hover:bg-muted/50 transition-colors"
-                                >
-                                    {row.getVisibleCells().map((cell) => {
-                                        const isHiddenOnMobile = ['parent_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(cell.column.id);
                                         return (
-                                            <TableCell key={cell.id} className={isHiddenOnMobile ? 'hidden md:table-cell' : ''}>
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
+                                            <TableHead key={header.id} className={isHiddenOnMobile ? 'hidden md:table-cell' : ''}>
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                            </TableHead>
                                         );
                                     })}
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    No results found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-
-                {/* Pagination */}
-                <div className="flex items-center justify-end space-x-2 py-4 px-4 border-t">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        Next
-                    </Button>
-                </div>
-            </div>
-
-            {/* Mobile PWA Drawer for Hidden Details */}
-            <Drawer open={!!drawerStudent} onOpenChange={(o) => (!o && setDrawerStudent(null))}>
-                <DrawerContent>
-                    <div className="w-full">
-                        <DrawerHeader className="flex items-center gap-4 text-left">
-                            {drawerStudent?.photo_url ? (
-                                <NextImage 
-                                    src={drawerStudent.photo_url} 
-                                    alt="Photo" 
-                                    width={48}
-                                    height={48}
-                                    className="w-12 h-12 rounded-full object-cover border shadow-sm shrink-0 cursor-pointer ring-offset-2 hover:ring-2 ring-primary/50 transition-all" 
-                                    onClick={() => setPhotoViewerUrl(drawerStudent.photo_url || null)}
-                                    unoptimized={drawerStudent.photo_url.startsWith('data:')}
-                                />
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows?.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow
+                                        key={row.id}
+                                        data-state={row.getIsSelected() && "selected"}
+                                        onClick={() => {
+                                            // On Mobile, opening drawer
+                                            if (window.innerWidth < 768) {
+                                                setDrawerStudent(row.original as StudentWithRelations);
+                                            }
+                                        }}
+                                        className="cursor-pointer md:cursor-default hover:bg-muted/50 transition-colors"
+                                    >
+                                        {row.getVisibleCells().map((cell) => {
+                                            const isHiddenOnMobile = ['parent_name', 'class_section', 'date_of_birth', 'b_form_url', 'actions'].includes(cell.column.id);
+                                            return (
+                                                <TableCell key={cell.id} className={isHiddenOnMobile ? 'hidden md:table-cell' : ''}>
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                </TableCell>
+                                            );
+                                        })}
+                                    </TableRow>
+                                ))
                             ) : (
-                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase shrink-0">
-                                    {(drawerStudent?.full_name as string)?.substring(0, 2) || ''}
-                                </div>
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        No results found.
+                                    </TableCell>
+                                </TableRow>
                             )}
-                            <div>
-                                <DrawerTitle className="text-xl">{drawerStudent?.full_name}</DrawerTitle>
-                                <DrawerDescription>Roll No: {drawerStudent?.roll_number}</DrawerDescription>
-                            </div>
-                        </DrawerHeader>
-                        <div className="p-4 pb-0 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        </TableBody>
+                    </Table>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-end space-x-2 py-4 px-4 border-t">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Mobile PWA Drawer for Hidden Details */}
+                <Drawer open={!!drawerStudent} onOpenChange={(o) => (!o && setDrawerStudent(null))}>
+                    <DrawerContent>
+                        <div className="w-full">
+                            <DrawerHeader className="flex items-center gap-4 text-left">
+                                {drawerStudent?.photo_url ? (
+                                    <NextImage
+                                        src={drawerStudent.photo_url}
+                                        alt="Photo"
+                                        width={48}
+                                        height={48}
+                                        className="w-12 h-12 rounded-full object-cover border shadow-sm shrink-0 cursor-pointer ring-offset-2 hover:ring-2 ring-primary/50 transition-all"
+                                        onClick={() => setPhotoViewerUrl(drawerStudent.photo_url || null)}
+                                        unoptimized={drawerStudent.photo_url.startsWith('data:')}
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase shrink-0">
+                                        {(drawerStudent?.full_name as string)?.substring(0, 2) || ''}
+                                    </div>
+                                )}
                                 <div>
-                                    <p className="text-xs text-muted-foreground uppercase font-semibold">Class</p>
-                                    <p className="font-medium">{drawerStudent?.classes?.name} - {drawerStudent?.classes?.section}</p>
+                                    <DrawerTitle className="text-xl">{drawerStudent?.full_name}</DrawerTitle>
+                                    <DrawerDescription>Roll No: {drawerStudent?.roll_number}</DrawerDescription>
+                                </div>
+                            </DrawerHeader>
+                            <div className="p-4 pb-0 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Class</p>
+                                        <p className="font-medium">{drawerStudent?.classes?.name} - {drawerStudent?.classes?.section}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground uppercase font-semibold">Status</p>
+                                        <Badge variant="outline" className="mt-1">{drawerStudent?.status || 'ACTIVE'}</Badge>
+                                    </div>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-muted-foreground uppercase font-semibold">Status</p>
-                                    <Badge variant="outline" className="mt-1">{drawerStudent?.status || 'ACTIVE'}</Badge>
+                                    <p className="text-xs text-muted-foreground uppercase font-semibold">Guardian</p>
+                                    <p className="font-medium">{drawerStudent?.users?.full_name || 'N/A'}</p>
                                 </div>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground uppercase font-semibold">Guardian</p>
-                                <p className="font-medium">{drawerStudent?.users?.full_name || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground uppercase font-semibold">DOB</p>
-                                <p className="font-medium">{drawerStudent?.date_of_birth ? new Date(drawerStudent?.date_of_birth).toLocaleDateString() : 'N/A'}</p>
-                            </div>
-                            {drawerStudent?.b_form_url && (
-                                <div className="pt-2">
-                                    <a href={drawerStudent.b_form_url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline">
-                                        <FileText className="w-4 h-4 mr-2" /> View Vault Document
-                                    </a>
+                                <div>
+                                    <p className="text-xs text-muted-foreground uppercase font-semibold">DOB</p>
+                                    <p className="font-medium">{drawerStudent?.date_of_birth ? new Date(drawerStudent?.date_of_birth).toLocaleDateString() : 'N/A'}</p>
                                 </div>
+                                {drawerStudent?.b_form_url && (
+                                    <div className="pt-2">
+                                        <a href={drawerStudent.b_form_url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline">
+                                            <FileText className="w-4 h-4 mr-2" /> View Vault Document
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                            <DrawerFooter className="flex-col gap-2 pt-6">
+                                {!isParent && !isTeacher && (
+                                    <>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full"
+                                            onClick={() => { if (drawerStudent) { setStudentToEdit(drawerStudent); setDrawerStudent(null); } }}
+                                        >
+                                            <Pencil className="w-4 h-4 mr-2" /> Edit
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            className="w-full"
+                                            onClick={() => { if (drawerStudent) { setStudentToDelete({ id: drawerStudent.id, name: drawerStudent.full_name }); } }}
+                                        >
+                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                        </Button>
+                                    </>
+                                )}
+                            </DrawerFooter>
+                            <div className="px-4 pb-4">
+                                <DrawerClose asChild>
+                                    <Button variant="ghost" className="w-full text-muted-foreground">Close</Button>
+                                </DrawerClose>
+                            </div>
+                        </div>
+                    </DrawerContent>
+                </Drawer>
+
+                {/* Editing / Deleting Dialogs */}
+                <AlertDialog open={!!studentToDelete} onOpenChange={(open) => !open && setStudentToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete the student record for <strong>{studentToDelete?.name}</strong> and remove their data.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={deleteMutation.isPending}
+                            >
+                                {deleteMutation.isPending ? 'Deleting...' : 'Delete Student'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Bulk Delete Confirmation */}
+                <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete <strong>{Object.keys(rowSelection).length}</strong> student record{Object.keys(rowSelection).length === 1 ? '' : 's'}. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => { e.preventDefault(); executeBulkDelete(); }}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={bulkDeleteMutation.isPending}
+                            >
+                                {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Selection'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <EditStudentDialog
+                    isOpen={!!studentToEdit}
+                    setIsOpen={(open) => !open && setStudentToEdit(null)}
+                    student={studentToEdit}
+                />
+
+                <Dialog open={!!photoViewerUrl} onOpenChange={(open) => !open && setPhotoViewerUrl(null)}>
+                    <DialogContent className="sm:max-w-md p-1 bg-transparent border-none shadow-none">
+                        <DialogTitle className="sr-only">Student Photo Preview</DialogTitle>
+                        <div className="relative w-full overflow-hidden rounded-xl aspect-square bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-2xl">
+                            {photoViewerUrl && (
+                                <NextImage
+                                    src={photoViewerUrl}
+                                    alt="Student Portrait"
+                                    fill
+                                    className="w-full h-full object-contain"
+                                    unoptimized={photoViewerUrl.startsWith('data:')}
+                                />
                             )}
                         </div>
-                        <DrawerFooter className="flex-col gap-2 pt-6">
-                            {!isParent && !isTeacher && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => { if (drawerStudent) { setStudentToEdit(drawerStudent); setDrawerStudent(null); } }}
-                                    >
-                                        <Pencil className="w-4 h-4 mr-2" /> Edit
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        className="w-full"
-                                        onClick={() => { if (drawerStudent) { setStudentToDelete({ id: drawerStudent.id, name: drawerStudent.full_name }); } }}
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                    </Button>
-                                </>
-                            )}
-                        </DrawerFooter>
-                        <div className="px-4 pb-4">
-                            <DrawerClose asChild>
-                                <Button variant="ghost" className="w-full text-muted-foreground">Close</Button>
-                            </DrawerClose>
-                        </div>
-                    </div>
-                </DrawerContent>
-            </Drawer>
-
-            {/* Editing / Deleting Dialogs */}
-            <AlertDialog open={!!studentToDelete} onOpenChange={(open) => !open && setStudentToDelete(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete the student record for <strong>{studentToDelete?.name}</strong> and remove their data.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => { e.preventDefault(); confirmDelete(); }}
-                            className="bg-red-600 hover:bg-red-700"
-                            disabled={deleteMutation.isPending}
-                        >
-                            {deleteMutation.isPending ? 'Deleting...' : 'Delete Student'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            {/* Bulk Delete Confirmation */}
-            <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete <strong>{Object.keys(rowSelection).length}</strong> student record{Object.keys(rowSelection).length === 1 ? '' : 's'}. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => { e.preventDefault(); executeBulkDelete(); }}
-                            className="bg-red-600 hover:bg-red-700"
-                            disabled={bulkDeleteMutation.isPending}
-                        >
-                            {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Selection'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-            <EditStudentDialog
-                isOpen={!!studentToEdit}
-                setIsOpen={(open) => !open && setStudentToEdit(null)}
-                student={studentToEdit}
-            />
-
-            <Dialog open={!!photoViewerUrl} onOpenChange={(open) => !open && setPhotoViewerUrl(null)}>
-                <DialogContent className="sm:max-w-md p-1 bg-transparent border-none shadow-none">
-                    <DialogTitle className="sr-only">Student Photo Preview</DialogTitle>
-                    <div className="relative w-full overflow-hidden rounded-xl aspect-square bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-2xl">
-                        {photoViewerUrl && (
-                            <NextImage 
-                                src={photoViewerUrl} 
-                                alt="Student Portrait" 
-                                fill
-                                className="w-full h-full object-contain" 
-                                unoptimized={photoViewerUrl.startsWith('data:')}
-                            />
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
-    </div>
-);
+    );
 }

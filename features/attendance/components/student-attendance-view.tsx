@@ -3,19 +3,22 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { 
-    CalendarDays, 
-    Save, 
-    Loader2, 
-    Search, 
-    Users, 
+import {
+    CalendarDays,
+    Save,
+    Loader2,
+    Search,
+    Users,
     CheckSquare,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
-    ChevronsRight
+    ChevronsRight,
+    Printer,
+    User
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 import { useTeacherClasses } from '@/features/classes/hooks/use-teacher-classes';
 import { useGetAttendance } from '../api/use-get-attendance';
@@ -23,6 +26,7 @@ import { useUpsertAttendance } from '../api/use-upsert-attendance';
 import { type AttendanceStatus } from '../schemas/attendance.schema';
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 import { useStudentsByClass } from '@/features/students/hooks/use-students-by-class';
+import { AttendancePrintReport } from './attendance-print-report';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +42,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 // Status styling config
 const STATUS_CONFIG: Record<AttendanceStatus, { label: string; className: string }> = {
@@ -66,6 +79,7 @@ export function StudentAttendanceView() {
     // Pagination & Search States
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [isPrinting, setIsPrinting] = useState(false);
     const PAGE_SIZE = 10;
 
     const { data: classes, isLoading: classesLoading } = useTeacherClasses();
@@ -135,10 +149,13 @@ export function StudentAttendanceView() {
     const { data: allStudents } = useStudentsByClass(selectedClassId);
     const studentList = allStudents ?? [];
 
+    const selectedClass = (classes ?? []).find(c => c.id === selectedClassId);
+    const selectedClassName = selectedClass ? `${selectedClass.name} - ${selectedClass.section}` : '';
+
     // Sorting, Filtering & Pagination Logic
     const filteredStudents = studentList
-        .filter(s => 
-            s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        .filter(s =>
+            s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             s.roll_number.toLowerCase().includes(searchTerm.toLowerCase())
         )
         .sort((a, b) => {
@@ -177,41 +194,57 @@ export function StudentAttendanceView() {
                         </div>
                     </div>
 
-                    {canMark && (
-                        <Button
-                            onClick={handleSave}
-                            disabled={upsertMutation.isPending || studentList.length === 0}
-                            className="gap-2"
-                        >
-                            {upsertMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Save className="h-4 w-4" />
-                            )}
-                            Save Attendance
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {selectedClassId && studentList.length > 0 && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsPrinting(true)}
+                                className="gap-2 border-primary/20 hover:bg-primary/5 font-bold"
+                            >
+                                <Printer className="h-4 w-4" />
+                                Print Report
+                            </Button>
+                        )}
+                        {canMark && (
+                            <Button
+                                onClick={handleSave}
+                                disabled={upsertMutation.isPending || studentList.length === 0}
+                                className="gap-2 bg-emerald-600 hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-500/20"
+                            >
+                                {upsertMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="h-4 w-4" />
+                                )}
+                                Save Attendance
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── Filters ── */}
-                <Card>
-                    <CardContent className="pt-5 pb-4">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1 space-y-1.5">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Class
+                <Card className="border-none shadow-sm bg-muted/20">
+                    <CardContent className="pt-6 pb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Class Selection */}
+                            <div className="space-y-2.5">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">
+                                    Target Class
                                 </Label>
                                 <Select
                                     value={selectedClassId}
                                     onValueChange={(v) => { setSelectedClassId(v); handleClassOrDateChange(); }}
                                     disabled={classesLoading}
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a class…" />
+                                    <SelectTrigger className="h-12 rounded-xl border-2 border-primary/10 bg-background/50 hover:border-primary/30 transition-all font-bold">
+                                        <div className="flex items-center gap-3">
+                                            <Users className="h-4 w-4 text-primary" />
+                                            <SelectValue placeholder="Select a class…" />
+                                        </div>
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="rounded-xl border-2 border-primary/10">
                                         {(classes ?? []).map((cls) => (
-                                            <SelectItem key={cls.id} value={cls.id}>
+                                            <SelectItem key={cls.id} value={cls.id} className="font-bold py-3 hover:bg-primary/5 cursor-pointer">
                                                 {cls.name} — Section {cls.section}
                                             </SelectItem>
                                         ))}
@@ -219,16 +252,42 @@ export function StudentAttendanceView() {
                                 </Select>
                             </div>
 
-                            <div className="flex-1 space-y-1.5">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Date
+                            {/* Date Selection */}
+                            <div className="space-y-2.5">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">
+                                    Attendance Date
                                 </Label>
-                                <Input
-                                    type="date"
-                                    value={selectedDate}
-                                    max={today}
-                                    onChange={(e) => { setSelectedDate(e.target.value); handleClassOrDateChange(); }}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full h-12 justify-start text-left font-bold rounded-xl border-2 border-primary/10 bg-background/50 hover:border-primary/30 transition-all",
+                                                !selectedDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-3 h-4 w-4 text-primary" />
+                                            {selectedDate ? format(parseISO(selectedDate), "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 rounded-2xl border-2 border-primary/10 shadow-2xl" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={isValid(parseISO(selectedDate)) ? parseISO(selectedDate) : undefined}
+                                            onSelect={(date) => {
+                                                if (date) {
+                                                    setSelectedDate(format(date, 'yyyy-MM-dd'));
+                                                    handleClassOrDateChange();
+                                                }
+                                            }}
+                                            disabled={(date) =>
+                                                date > new Date() || date < new Date("1900-01-01")
+                                            }
+                                            initialFocus
+                                            className="p-3"
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                     </CardContent>
@@ -256,8 +315,8 @@ export function StudentAttendanceView() {
                 )}
 
                 {/* ── Student Grid ── */}
-                <Card className="overflow-hidden border-none shadow-xl bg-card/50 backdrop-blur-md">
-                    <CardHeader className="border-b bg-muted/30 pb-4">
+                <Card className="overflow-hidden border-none  shadow-xl bg-card/50 backdrop-blur-md">
+                    <CardHeader className="border-b pb-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
                                 <Users className="w-4 h-4 text-primary" />
@@ -339,30 +398,36 @@ export function StudentAttendanceView() {
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.02 }}
-                                            className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/10 transition-colors"
+                                            className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/10 transition-colors group"
                                         >
                                             {/* Student info */}
                                             <div className="flex items-center gap-4 min-w-0">
-                                                {student.photo_url ? (
-                                                    <img
-                                                        src={student.photo_url}
-                                                        alt={student.full_name}
-                                                        className="h-10 w-10 rounded-full object-cover shrink-0 border-2 border-primary/10 shadow-sm"
-                                                    />
-                                                ) : (
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary text-xs font-black ring-2 ring-primary/5">
-                                                        {student.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
-                                                    </div>
-                                                )}
+                                                <ImagePreviewDialog
+                                                    src={student.photo_url}
+                                                    title={student.full_name}
+                                                    description={`Roll No: ${student.roll_number}`}
+                                                >
+                                                    <Avatar className="h-12 w-12 border-2 border-primary/10 transition-all group-hover:scale-105 group-hover:border-primary/30 shrink-0 cursor-zoom-in">
+                                                        {student.photo_url ? (
+                                                            <AvatarImage src={student.photo_url} className="object-cover" />
+                                                        ) : null}
+                                                        <AvatarFallback className="bg-primary/5 text-primary font-black text-xs">
+                                                            {student.full_name.charAt(0) || <User className="w-5 h-5" />}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                </ImagePreviewDialog>
+
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm font-black tracking-tight truncate text-foreground/90">{student.full_name}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] font-black text-primary uppercase tracking-widest opacity-60">
+                                                    <span className="text-sm font-black tracking-tight text-foreground/90 truncate">
+                                                        {student.full_name}
+                                                    </span>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest py-0 px-1.5 h-4 border-primary/20 text-primary/70">
+                                                            {selectedClassName}
+                                                        </Badge>
+                                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60">
                                                             {student.roll_number}
                                                         </span>
-                                                        <Badge variant="outline" className="text-[8px] font-bold py-0 h-4 border-muted-foreground/10 text-muted-foreground/60 rounded-sm">
-                                                            Roll No
-                                                        </Badge>
                                                     </div>
                                                 </div>
                                             </div>
@@ -388,17 +453,20 @@ export function StudentAttendanceView() {
                             </div>
                         )}
 
-                        {/* Pagination Footer */}
+                        {/* Pagination Footer - Industry Level */}
                         {selectedClassId && totalPages > 1 && (
-                            <div className="bg-muted/30 px-6 py-4 border-t flex items-center justify-between">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
-                                    Page {currentPage} of {totalPages} &bull; {totalResults} Students
-                                </p>
+                            <div className="bg-muted/10 px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-sm">
+                                <div className="flex items-center gap-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+                                        Showing <span className="text-foreground">{startIndex + 1}</span> to <span className="text-foreground">{endIndex}</span> of <span className="text-foreground">{totalResults}</span> active records
+                                    </p>
+                                </div>
+
                                 <div className="flex items-center gap-1.5">
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-lg"
+                                        className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground transition-all"
                                         onClick={() => setCurrentPage(1)}
                                         disabled={currentPage === 1}
                                     >
@@ -407,37 +475,43 @@ export function StudentAttendanceView() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-lg"
+                                        className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground transition-all"
                                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                         disabled={currentPage === 1}
                                     >
                                         <ChevronLeft className="h-4 w-4" />
                                     </Button>
-                                    
-                                    <div className="flex items-center gap-1 mx-2">
+
+                                    <div className="flex items-center gap-1.5 mx-2">
                                         {Array.from({ length: totalPages }, (_, i) => i + 1)
                                             .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                                            .map((p, idx, array) => (
-                                                <div key={p} className="flex items-center">
-                                                    {idx > 0 && p !== array[idx - 1] + 1 && (
-                                                        <span className="text-muted-foreground/30 px-1">...</span>
-                                                    )}
-                                                    <Button
-                                                        variant={currentPage === p ? "default" : "ghost"}
-                                                        size="sm"
-                                                        className={`h-8 w-8 rounded-lg font-black text-xs ${currentPage === p ? "bg-primary shadow-lg shadow-primary/20" : ""}`}
-                                                        onClick={() => setCurrentPage(p)}
-                                                    >
-                                                        {p}
-                                                    </Button>
-                                                </div>
-                                            ))}
+                                            .map((p, idx, array) => {
+                                                const showEllipsis = idx > 0 && p !== array[idx - 1] + 1;
+                                                return (
+                                                    <div key={p} className="flex items-center gap-1.5">
+                                                        {showEllipsis && <span className="text-muted-foreground/30 text-xs font-bold px-1">...</span>}
+                                                        <Button
+                                                            variant={currentPage === p ? 'default' : 'ghost'}
+                                                            size="sm"
+                                                            className={cn(
+                                                                "h-9 w-9 p-0 rounded-xl font-black text-xs transition-all duration-300",
+                                                                currentPage === p
+                                                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110 pointer-events-none"
+                                                                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                                                            )}
+                                                            onClick={() => setCurrentPage(p)}
+                                                        >
+                                                            {p}
+                                                        </Button>
+                                                    </div>
+                                                );
+                                            })}
                                     </div>
 
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-lg"
+                                        className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground transition-all"
                                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                                         disabled={currentPage === totalPages}
                                     >
@@ -446,7 +520,7 @@ export function StudentAttendanceView() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-lg"
+                                        className="h-9 w-9 rounded-xl hover:bg-primary/5 text-muted-foreground transition-all"
                                         onClick={() => setCurrentPage(totalPages)}
                                         disabled={currentPage === totalPages}
                                     >
@@ -457,6 +531,22 @@ export function StudentAttendanceView() {
                         )}
                     </CardContent>
                 </Card>
+
+                {isPrinting && (
+                    <AttendancePrintReport
+                        open={isPrinting}
+                        data={studentList.map(s => ({
+                            ...s,
+                            status: statusMap[s.id] || 'UNMARKED'
+                        }))}
+                        onClose={() => setIsPrinting(false)}
+                        filters={{
+                            className: classes?.find(c => c.id === selectedClassId)?.name || '',
+                            section: classes?.find(c => c.id === selectedClassId)?.section || '',
+                            date: selectedDate
+                        }}
+                    />
+                )}
             </div>
         </PageTransition>
     );

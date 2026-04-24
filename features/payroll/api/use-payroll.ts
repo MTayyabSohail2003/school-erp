@@ -11,10 +11,11 @@ export const useUpdateSalary = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ profileId, salary }: { profileId: string; salary: number }) =>
-            payrollApi.updateSalary(profileId, salary),
+        mutationFn: ({ profileId, salary, monthYear, teacherId }: { profileId: string; salary: number; monthYear?: string; teacherId?: string }) =>
+            payrollApi.updateSalary(profileId, salary, monthYear, teacherId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['payroll'] });
+            queryClient.invalidateQueries({ queryKey: ['payroll-dashboard'] });
         },
     });
 };

@@ -190,7 +190,7 @@ export function ParentsTable() {
                             </TableCell>
                             <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                    <SingleReminderButton parentId={parent.id} />
+                                    <SingleReminderButton parentId={parent.id} hasStudents={Boolean(parent.students && parent.students.length > 0)} />
                                     <EditParentDialog parent={parent} />
 
                                     <AlertDialog>

@@ -15,6 +15,7 @@ import {
     SortingState,
     ColumnFiltersState,
 } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
 
 import {
     Table,
@@ -109,7 +110,7 @@ export function StaffTable() {
     const handleForceDelete = async (password: string) => {
         if (!forceDeleteData) return;
         const result = await submitForceDeleteStaff(forceDeleteData.id, password);
-        
+
         if (!result.success) {
             toast.error(result.error);
             return;
@@ -117,7 +118,7 @@ export function StaffTable() {
 
         toast.success(`Staff member ${forceDeleteData.name} and all associated data force-deleted securely.`);
         setForceDeleteData(null);
-        
+
         // Invalidate staff query to update UI dynamically without reload
         queryClient.invalidateQueries({ queryKey: STAFF_KEY });
     };
@@ -139,9 +140,9 @@ export function StaffTable() {
             },
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
-                    <ImagePreviewDialog 
-                        src={row.original.avatar_url} 
-                        title={row.getValue('full_name')} 
+                    <ImagePreviewDialog
+                        src={row.original.avatar_url}
+                        title={row.getValue('full_name')}
                         description="Staff Profile Detail"
                     >
                         <Avatar className="h-9 w-9 border-2 border-primary/10 transition-transform group-hover:scale-110 duration-500">
@@ -161,11 +162,20 @@ export function StaffTable() {
         {
             accessorKey: 'role',
             header: 'Role',
-            cell: () => (
-                <Badge variant="outline" className="flex items-center gap-1 w-fit bg-secondary/30 text-foreground border-border">
-                    <Shield className="w-3 h-3 text-muted-foreground" /> Teacher
-                </Badge>
-            ),
+            cell: ({ row }) => {
+                const role = row.original.role;
+                const isAdmin = role === 'ADMIN';
+
+                return (
+                    <Badge variant="outline" className={cn(
+                        "flex items-center gap-1 w-fit border-border",
+                        isAdmin ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-secondary/30 text-foreground"
+                    )}>
+                        <Shield className={cn("w-3 h-3", isAdmin ? "text-amber-500" : "text-muted-foreground")} />
+                        {isAdmin ? 'Admin' : 'Teacher'}
+                    </Badge>
+                );
+            },
         },
         {
             accessorKey: 'status',
@@ -228,10 +238,10 @@ export function StaffTable() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setStaffToAssignSubjects(staffMember); }}>
+                                {/* <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setStaffToAssignSubjects(staffMember); }}>
                                     <BookOpen className="mr-2 h-4 w-4" />
                                     Assign Subjects
-                                </DropdownMenuItem>
+                                </DropdownMenuItem> */}
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setStaffToEdit(staffMember); }}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit Profile

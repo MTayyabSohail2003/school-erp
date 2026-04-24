@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download, X, Maximize2, User } from 'lucide-react';
+import { Download, X, Maximize2, User, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ImagePreviewDialogProps {
@@ -62,6 +62,17 @@ export function ImagePreviewDialog({ src, title, description, children }: ImageP
                             title="Download Image"
                         >
                             <Download className="h-5 w-5" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 rounded-xl bg-white/5 border-white/10 hover:bg-blue-500 hover:text-white transition-all active:scale-95"
+                            asChild
+                            title="Open in New Tab"
+                        >
+                            <a href={src || '#'} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-5 w-5" />
+                            </a>
                         </Button>
                         <Button
                             variant="outline"

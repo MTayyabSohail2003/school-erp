@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { MonthPicker } from '@/components/ui/month-picker';
-import { Search } from 'lucide-react';
+import { Search, Printer } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 
@@ -19,9 +19,11 @@ export interface FeeFiltersState {
 interface FeeFiltersProps {
     filters: FeeFiltersState;
     onChange: (filters: FeeFiltersState) => void;
+    onBulkPrint: () => void;
+    canPrint: boolean;
 }
 
-export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
+export function FeeFilters({ filters, onChange, onBulkPrint, canPrint }: FeeFiltersProps) {
     const { data: classes } = useQuery({
         queryKey: ['classes-list'],
         queryFn: async () => {
@@ -108,7 +110,6 @@ export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
                     </SelectContent>
                 </Select>
 
-                {/* Reset Buttons */}
                 <Button 
                     variant="ghost" 
                     className="h-10 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors" 
@@ -121,6 +122,18 @@ export function FeeFilters({ filters, onChange }: FeeFiltersProps) {
                     })}
                 >
                     Reset
+                </Button>
+
+                <div className="h-8 w-[2px] bg-border/40 mx-2 hidden lg:block" />
+
+                <Button
+                    onClick={onBulkPrint}
+                    variant="outline"
+                    className="rounded-xl h-11 px-6 font-black gap-2 border-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 shadow-lg shadow-zinc-100 dark:shadow-none transition-all active:scale-95 text-[10px] uppercase tracking-widest"
+                    disabled={!canPrint}
+                >
+                    <Printer className="w-4 h-4" />
+                    Bulk Print Slips
                 </Button>
             </div>
         </div>

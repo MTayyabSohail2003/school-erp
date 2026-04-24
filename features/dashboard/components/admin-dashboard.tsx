@@ -10,7 +10,7 @@ import {
 import { motion } from 'framer-motion';
 import { ROUTES } from '@/constants/globals';
 import { format } from 'date-fns';
-import { NoticeBoardWidget } from '@/features/notices/components/notice-board-widget';
+
 
 // ── Premium KPI Card ────────────────────────────────────────────────────────
 
@@ -294,25 +294,7 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
             </div>
 
 
-            {/* ── Latest Notices & Updates ── */}
-            <div>
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="h-4 w-1 rounded-full bg-blue-500" />
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Announcements</h2>
-                </div>
-                <div className="grid gap-6 lg:grid-cols-3">
-                    <div className="lg:col-span-2">
-                        <NoticeBoardWidget role="ADMIN" />
-                    </div>
-                    {/* Placeholder for future sidebar widget or more stats */}
-                    <div className="hidden lg:block space-y-4">
-                        <div className="bg-muted/10 border-2 border-dashed border-muted rounded-2xl p-8 flex flex-col items-center justify-center text-center opacity-40">
-                             <Zap className="h-8 w-8 mb-2" />
-                             <p className="text-sm font-bold">More features coming soon</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
 
             {/* ── Analytics Charts ── */}
             <DashboardCharts />

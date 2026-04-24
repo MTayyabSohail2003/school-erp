@@ -3,8 +3,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Briefcase, Save, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import {
+    Briefcase,
+    Save,
+    Loader2,
+    Search,
+    User,
+    CheckSquare,
+    Printer
+} from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 import { useGetStaffAttendance } from '../api/use-get-staff-attendance';
 import { useUpsertStaffAttendance } from '../api/use-upsert-staff-attendance';
@@ -15,9 +24,35 @@ import { useGetStaff } from '@/features/staff/api/use-get-staff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageTransition } from '@/components/ui/motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+
+// Status styling config (Matches student attendance)
+const STATUS_CONFIG: Record<AttendanceStatus, { label: string; className: string }> = {
+    PRESENT: {
+        label: 'Present',
+        className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25',
+    },
+    ABSENT: {
+        label: 'Absent',
+        className: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/25',
+    },
+    LEAVE: {
+        label: 'Leave',
+        className: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25',
+    },
+};
 
 export function StaffAttendanceView() {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -34,7 +69,7 @@ export function StaffAttendanceView() {
         if (attendanceData) {
             console.log('[Attendance Debug] Raw DB Records:', attendanceData);
             const map: Record<string, AttendanceStatus> = {};
-            attendanceData.forEach((rec) => { 
+            attendanceData.forEach((rec) => {
                 if (rec.user_id) {
                     map[rec.user_id] = rec.status;
                 }
@@ -94,24 +129,60 @@ export function StaffAttendanceView() {
                             <Briefcase className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Staff Attendance</h1>
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground">Staff Attendance</h1>
                             <p className="text-sm text-muted-foreground">Manage attendance for teachers and staff</p>
                         </div>
                     </div>
 
-                    <Button onClick={handleSave} disabled={upsertMutation.isPending || staffMembers.length === 0} className="gap-2">
+                    <Button
+                        onClick={handleSave}
+                        disabled={upsertMutation.isPending || staffMembers.length === 0}
+                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-500/20"
+                    >
                         {upsertMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Staff Attendance
                     </Button>
                 </div>
 
                 {/* ── Filters ── */}
-                <Card>
-                    <CardContent className="pt-5 pb-4">
+                <Card className="border-none shadow-sm bg-muted/20">
+                    <CardContent className="pt-6 pb-6">
                         <div className="flex flex-col sm:flex-row gap-4 max-w-sm">
-                            <div className="flex-1 space-y-1.5">
-                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Date</Label>
-                                <Input type="date" value={selectedDate} max={today} onChange={(e) => { setSelectedDate(e.target.value); setStatusMap({}); }} />
+                            <div className="flex-1 space-y-2.5">
+                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">
+                                    Attendance Date
+                                </Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full h-12 justify-start text-left font-bold rounded-xl border-2 border-primary/10 bg-background/50 hover:border-primary/30 transition-all",
+                                                !selectedDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-3 h-4 w-4 text-primary" />
+                                            {selectedDate ? format(parseISO(selectedDate), "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 rounded-2xl border-2 border-primary/10 shadow-2xl" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={isValid(parseISO(selectedDate)) ? parseISO(selectedDate) : undefined}
+                                            onSelect={(date) => {
+                                                if (date) {
+                                                    setSelectedDate(format(date, 'yyyy-MM-dd'));
+                                                    setStatusMap({});
+                                                }
+                                            }}
+                                            disabled={(date) =>
+                                                date > new Date() || date < new Date("1900-01-01")
+                                            }
+                                            initialFocus
+                                            className="p-3"
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                     </CardContent>
@@ -135,9 +206,12 @@ export function StaffAttendanceView() {
                 )}
 
                 {/* ── Staff Grid ── */}
-                <Card>
-                    <CardHeader className="border-b pb-3">
-                        <CardTitle className="text-base font-semibold">{staffMembers.length} Staff Members</CardTitle>
+                <Card className="overflow-hidden border-none shadow-xl bg-card/50 backdrop-blur-md">
+                    <CardHeader className="border-b  pb-4">
+                        <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
+                            <Briefcase className="w-4 h-4 text-primary" />
+                            {staffMembers.length} Staff Members
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                         {(staffLoading || attendanceLoading) && (
@@ -154,29 +228,57 @@ export function StaffAttendanceView() {
                                 {staffMembers.map((staff, index) => {
                                     const currentStatus = staff.id ? statusMap[staff.id] ?? null : null;
                                     return (
-                                        <motion.div key={staff.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.03 }} className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-muted/30 transition-colors">
-                                            <div className="flex items-center gap-3 min-w-0">
-                                                <span className="text-sm font-medium truncate">{staff.full_name}</span>
+                                        <motion.div
+                                            key={staff.id}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.02 }}
+                                            className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/10 transition-colors group"
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0">
+                                                <ImagePreviewDialog
+                                                    src={staff.avatar_url}
+                                                    title={staff.full_name}
+                                                    description={`Role: ${staff.role || 'Staff'}`}
+                                                >
+                                                    <Avatar className="h-12 w-12 border-2 border-primary/10 transition-all group-hover:scale-105 group-hover:border-primary/30 shrink-0 cursor-zoom-in">
+                                                        {staff.avatar_url ? (
+                                                            <AvatarImage src={staff.avatar_url} className="object-cover" />
+                                                        ) : null}
+                                                        <AvatarFallback className="bg-primary/5 text-primary font-black text-xs text-center">
+                                                            {staff.full_name.substring(0, 2).toUpperCase() || <User className="w-5 h-5" />}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                </ImagePreviewDialog>
+
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="text-sm font-black tracking-tight text-foreground/90 truncate">
+                                                        {staff.full_name}
+                                                    </span>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest py-0 px-1.5 h-4 border-primary/20 text-primary/70">
+                                                            {staff.role || 'Teacher'}
+                                                        </Badge>
+                                                        <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-60 truncate">
+                                                            {staff.email}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
+
                                             <div className="flex items-center gap-2 shrink-0">
-                                                <button
-                                                    onClick={() => staff.id && setStatus(staff.id, 'PRESENT')}
-                                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${currentStatus === 'PRESENT' ? 'bg-green-100 border-green-200 text-green-700 dark:bg-green-900/40 dark:border-green-800' : 'bg-transparent border-input hover:bg-muted'}`}
-                                                >
-                                                    P
-                                                </button>
-                                                <button
-                                                    onClick={() => staff.id && setStatus(staff.id, 'ABSENT')}
-                                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${currentStatus === 'ABSENT' ? 'bg-red-100 border-red-200 text-red-700 dark:bg-red-900/40 dark:border-red-800' : 'bg-transparent border-input hover:bg-muted'}`}
-                                                >
-                                                    A
-                                                </button>
-                                                <button
-                                                    onClick={() => staff.id && setStatus(staff.id, 'LEAVE')}
-                                                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${currentStatus === 'LEAVE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700 dark:bg-yellow-900/40 dark:border-yellow-800' : 'bg-transparent border-input hover:bg-muted'}`}
-                                                >
-                                                    L
-                                                </button>
+                                                {(Object.keys(STATUS_CONFIG) as AttendanceStatus[]).map((status) => (
+                                                    <button
+                                                        key={status}
+                                                        onClick={() => staff.id && setStatus(staff.id, status)}
+                                                        className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-200 cursor-pointer active:scale-95 ${currentStatus === status
+                                                                ? STATUS_CONFIG[status].className + " shadow-lg shadow-primary/5"
+                                                                : 'border-border/60 text-muted-foreground hover:border-primary/20 hover:bg-primary/5'
+                                                            }`}
+                                                    >
+                                                        {STATUS_CONFIG[status].label}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </motion.div>
                                     );

@@ -12,11 +12,14 @@ import {
     CheckCircle2,
     TrendingUp,
     MessageSquare,
-    Loader2
+    Loader2,
+    Clock
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useRecordPayout } from '../api/use-payroll-ledger';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
 
 import {
     Dialog,
@@ -94,7 +97,19 @@ export function PayStaffModal({
         return staff.base_salary + staff.historicalArrears + Number(watchedBonus || 0) - Number(watchedFine || 0);
     }, [staff, watchedBonus, watchedFine]);
 
-    const remaining = netLiability - Number(watchedAmountPaid || 0);
+    // Smart Sync: Only update amount_paid if it was previously equal to netLiability (Full Payment mode)
+    // This allows users to do partial payments without being "reset" every time they change a bonus
+    const prevLiabilityRef = React.useRef(netLiability);
+
+    React.useEffect(() => {
+        const isCurrentlyFullPayment = Number(watchedAmountPaid) === prevLiabilityRef.current;
+        if (isCurrentlyFullPayment || Number(watchedAmountPaid) === 0) {
+            form.setValue('amount_paid', netLiability);
+        }
+        prevLiabilityRef.current = netLiability;
+    }, [netLiability, form]); // Only trigger on liability changes (bonus/fine)
+
+    const remaining = Math.max(0, netLiability - Number(watchedAmountPaid || 0));
 
     const onSubmit = async (values: any) => {
         try {
@@ -132,12 +147,21 @@ export function PayStaffModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[96vw] sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl rounded-[1.5rem] sm:rounded-[2rem] bg-zinc-50 dark:bg-zinc-950 flex flex-col h-[92dvh] sm:h-auto sm:max-h-[90vh]">
-                <div className="bg-emerald-500/5 p-5 sm:p-8 border-b border-emerald-500/10 shrink-0">
+            <DialogContent className="w-[95vw] sm:max-w-[620px] p-0 overflow-hidden border-none shadow-2xl rounded-[1.8rem] sm:rounded-[2.2rem] bg-zinc-50 dark:bg-zinc-950 flex flex-col h-[90dvh] max-h-[90dvh]">
+                <div className="bg-emerald-500/5 p-4 sm:p-6 border-b border-emerald-500/10 shrink-0">
                     <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                        <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-emerald-500 flex items-center justify-center shadow-xl shadow-emerald-500/20 shrink-0">
-                            <Coins className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
-                        </div>
+                        <ImagePreviewDialog
+                            src={staff.avatar_url}
+                            title={staff.full_name}
+                            description={`Staff Profile - ${format(parseISO(`${monthYear}-01`), 'MMMM yyyy')}`}
+                        >
+                            <Avatar className="h-10 w-10 sm:h-16 sm:w-16 border-2 border-emerald-500/20 transition-transform hover:scale-105 duration-300 shadow-xl shadow-emerald-500/10 cursor-zoom-in shrink-0">
+                                <AvatarImage src={staff.avatar_url} className="object-cover" />
+                                <AvatarFallback className="bg-emerald-500/10 text-emerald-600 font-black text-xs sm:text-xl">
+                                    {staff.full_name?.charAt(0)}
+                                </AvatarFallback>
+                            </Avatar>
+                        </ImagePreviewDialog>
                         <DialogHeader className="p-0 space-y-0.5 text-left">
                             <DialogTitle className="text-xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">Process Payout</DialogTitle>
                             <DialogDescription className="text-emerald-500/60 font-black flex items-center gap-2 text-[10px] sm:text-sm">
@@ -147,210 +171,256 @@ export function PayStaffModal({
                         </DialogHeader>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                        <div className="bg-white/50 dark:bg-white/5 backdrop-blur-md rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-white dark:border-white/10">
-                            <p className="text-[9px] sm:text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-1">Total Liability</p>
-                            <p className="text-xl sm:text-2xl font-black text-emerald-600">Rs. {netLiability.toLocaleString()}</p>
-                            <p className="text-[9px] font-bold text-muted-foreground/60 mt-0.5 sm:mt-1 italic leading-none">Incl. Rs. {staff.historicalArrears.toLocaleString()} Arrears</p>
-                        </div>
-                        <div className={`rounded-2xl sm:rounded-3xl p-3 sm:p-4 border transition-all duration-500 ${remaining > 0 ? 'bg-orange-500/10 border-orange-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
-                            <p className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest mb-1 opacity-70">Remaining Debt</p>
-                            <p className={`text-xl sm:text-2xl font-black ${remaining > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                Rs. {remaining.toLocaleString()}
-                            </p>
-                            <p className="text-[9px] font-bold opacity-60 mt-0.5 sm:mt-1 italic leading-none">
-                                {remaining > 0 ? 'Will carry to next month' : 'Full settlement'}
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-2">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/40">Payable Amount</p>
+                            <p className="text-3xl sm:text-5xl font-black text-emerald-600 tracking-tighter">
+                                Rs. <span className="tabular-nums">{netLiability.toLocaleString()}</span>
                             </p>
                         </div>
+                        
+                        {staff.historicalArrears > 0 && (
+                            <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl px-4 py-2 flex items-center gap-2 animate-pulse">
+                                <Landmark className="w-4 h-4 text-orange-600" />
+                                <div>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-orange-600/60 leading-none">Unpaid Arrears</p>
+                                    <p className="text-sm font-black text-orange-600">Rs. {staff.historicalArrears.toLocaleString()}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
-                        <ScrollArea className="flex-1 w-full h-full pb-6 pt-5">
-                            <div className="space-y-5 sm:space-y-6 px-5 sm:px-8">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                                <FormField
-                                    control={form.control}
-                                    name="bonus"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                                <TrendingUp className="w-3 h-3 text-emerald-500" /> Monthly Bonus
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} className="h-12 rounded-xl bg-muted/30 border-primary/5 font-bold focus:ring-primary/20" />
-                                            </FormControl>
-                                        </FormItem>
+                        <ScrollArea className="flex-1 w-full h-full pb-6 pt-4 sm:pt-5">
+                            <div className="space-y-3 sm:space-y-4 px-4 sm:px-8">
+                                {/* Professional Financial Breakdown 📊 */}
+                                <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-emerald-500/[0.03] border border-emerald-500/10 space-y-3">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600/60 flex items-center gap-2">
+                                        <Coins className="w-3 h-3" /> Liability Breakdown
+                                    </h4>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="font-bold text-muted-foreground/70">Base Monthly Salary</span>
+                                            <span className="font-black text-foreground">Rs. {staff.base_salary.toLocaleString()}</span>
+                                        </div>
+                                        {staff.historicalArrears > 0 && (
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="font-bold text-muted-foreground/70 flex items-center gap-1.5">
+                                                    Previous Month Arrears <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                                </span>
+                                                <span className="font-black text-orange-600">Rs. {staff.historicalArrears.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        {Number(watchedBonus) > 0 && (
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="font-bold text-muted-foreground/70">Added Bonus</span>
+                                                <span className="font-black text-emerald-600">+ Rs. {Number(watchedBonus).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        {Number(watchedFine) > 0 && (
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="font-bold text-muted-foreground/70">Salary Deduction (Fine)</span>
+                                                <span className="font-black text-red-600">- Rs. {Number(watchedFine).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        <div className="pt-2 border-t border-emerald-500/10 flex justify-between items-center">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Total Net Liability</span>
+                                            <span className="text-lg font-black text-emerald-600">Rs. {netLiability.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    {remaining > 0 && (
+                                        <div className="pt-2 border-t border-dashed border-orange-500/20 flex justify-between items-center animate-in fade-in slide-in-from-top-1 duration-500">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-orange-600 flex items-center gap-1.5">
+                                                <Clock className="w-3 h-3" /> Balance After Payment
+                                            </span>
+                                            <div className="text-right">
+                                                <span className="text-sm font-black text-orange-600">Rs. {remaining.toLocaleString()}</span>
+                                                <p className="text-[8px] font-bold text-orange-500/60 leading-none">To be paid later</p>
+                                            </div>
+                                        </div>
                                     )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="fine"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                                <AlertCircle className="w-3 h-3 text-red-500" /> Salary Fine
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} className="h-12 rounded-xl bg-muted/30 border-primary/5 font-bold focus:ring-primary/20" />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            {Number(form.watch('bonus')) > 0 && (
-                                <FormField
-                                    control={form.control}
-                                    name="bonus_notes"
-                                    render={({ field }) => (
-                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                                            <FormItem className="space-y-1.5 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                                                    <TrendingUp className="w-3 h-3" /> Reason for Bonus
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="bonus"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                    <TrendingUp className="w-3 h-3 text-emerald-500" /> Monthly Bonus
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Textarea {...field} placeholder="Why is this bonus being given? (e.g. Performance)" className="resize-none h-16 bg-transparent border-none p-3 focus-visible:ring-0 font-medium text-sm" />
+                                                    <Input type="number" {...field} className="h-10 sm:h-12 rounded-xl bg-muted/30 border-primary/5 font-bold focus:ring-primary/20" />
                                                 </FormControl>
                                             </FormItem>
-                                        </motion.div>
-                                    )}
-                                />
-                            )}
-
-                            
-                            {Number(watchedFine) > 0 && (
-                                <FormField
-                                    control={form.control}
-                                    name="fine_notes"
-                                    render={({ field }) => (
-                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                                            <FormItem className="space-y-1.5 p-4 rounded-2xl bg-red-500/5 border border-red-500/10">
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 flex items-center gap-2">
-                                                    <AlertCircle className="w-3 h-3" /> Reason for Fine
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="fine"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1">
+                                                <FormLabel className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                    <AlertCircle className="w-3 h-3 text-red-500" /> Salary Fine
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Textarea {...field} placeholder="Explain why salary was deducted..." className="resize-none h-16 bg-transparent border-none p-3 focus-visible:ring-0 font-medium text-sm" />
+                                                    <Input type="number" {...field} className="h-10 sm:h-12 rounded-xl bg-muted/30 border-primary/5 font-bold focus:ring-primary/20" />
                                                 </FormControl>
                                             </FormItem>
-                                        </motion.div>
-                                    )}
-                                />
-                            )}
-                            
-                            {remaining > 0 && (
-                                <FormField
-                                    control={form.control}
-                                    name="paid_notes"
-                                    render={({ field }) => (
-                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                                            <FormItem className="space-y-1.5 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                                                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 flex items-center gap-2">
-                                                    <AlertCircle className="w-3 h-3" /> Reason for Partial Payment
+                                        )}
+                                    />
+                                </div>
+
+                                {Number(form.watch('bonus')) > 0 && (
+                                    <FormField
+                                        control={form.control}
+                                        name="bonus_notes"
+                                        render={({ field }) => (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                                <FormItem className="space-y-1.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                                                    <FormLabel className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                                        <TrendingUp className="w-3 h-3" /> Reason for Bonus
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Textarea {...field} placeholder="Why is this bonus given?" className="resize-none h-12 sm:h-16 bg-transparent border-none p-0 px-1 focus-visible:ring-0 font-medium text-xs sm:text-sm" />
+                                                    </FormControl>
+                                                </FormItem>
+                                            </motion.div>
+                                        )}
+                                    />
+                                )}
+
+                                {Number(watchedFine) > 0 && (
+                                    <FormField
+                                        control={form.control}
+                                        name="fine_notes"
+                                        render={({ field }) => (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                                <FormItem className="space-y-1.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-red-500/5 border border-red-500/10">
+                                                    <FormLabel className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 flex items-center gap-2">
+                                                        <AlertCircle className="w-3 h-3" /> Reason for Fine
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Textarea {...field} placeholder="Explain deduction..." className="resize-none h-12 sm:h-16 bg-transparent border-none p-0 px-1 focus-visible:ring-0 font-medium text-xs sm:text-sm" />
+                                                    </FormControl>
+                                                </FormItem>
+                                            </motion.div>
+                                        )}
+                                    />
+                                )}
+
+                                {remaining > 0 && (
+                                    <FormField
+                                        control={form.control}
+                                        name="paid_notes"
+                                        render={({ field }) => (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                                <FormItem className="space-y-1.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-orange-500/5 border border-orange-500/10">
+                                                    <FormLabel className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                                                        <AlertCircle className="w-3 h-3" /> Partial Payment Reason
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Textarea {...field} placeholder="Why is the full amount not being paid?" className="resize-none h-12 sm:h-16 bg-transparent border-none p-0 px-1 focus-visible:ring-0 font-medium text-xs sm:text-sm" />
+                                                    </FormControl>
+                                                </FormItem>
+                                            </motion.div>
+                                        )}
+                                    />
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                    <FormField
+                                        control={form.control}
+                                        name="amount_paid"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1.5">
+                                                <FormLabel className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                    <Banknote className="w-4 h-4" /> Amount Paying
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Textarea {...field} placeholder="Why is the full amount not being paid? (e.g. Balance pending)" className="resize-none h-16 bg-transparent border-none p-3 focus-visible:ring-0 font-medium text-sm" />
-                                                </FormControl>
-                                            </FormItem>
-                                        </motion.div>
-                                    )}
-                                />
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 items-end">
-                                <FormField
-                                    control={form.control}
-                                    name="amount_paid"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                                <Banknote className="w-4 h-4" /> Amount Paying
-                                            </FormLabel>
-                                            <FormControl>
-                                                <div className="relative group">
-                                                    <Input 
-                                                        type="number" 
-                                                        {...field} 
-                                                        className={`h-14 pl-4 rounded-2xl border-2 transition-all font-black text-xl focus:ring-4 ${Number(watchedAmountPaid) > netLiability ? 'bg-red-500/10 border-red-500 text-red-600 focus:ring-red-500/20' : 'bg-primary/5 border-primary/20 text-primary focus:ring-primary/30'}`} 
-                                                    />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                        <Button type="button" variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary" onClick={() => field.onChange(netLiability)}>Max</Button>
+                                                    <div className="relative group">
+                                                        <Input
+                                                            type="number"
+                                                            {...field}
+                                                            className={`h-12 sm:h-14 pl-4 rounded-xl sm:rounded-2xl border-2 transition-all font-black text-lg sm:text-xl focus:ring-4 ${Number(watchedAmountPaid) > netLiability ? 'bg-red-500/10 border-red-500 text-red-600 focus:ring-red-500/20' : 'bg-primary/5 border-primary/20 text-primary focus:ring-primary/30'}`}
+                                                        />
+                                                        <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                            <Button type="button" variant="ghost" size="sm" className="h-7 sm:h-8 text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary" onClick={() => field.onChange(netLiability)}>Max</Button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </FormControl>
-                                            {Number(watchedAmountPaid) > netLiability && (
-                                                <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mt-2 animate-pulse flex items-center gap-1">
-                                                    <AlertCircle className="w-3 h-3" /> Overpayment limited to Rs. {netLiability.toLocaleString()}
-                                                </p>
-                                            )}
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="method"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                                <Landmark className="w-3 h-3" /> Method
-                                            </FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger className="h-14 rounded-2xl bg-muted/50 border-primary/5 font-black text-xs uppercase tracking-widest italic">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent className="rounded-2xl border-primary/10">
-                                                    <SelectItem value="CASH" className="font-bold py-3">Cash In Hand</SelectItem>
-                                                    <SelectItem value="BANK" className="font-bold py-3">Bank Transfer</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                                                {Number(watchedAmountPaid) > netLiability && (
+                                                    <p className="text-[8px] sm:text-[10px] font-black text-red-600 uppercase tracking-widest mt-2 animate-pulse flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3" /> Overpayment limit reached
+                                                    </p>
+                                                )}
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="method"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1.5">
+                                                <FormLabel className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                    <Landmark className="w-3 h-3" /> Method
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-muted/50 border-primary/5 font-black text-[10px] sm:text-xs uppercase tracking-widest italic">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent className="rounded-2xl border-primary/10">
+                                                        <SelectItem value="CASH" className="font-bold py-3 text-xs">Cash In Hand</SelectItem>
+                                                        <SelectItem value="BANK" className="font-bold py-3 text-xs">Bank Transfer</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
 
-                            {remaining <= 0 && (
-                                <FormField
-                                    control={form.control}
-                                    name="paid_notes"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-1.5">
-                                            <FormLabel className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                                <MessageSquare className="w-3 h-3" /> Payout Remarks
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input {...field} placeholder="Optional notes for this payout..." className="h-12 rounded-xl bg-muted/30 border-primary/5 font-medium" />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                            )}
+                                {remaining <= 0 && (
+                                    <FormField
+                                        control={form.control}
+                                        name="paid_notes"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-1.5">
+                                                <FormLabel className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                    <MessageSquare className="w-3 h-3" /> Remarks
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input {...field} placeholder="Optional notes..." className="h-10 sm:h-12 rounded-xl bg-muted/30 border-primary/5 font-medium text-sm" />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
                             </div>
                         </ScrollArea>
-                        <div className="p-4 sm:p-6 border-t bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shrink-0">
+                        <div className="p-3 sm:p-5 border-t bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shrink-0 mt-auto">
                             <Button
                                 type="submit"
                                 disabled={recordPayout.isPending}
-                                className="w-full h-12 sm:h-16 rounded-xl sm:rounded-3xl bg-emerald-500 text-white font-black text-xs sm:text-lg uppercase tracking-[0.15em] sm:tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all group"
+                                className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-500 text-white font-black text-xs sm:text-base uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all group"
                             >
                                 {recordPayout.isPending ? (
-                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    <Loader2 className="h-5 w-5 animate-spin" />
                                 ) : (
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
                                         Release Payout
                                     </div>
                                 )}
                             </Button>
-                            <p className="text-[9px] text-center mt-4 font-black text-muted-foreground/40 uppercase tracking-widest">
-                                Secure transaction recorded with full audit logs
-                            </p>
                         </div>
                     </form>
                 </Form>
             </DialogContent>
+
         </Dialog>
     );
 }

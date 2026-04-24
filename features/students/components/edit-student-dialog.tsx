@@ -40,6 +40,7 @@ import { useUpdateStudent } from '../api/use-update-student';
 import { storageApi } from '@/features/storage/api/storage.api';
 import { base64ToFile } from '@/utils/file-utils';
 import { Loader2, UploadCloud } from 'lucide-react';
+import { UPLOAD_LIMITS } from '@/constants/config';
 
 // A lightweight schema for the update form (no document re-upload needed here)
 const editStudentSchema = z.object({
@@ -51,6 +52,7 @@ const editStudentSchema = z.object({
     photo_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
     class_id: z.string().min(1, 'Select a valid class'),
+    b_form_id: z.string().min(5, 'B-Form ID is required for verification'),
     monthly_fee: z.number().min(0, { message: 'Monthly fee is required and must be 0 or positive' }),
 });
 
@@ -69,6 +71,7 @@ type EditStudentProps = {
         photo_url?: string | null;
         date_of_birth: string;
         class_id: string;
+        b_form_id: string;
         monthly_fee?: number | null;
     } | null;
 };
@@ -95,6 +98,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
             photo_url: null,
             date_of_birth: '',
             class_id: '',
+            b_form_id: '',
             monthly_fee: undefined, // Default to undefined
         },
     });
@@ -110,6 +114,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                     ? student.date_of_birth.split('T')[0] // strip time component for date input
                     : '',
                 class_id: student?.class_id || '',
+                b_form_id: student?.b_form_id || '',
                 monthly_fee: student?.monthly_fee || undefined,
             });
         }
@@ -119,18 +124,33 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (fieldName === 'photo_url') {
-            const reader = new FileReader();
-            reader.addEventListener("load", () => {
-                setTempCropImage(reader.result?.toString() || "");
-                setCropModalOpen(true);
-            });
-            reader.readAsDataURL(file);
-            return;
-        }
-
         try {
             setIsUploading(true);
+            
+            // Photo validation
+            if (fieldName === 'photo_url') {
+                if (file.size > UPLOAD_LIMITS.MAX_IMAGE_BYTES) {
+                    toast.error(`Image too large (Max ${UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB}KB). Please compress your image.`);
+                    if (e.target) e.target.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.addEventListener("load", () => {
+                    setTempCropImage(reader.result?.toString() || "");
+                    setCropModalOpen(true);
+                });
+                reader.readAsDataURL(file);
+                return;
+            }
+
+            // Document validation (B-Form)
+            if (file.size > UPLOAD_LIMITS.MAX_DOC_BYTES) {
+                toast.error(`Document too large (Max ${UPLOAD_LIMITS.MAX_DOC_SIZE_KB}KB or ${UPLOAD_LIMITS.MAX_DOC_SIZE_KB / 1024}MB).`);
+                if (e.target) e.target.value = '';
+                return;
+            }
+
             const url = await storageApi.uploadDocument(file);
             form.setValue(fieldName, url);
             toast.success('Document uploaded to vault securely.');
@@ -148,6 +168,12 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
             const fileName = `photo_${form.getValues('roll_number') || Date.now()}.png`;
             const file = base64ToFile(base64Image, fileName);
             
+            // Double-check size after cropping
+            if (file.size > UPLOAD_LIMITS.MAX_IMAGE_BYTES) {
+                toast.error(`Cropped image still exceeds ${UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB}KB. Please use a smaller source.`);
+                return;
+            }
+
             // Upload to Supabase Storage (vault/photos subfolder)
             const url = await storageApi.uploadDocument(file, 'documents', 'vault/photos');
             
@@ -215,19 +241,41 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                             />
                         </div>
 
-                        <FormField
-                            control={form.control}
-                            name="full_name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Full Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Full Name" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="full_name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Full Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Full Name" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="b_form_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>B-Form ID</FormLabel>
+                                        <FormControl>
+                                            <Input 
+                                                placeholder="35201XXXXXXXX" 
+                                                {...field} 
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    field.onChange(val);
+                                                }}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         <FormField
                             control={form.control}

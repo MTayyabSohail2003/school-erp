@@ -9,6 +9,7 @@ import { storageApi } from '@/features/storage/api/storage.api';
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
 import { base64ToFile } from '@/utils/file-utils';
+import { UPLOAD_LIMITS } from '@/constants/config';
 import Image from 'next/image';
 
 import {
@@ -80,6 +81,24 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Unified Size Validation based on global limits
+        const isImage = fieldName === 'avatar_url';
+        const limitBytes = isImage ? UPLOAD_LIMITS.MAX_IMAGE_BYTES : UPLOAD_LIMITS.MAX_DOC_BYTES;
+        const limitKB = isImage ? UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB : UPLOAD_LIMITS.MAX_DOC_SIZE_KB;
+
+        if (file.size > limitBytes) {
+            toast.error(`File too large (Max ${limitKB}KB). Please compress or choose a smaller file.`);
+            if (e.target) e.target.value = '';
+            return;
+        }
+
+        // Type Validation
+        if (isImage && !file.type.startsWith('image/')) {
+            toast.error("Invalid file type. Please upload an image for the profile photo.");
+            if (e.target) e.target.value = '';
+            return;
+        }
+
         if (fieldName === 'avatar_url') {
             const reader = new FileReader();
             reader.addEventListener("load", () => {
@@ -133,7 +152,7 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px] h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Edit Staff Profile</DialogTitle>
                     <DialogDescription>

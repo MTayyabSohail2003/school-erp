@@ -12,6 +12,7 @@ import { useClasses } from '@/features/classes/hooks/use-classes';
 import { useGetParents } from '@/features/parents/api/use-get-parents';
 import { storageApi } from '@/features/storage/api/storage.api';
 import { bulkStudentFormSchema, BulkStudentFormData } from '../schemas/student.schema';
+import { UPLOAD_LIMITS } from '@/constants/config';
 
 import {
     Dialog,
@@ -105,6 +106,21 @@ export function BulkAddStudentsDialog() {
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number, fieldName: 'photo_url' | 'b_form_url') => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        // Size validation
+        if (fieldName === 'photo_url') {
+            if (file.size > UPLOAD_LIMITS.MAX_IMAGE_BYTES) {
+                toast.error(`Image too large (Max ${UPLOAD_LIMITS.MAX_IMAGE_SIZE_KB}KB). Please compress.`);
+                if (e.target) e.target.value = '';
+                return;
+            }
+        } else {
+            if (file.size > UPLOAD_LIMITS.MAX_DOC_BYTES) {
+                toast.error(`Document too large (Max ${UPLOAD_LIMITS.MAX_DOC_SIZE_KB}KB).`);
+                if (e.target) e.target.value = '';
+                return;
+            }
+        }
 
         try {
             setIsUploading(true);
@@ -248,7 +264,17 @@ export function BulkAddStudentsDialog() {
                                             render={({ field: f }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-sm font-semibold">B-Form ID (Opt)</FormLabel>
-                                                    <FormControl><Input placeholder="35201-XXXXXXX-X" {...f} className="h-10 border-primary/10" /></FormControl>
+                                                    <FormControl>
+                                                        <Input 
+                                                            placeholder="35201XXXXXXXX" 
+                                                            {...f} 
+                                                            className="h-10 border-primary/10" 
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                f.onChange(val);
+                                                            }}
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage className="text-xs mt-1" />
                                                 </FormItem>
                                             )}

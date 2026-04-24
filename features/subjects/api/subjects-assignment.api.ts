@@ -78,5 +78,15 @@ export const subjectsAssignmentApi = {
             master_id: item.master_id,
             classes: Array.isArray(item.classes) ? item.classes[0] : item.classes
         }));
+    },
+
+    updateRelatedAssignments: async (masterId: string, name: string, code: string | null): Promise<void> => {
+        const supabase = createClient();
+        const { error } = await supabase
+            .from('subjects')
+            .update({ name, code })
+            .eq('master_id', masterId);
+
+        if (error) throw new Error(error.message);
     }
 };

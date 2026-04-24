@@ -1,5 +1,5 @@
 import { SubjectsSetup } from '@/features/subjects/components/subjects-setup';
-import { PeriodsSetup } from '@/features/timetable/components/periods-setup';
+// import { PeriodsSetup } from '@/features/timetable/components/periods-setup';
 
 export default function AcademicsPage() {
     return (
@@ -11,7 +11,7 @@ export default function AcademicsPage() {
 
             <div className="space-y-10">
                 <SubjectsSetup />
-                <PeriodsSetup />
+                {/* <PeriodsSetup /> */}
             </div>
         </div>
     );

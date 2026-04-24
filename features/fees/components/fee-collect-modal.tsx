@@ -19,6 +19,9 @@ import { useCollectFee } from '../../finance/api/use-fees-dashboard';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
+import { FeePrintReceipt } from './fee-print-receipt';
+import { cn } from '@/lib/utils';
+import { Printer } from 'lucide-react';
 
 export interface DashboardChallan {
     id: string;
@@ -48,7 +51,8 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
     const [fines, setFines] = useState<number>(challan?.fines || 0);
     const [discount, setDiscount] = useState<number>(challan?.discount || 0);
     const [paidNotes, setPaidNotes] = useState<string>(challan?.paid_notes || '');
-    const [fineNotes, setFineNotes] = useState<string>(challan?.fine_notes || '');
+     const [fineNotes, setFineNotes] = useState<string>(challan?.fine_notes || '');
+    const [isPrinting, setIsPrinting] = useState(false);
 
     // Mutation
     const { mutateAsync: collectFee, isPending } = useCollectFee();
@@ -62,6 +66,11 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
     const handleConfirm = async () => {
         if (isPartial && !paidNotes.trim()) {
             toast.error('Please provide a reason for partial payment');
+            return;
+        }
+
+        if (paidAmount > currentTotalPayable) {
+            toast.error(`Cannot collect more than the total balance of Rs. ${currentTotalPayable.toLocaleString()}.`);
             return;
         }
 
@@ -93,7 +102,7 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl max-h-[92vh] flex flex-col">
+            <DialogContent className="w-[95vw] sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl max-h-[92vh] flex flex-col print:hidden">
                 <div className="bg-primary p-4 sm:p-6 sm:py-8 text-primary-foreground relative overflow-hidden shrink-0">
                     <div className="absolute -right-10 -top-10 h-40 w-40 bg-white/10 rounded-full blur-3xl" />
                     <div className="absolute -left-10 -bottom-10 h-32 w-32 bg-black/10 rounded-full blur-2xl" />
@@ -177,9 +186,12 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
                                         </div>
                                     )}
                                     <Separator className="bg-border/50" />
-                                    <div className="flex justify-between text-sm font-black pt-1">
+                                     <div className="flex justify-between text-sm font-black pt-1">
                                         <span>Total Balance</span>
-                                        <span className="text-primary tracking-tight">Rs. {currentTotalPayable.toLocaleString()}</span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-primary tracking-tight">Rs. {currentTotalPayable.toLocaleString()}</span>
+                                            <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-tighter italic">Total Added vs Original</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -203,8 +215,19 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
                                         <Input
                                             type="number"
                                             value={paidAmount}
-                                            onChange={(e) => setPaidAmount(Number(e.target.value))}
-                                            className="h-11 pl-10 border-2 font-black rounded-xl focus-visible:ring-primary/20 transition-all"
+                                            onChange={(e) => {
+                                                const val = Number(e.target.value);
+                                                if (val > currentTotalPayable) {
+                                                    setPaidAmount(currentTotalPayable);
+                                                    toast.warning(`Amount capped at total balance of Rs. ${currentTotalPayable.toLocaleString()}`);
+                                                } else {
+                                                    setPaidAmount(val);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "h-11 pl-10 border-2 font-black rounded-xl focus-visible:ring-primary/20 transition-all",
+                                                paidAmount > currentTotalPayable ? "border-red-500 text-red-600 focus-visible:ring-red-500/20" : ""
+                                            )}
                                         />
                                     </div>
                                 </div>
@@ -285,7 +308,9 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
                 </ScrollArea>
 
                 <div className="px-6 py-4 sm:py-8 bg-muted/30 border-t flex flex-col sm:flex-row justify-between items-center gap-4 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-md shrink-0">
-                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold px-6 w-full sm:w-auto order-2 sm:order-1">Discard</Button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto order-2 sm:order-1">
+                        <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold px-6 flex-1 sm:flex-none">Discard</Button>
+                    </div>
                     <Button
                         onClick={handleConfirm}
                         disabled={isPending}
@@ -299,6 +324,13 @@ export function FeeCollectModal({ challan, open, onOpenChange }: { challan: Dash
                         )}
                     </Button>
                 </div>
+
+                {/* Print Portal */}
+                <FeePrintReceipt 
+                    open={isPrinting} 
+                    challan={challan} 
+                    onClose={() => setIsPrinting(false)} 
+                />
             </DialogContent>
         </Dialog>
     );

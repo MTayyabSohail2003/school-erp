@@ -26,7 +26,7 @@ export async function sendFeeRemindersAction(parentId?: string) {
                 id,
                 full_name,
                 email,
-                students (
+                students!inner (
                     full_name
                 )
             `)

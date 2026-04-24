@@ -323,7 +323,7 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
 }
 
 /**
- * School-wide batch promotion for all classes at once
+ * School-wide batch promotion for all classes at once (Optimized via Postgres RPC)
  */
 export async function batchPromoteAllAction(data: BatchPromoteData) {
     const supabase = await createClient();
@@ -332,202 +332,25 @@ export async function batchPromoteAllAction(data: BatchPromoteData) {
     if (!user) return { success: false, error: 'Unauthorized' };
 
     try {
-        let totalPromoted = 0;
-        let totalGraduated = 0;
-        let totalRepeated = 0;
+        const { data: result, error: rpcError } = await supabase.rpc('batch_promote_students_v1', {
+            p_mappings: data.mappings,
+            p_new_academic_year: data.new_academic_year,
+            p_promoted_by: user.id
+        });
 
-        // 1. Safe Processing: Fetch ALL relevant students and classes FIRST
-        // This prevents the "ladder" bug where updated students are caught in subsequent mapping queries
-        const sourceClassIds = data.mappings.map(m => m.source_class_id);
-        const destinationClassIds = data.mappings
-            .map(m => m.destination_class_id)
-            .filter((id): id is string => !!id);
+        if (rpcError) throw rpcError;
         
-        const allClassIds = Array.from(new Set([...sourceClassIds, ...destinationClassIds]));
-
-        const [{ data: allSourceStudents }, { data: allClasses }, { data: allFeeStructures }] = await Promise.all([
-            supabase
-                .from('students')
-                .select('*, classes(name, section)')
-                .in('class_id', sourceClassIds)
-                .eq('status', 'ACTIVE'),
-            supabase
-                .from('classes')
-                .select('id, name, section')
-                .in('id', allClassIds),
-            supabase
-                .from('fee_structures')
-                .select('class_id, monthly_fee')
-                .in('class_id', allClassIds)
-        ]);
-
-        if (!allSourceStudents) throw new Error("Could not fetch student records.");
-        const classMap = Object.fromEntries((allClasses || []).map(c => [c.id, c]));
-        const feeMap = Object.fromEntries((allFeeStructures || []).map(f => [f.class_id, f.monthly_fee]));
-
-        // Helper to update roll number prefix (e.g., C2-A-001 -> C3-A-001)
-        const getUpdatedRollNumber = (oldRoll: string, targetClassId: string | null) => {
-            if (!targetClassId || !classMap[targetClassId]) return oldRoll;
-            
-            const targetClass = classMap[targetClassId];
-            const classNum = targetClass.name.match(/\d+/)?.[0] || targetClass.name;
-            const newPrefix = `C${classNum}-${targetClass.section}-`.toUpperCase().replace(/\s+/g, '');
-            
-            // If it's already a standard formatted roll number, swap prefix
-            if (oldRoll.includes('-')) {
-                const parts = oldRoll.split('-');
-                const suffix = parts[parts.length - 1];
-                return newPrefix + suffix;
-            }
-            
-            // Fallback for non-standard formats
-            return newPrefix + oldRoll;
+        // result is returned as dynamic JSONB, we cast it to our expected shape
+        const response = result as { 
+            success: boolean; 
+            total_promoted: number; 
+            total_graduated: number; 
+            total_repeated: number; 
+            error?: string 
         };
 
-        // 2. Prepare all pending updates first to free the namespace
-        const pendingUpdates = [];
-
-        for (const mapping of data.mappings) {
-            const studentsInClass = allSourceStudents.filter(s => s.class_id === mapping.source_class_id);
-            if (studentsInClass.length === 0) continue;
-
-            const excludedIds = mapping.excluded_student_ids || [];
-            const rollOverrides = mapping.roll_number_overrides || {};
-
-            for (const student of studentsInClass) {
-                const isExcluded = excludedIds.includes(student.id);
-                const manualOverride = rollOverrides[student.id];
-                const isGraduation = !isExcluded && (mapping.is_graduation || !mapping.destination_class_id);
-                
-                let targetRoll = student.roll_number;
-                let targetClassId = student.class_id;
-                let targetStatus: 'ACTIVE' | 'GRADUATED' = 'ACTIVE';
-
-                if (isExcluded) {
-                    targetRoll = manualOverride || student.roll_number;
-                    targetClassId = mapping.source_class_id;
-                } else if (isGraduation) {
-                    targetRoll = manualOverride || student.roll_number;
-                    targetClassId = null;
-                    targetStatus = 'GRADUATED';
-                } else {
-                    targetRoll = manualOverride || getUpdatedRollNumber(student.roll_number, mapping.destination_class_id);
-                    targetClassId = mapping.destination_class_id;
-                }
-
-                pendingUpdates.push({
-                    student,
-                    targetRoll,
-                    targetClassId,
-                    targetStatus,
-                    // Prioritize: Mapping-specific fee > Database structure fee > Current record fee
-                    targetMonthlyFee: targetClassId 
-                        ? (mapping.target_monthly_fee ?? feeMap[targetClassId]) 
-                        : student.monthly_fee,
-                    isGraduation,
-                    isRepeat: isExcluded
-                });
-            }
-        }
-
-        // --- STAGE 1: Free the ACTIVE roll number namespace ---
-        // We move everyone to a temporary roll number to avoid 'duplicate key' collisions 
-        // during the migration, especially on sequential updates.
-        for (const update of pendingUpdates) {
-            const { error: tempError } = await supabase
-                .from('students')
-                .update({ 
-                    roll_number: `TMP-${update.student.id.slice(0, 8)}-${update.student.roll_number}`.toUpperCase()
-                })
-                .eq('id', update.student.id);
-            
-            if (tempError) {
-                console.error(`Namespace Clearance Failed for ${update.student.full_name}:`, tempError);
-                throw new Error(`Failed to clear roll number for ${update.student.full_name}: ${tempError.message}`);
-            }
-        }
-
-        // --- STAGE 2: Apply official new session state ---
-        for (const update of pendingUpdates) {
-            const { error: finalError } = await supabase
-                .from('students')
-                .update({
-                    class_id: update.targetClassId,
-                    academic_year: data.new_academic_year,
-                    status: update.targetStatus,
-                    roll_number: update.targetRoll,
-                    monthly_fee: update.targetMonthlyFee
-                })
-                .eq('id', update.student.id);
-            
-            if (finalError) {
-                console.error(`Final Update Failed for ${update.student.full_name}:`, finalError);
-                throw new Error(`Failed to finalize promotion for ${update.student.full_name}: ${finalError.message}`);
-            }
-
-            // Log History
-            await supabase.from('promotion_history').insert({
-                student_id: update.student.id,
-                from_class_id: update.student.class_id,
-                to_class_id: update.targetClassId,
-                from_academic_year: update.student.academic_year || 'Unknown',
-                to_academic_year: data.new_academic_year,
-                is_graduation: update.isGraduation
-            });
-
-            // Fee Reset logic for non-graduating students
-            if (!update.isGraduation && update.targetClassId) {
-                const { data: feeStructure } = await supabase
-                    .from('fee_structures')
-                    .select('id, monthly_fee')
-                    .eq('class_id', update.targetClassId)
-                    .maybeSingle();
-
-                if (feeStructure) {
-                    const currentMonth = new Date().toISOString().slice(0, 7);
-                    const dueDate = new Date();
-                    dueDate.setDate(10);
-
-                    // Note: update.targetMonthlyFee was already committed to the student record in Stage 2
-                    await supabase.from('fee_challans').insert({
-                        student_id: update.student.id,
-                        fee_structure_id: feeStructure.id,
-                        month_year: currentMonth,
-                        amount_due: update.targetMonthlyFee ?? feeStructure.monthly_fee,
-                        due_date: dueDate.toISOString().split('T')[0],
-                        status: 'PENDING'
-                    });
-                }
-            }
-
-            if (update.isGraduation) totalGraduated++;
-            else if (update.isRepeat) totalRepeated++;
-            else totalPromoted++;
-        }
-
-        // --- STAGE 3: Sync Fee Structures for future-proofing ---
-        for (const mapping of data.mappings) {
-            if (mapping.destination_class_id && mapping.target_monthly_fee !== undefined) {
-                const { data: existing } = await supabase
-                    .from('fee_structures')
-                    .select('id')
-                    .eq('class_id', mapping.destination_class_id)
-                    .maybeSingle();
-
-                if (existing) {
-                    await supabase
-                        .from('fee_structures')
-                        .update({ monthly_fee: mapping.target_monthly_fee })
-                        .eq('id', existing.id);
-                } else {
-                    await supabase
-                        .from('fee_structures')
-                        .insert({ 
-                            class_id: mapping.destination_class_id, 
-                            monthly_fee: mapping.target_monthly_fee 
-                        });
-                }
-            }
+        if (!response.success) {
+            throw new Error(response.error || 'Batch promotion function failed on database side.');
         }
 
         revalidatePath('/dashboard/students');
@@ -535,7 +358,7 @@ export async function batchPromoteAllAction(data: BatchPromoteData) {
 
         return { 
             success: true, 
-            message: `Batch complete: ${totalPromoted} promoted, ${totalGraduated} graduated, ${totalRepeated} repeating.` 
+            message: `Batch complete: ${response.total_promoted} promoted, ${response.total_graduated} graduated, ${response.total_repeated} repeating.` 
         };
 
     } catch (error: Error | unknown) {
@@ -543,6 +366,7 @@ export async function batchPromoteAllAction(data: BatchPromoteData) {
         return { success: false, error: (error as Error).message || 'Batch promotion failed.' };
     }
 }
+
 
 
 

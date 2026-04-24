@@ -7,6 +7,7 @@ export type ClassRecord = {
     section: string | null;
     class_teacher_id: string | null;
     is_primary: boolean;
+    student_count?: number;
 };
 
 export const classesApi = {
@@ -17,11 +18,15 @@ export const classesApi = {
         const supabase = createClient();
         const { data, error } = await supabase
             .from('classes')
-            .select('id, name, section, class_teacher_id, is_primary')
+            .select('id, name, section, class_teacher_id, is_primary, students(count)')
             .order('name', { ascending: true });
 
         if (error) throw new Error(error.message);
-        return data || [];
+        
+        return (data || []).map(c => ({
+            ...c,
+            student_count: (c as any).students[0]?.count || 0
+        }));
     },
 
     /**

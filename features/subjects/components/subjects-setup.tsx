@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Plus, Trash2, Loader2, Layers, CheckCircle2, X, AlertCircle, Printer } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Loader2, Layers, CheckCircle2, X, AlertCircle, Printer, Pencil } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,7 +18,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useSubjectsMaster, useCreateMasterSubject, useDeleteMasterSubject } from '../hooks/use-subjects-master';
+import { useSubjectsMaster, useCreateMasterSubject, useDeleteMasterSubject, useUpdateMasterSubject } from '../hooks/use-subjects-master';
 import { useBulkCreateMasterSubjects } from '../hooks/use-bulk-create-master-subjects';
 import { useClassSubjects } from '../hooks/use-class-subjects';
 import { subjectsAssignmentApi } from '../api/subjects-assignment.api';
@@ -69,20 +69,23 @@ export function SubjectsSetup() {
     const { data: masterPool, isLoading: isMasterLoading } = useSubjectsMaster();
     const createMaster = useCreateMasterSubject();
     const deleteMaster = useDeleteMasterSubject();
+    const updateMaster = useUpdateMasterSubject();
     const bulkCreateMaster = useBulkCreateMasterSubjects();
 
     const [selectedClassId, setSelectedClassId] = useState<string>('');
     const { data: classSubjects, isLoading: isClassLoading } = useClassSubjects(selectedClassId);
     const { data: allAssignments } = useAllClassSubjects();
     const assignMutation = useAssignSubjects();
+    const [isPrinting, setIsPrinting] = useState(false);
 
     const [masterOpen, setMasterOpen] = useState(false);
+    const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
     const [bulkOpen, setBulkOpen] = useState(false);
     const [assignOpen, setAssignOpen] = useState(false);
 
     // Assignment state
     const [selectedMasterIds, setSelectedMasterIds] = useState<string[]>([]);
-    
+
     // Deletion states
     const [deleteItem, setDeleteItem] = useState<{ id: string; name: string; type: 'master' | 'assignment' } | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -94,7 +97,7 @@ export function SubjectsSetup() {
 
     const bulkForm = useForm<z.infer<typeof bulkSchema>>({
         resolver: zodResolver(bulkSchema),
-        defaultValues: { 
+        defaultValues: {
             subjects: [{ name: '', code: '' }],
             targetClassId: ''
         },
@@ -113,32 +116,68 @@ export function SubjectsSetup() {
     }, [bulkOpen, bulkForm]);
 
     const onAddMaster = (values: z.infer<typeof subjectSchema>) => {
-        createMaster.mutate(
-            { 
-                name: values.name.trim().toUpperCase(), 
-                code: values.code?.trim().toUpperCase() || null 
-            },
-            {
-                onSuccess: (newMaster) => {
-                    if (values.targetClassId) {
-                        subjectsAssignmentApi.bulkAssignSubjects(
-                            values.targetClassId,
-                            [newMaster.id],
-                            [{ id: newMaster.id, name: newMaster.name, code: newMaster.code }]
-                        ).then(() => {
-                            queryClient.invalidateQueries({ queryKey: ['subjects', 'class', values.targetClassId] });
-                            queryClient.invalidateQueries({ queryKey: ['subjects', 'all-assignments'] });
-                            toast.success(`Success: ${newMaster.name} added and assigned to class.`);
-                        }).catch(e => toast.error(`Master created, but assignment failed: ${e.message}`));
-                    } else {
-                        toast.success('Added to collection.');
-                    }
-                    form.reset();
-                    setMasterOpen(false);
+        const code = values.code?.trim().toUpperCase();
+
+        // Check for duplicate code in existing pool
+        if (code && masterPool?.some(m => m.code?.toUpperCase() === code && m.id !== editingSubjectId)) {
+            toast.error(`Conflict: Subject code "${code}" already exists in your collection.`);
+            return;
+        }
+
+        if (editingSubjectId) {
+            updateMaster.mutate(
+                { id: editingSubjectId, name: values.name.trim().toUpperCase(), code: code || null },
+                {
+                    onSuccess: () => {
+                        toast.success('Subject updated successfully.');
+                        handleCloseMaster();
+                    },
+                    onError: (err: Error) => toast.error(err.message)
+                }
+            );
+        } else {
+            createMaster.mutate(
+                {
+                    name: values.name.trim().toUpperCase(),
+                    code: code || null
                 },
-                onError: (err: Error) => toast.error(err.message)
-            }
-        );
+                {
+                    onSuccess: (newMaster) => {
+                        if (values.targetClassId) {
+                            subjectsAssignmentApi.bulkAssignSubjects(
+                                values.targetClassId,
+                                [newMaster.id],
+                                [{ id: newMaster.id, name: newMaster.name, code: newMaster.code }]
+                            ).then(() => {
+                                queryClient.invalidateQueries({ queryKey: ['subjects', 'class', values.targetClassId] });
+                                queryClient.invalidateQueries({ queryKey: ['subjects', 'all-assignments'] });
+                                toast.success(`Success: ${newMaster.name} added and assigned to class.`);
+                            }).catch(e => toast.error(`Master created, but assignment failed: ${e.message}`));
+                        } else {
+                            toast.success('Added to collection.');
+                        }
+                        handleCloseMaster();
+                    },
+                    onError: (err: Error) => toast.error(err.message)
+                }
+            );
+        }
+    };
+
+    const handleEditMaster = (subject: any) => {
+        setEditingSubjectId(subject.id);
+        form.reset({
+            name: subject.name,
+            code: subject.code || '',
+            targetClassId: ''
+        });
+        setMasterOpen(true);
+    };
+
+    const handleCloseMaster = () => {
+        setMasterOpen(false);
+        setEditingSubjectId(null);
+        form.reset({ name: '', code: '', targetClassId: '' });
     };
 
     const onBulkAdd = (values: z.infer<typeof bulkSchema>) => {
@@ -150,6 +189,23 @@ export function SubjectsSetup() {
             }));
 
         if (subjects.length === 0) return;
+
+        // 1. Check for duplicate codes within the bulk submission itself
+        const incomingCodes = subjects.map(s => s.code).filter(Boolean);
+        const hasSelfDuplicates = new Set(incomingCodes).size !== incomingCodes.length;
+        if (hasSelfDuplicates) {
+            toast.error("Duplicate codes found within your entry list. Please fix them before proceeding.");
+            return;
+        }
+
+        // 2. Check for duplicate codes against existing masterPool
+        const existingCodes = masterPool?.map(m => m.code?.toUpperCase()).filter(Boolean) || [];
+        const duplicates = incomingCodes.filter(code => existingCodes.includes(code as string));
+
+        if (duplicates.length > 0) {
+            toast.error(`Code Conflict: The following codes already exist: ${duplicates.join(', ')}`);
+            return;
+        }
 
         bulkCreateMaster.mutate(subjects, {
             onSuccess: (newMasters) => {
@@ -178,10 +234,10 @@ export function SubjectsSetup() {
         if (!selectedClassId || selectedMasterIds.length === 0) return;
 
         assignMutation.mutate(
-            { 
-                classId: selectedClassId, 
-                masterIds: selectedMasterIds, 
-                masterSubjects: masterPool || [] 
+            {
+                classId: selectedClassId,
+                masterIds: selectedMasterIds,
+                masterSubjects: masterPool || []
             },
             {
                 onSuccess: () => {
@@ -284,10 +340,10 @@ export function SubjectsSetup() {
                                                                 )}
                                                             />
                                                         </div>
-                                                        <Button 
-                                                            type="button" 
-                                                            variant="ghost" 
-                                                            size="icon" 
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
                                                             className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
                                                             onClick={() => fields.length > 1 && remove(index)}
                                                         >
@@ -300,7 +356,7 @@ export function SubjectsSetup() {
                                             <div className="flex flex-col gap-3 pt-2">
                                                 <div className="space-y-1.5 px-0.5">
                                                     <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest pl-1">Pre-Assign to Class (Optional)</label>
-                                                    <select 
+                                                    <select
                                                         className="w-full h-10 bg-background border-2 border-emerald-500/10 rounded-xl px-4 font-bold text-xs outline-none focus:border-emerald-500/40 transition-all appearance-none cursor-pointer dark:bg-muted/10 dark:text-foreground"
                                                         {...bulkForm.register('targetClassId')}
                                                     >
@@ -309,10 +365,10 @@ export function SubjectsSetup() {
                                                     </select>
                                                 </div>
 
-                                                <Button 
-                                                    type="button" 
-                                                    variant="outline" 
-                                                    size="sm" 
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
                                                     className="w-full font-bold border-dashed h-10"
                                                     onClick={() => append({ name: '', code: '' })}
                                                 >
@@ -329,14 +385,16 @@ export function SubjectsSetup() {
                                 </DialogContent>
                             </Dialog>
 
-                            <Dialog open={masterOpen} onOpenChange={setMasterOpen}>
+                            <Dialog open={masterOpen} onOpenChange={(o) => !o && handleCloseMaster()}>
                                 <DialogTrigger asChild>
-                                    <Button size="sm" className="font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
+                                    <Button onClick={() => { setEditingSubjectId(null); setMasterOpen(true); }} size="sm" className="font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
                                         <Plus className="h-4 w-4 mr-2" /> Add Single
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
-                                    <DialogHeader><DialogTitle>Create Master Subject</DialogTitle></DialogHeader>
+                                    <DialogHeader>
+                                        <DialogTitle>{editingSubjectId ? 'Edit Subject Details' : 'Create Master Subject'}</DialogTitle>
+                                    </DialogHeader>
                                     <Form {...form}>
                                         <form onSubmit={form.handleSubmit(onAddMaster)} className="space-y-4 pt-4">
                                             <FormField
@@ -362,26 +420,28 @@ export function SubjectsSetup() {
                                                 )}
                                             />
 
-                                            <FormField
-                                                control={form.control}
-                                                name="targetClassId"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="font-bold text-xs uppercase text-muted-foreground tracking-widest pl-1">Pre-Assign to Class (Optional)</FormLabel>
-                                                        <select 
-                                                            className="flex h-11 w-full rounded-xl border-2 border-emerald-500/10 bg-background px-3 py-2 text-xs font-bold outline-none focus:border-emerald-500/40 transition-all appearance-none cursor-pointer dark:bg-muted/10 dark:text-foreground"
-                                                            {...field}
-                                                        >
-                                                            <option value="" className="dark:bg-background">Do not assign...</option>
-                                                            {classes?.map(c => <option key={c.id} value={c.id} className="dark:bg-background">{c.name} - {c.section}</option>)}
-                                                        </select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <Button type="submit" className="w-full bg-emerald-600 font-bold" disabled={createMaster.isPending}>
-                                                {createMaster.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Add to Pool
+                                            {!editingSubjectId && (
+                                                <FormField
+                                                    control={form.control}
+                                                    name="targetClassId"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="font-bold text-xs uppercase text-muted-foreground tracking-widest pl-1">Pre-Assign to Class (Optional)</FormLabel>
+                                                            <select
+                                                                className="flex h-11 w-full rounded-xl border-2 border-emerald-500/10 bg-background px-3 py-2 text-xs font-bold outline-none focus:border-emerald-500/40 transition-all appearance-none cursor-pointer dark:bg-muted/10 dark:text-foreground"
+                                                                {...field}
+                                                            >
+                                                                <option value="" className="dark:bg-background">Do not assign...</option>
+                                                                {classes?.map(c => <option key={c.id} value={c.id} className="dark:bg-background">{c.name} - {c.section}</option>)}
+                                                            </select>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            )}
+                                            <Button type="submit" className="w-full bg-emerald-600 font-bold" disabled={createMaster.isPending || updateMaster.isPending}>
+                                                {(createMaster.isPending || updateMaster.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                {editingSubjectId ? 'Update Record' : 'Add to Pool'}
                                             </Button>
                                         </form>
                                     </Form>
@@ -392,7 +452,7 @@ export function SubjectsSetup() {
 
                     {isMasterLoading ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                            {[1,2,3,4,5,6].map(i => <div key={i} className="h-20 bg-muted/20 animate-pulse rounded-xl" />)}
+                            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-20 bg-muted/20 animate-pulse rounded-xl" />)}
                         </div>
                     ) : !masterPool?.length ? (
                         <div className="p-12 text-center border-2 border-dashed border-muted rounded-2xl bg-muted/5 text-muted-foreground font-medium">
@@ -400,23 +460,43 @@ export function SubjectsSetup() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                            {masterPool.map(subject => {
-                                const assignedClassesCount = allAssignments?.filter(a => a.master_id === subject.id || a.name === subject.name).length || 0;
-                                return (
+                            {[...(masterPool || [])]
+                                .sort((a, b) => {
+                                    // Get the lowest class name for subject A
+                                    const classesA = allAssignments?.filter(assign => assign.master_id === a.id)
+                                        .map(assign => `${assign.classes?.name}-${assign.classes?.section}`)
+                                        .sort()[0] || 'ZZZZ'; // Move unassigned to bottom
+                                    
+                                    // Get the lowest class name for subject B
+                                    const classesB = allAssignments?.filter(assign => assign.master_id === b.id)
+                                        .map(assign => `${assign.classes?.name}-${assign.classes?.section}`)
+                                        .sort()[0] || 'ZZZZ';
+
+                                    if (classesA !== classesB) return classesA.localeCompare(classesB);
+                                    return a.name.localeCompare(b.name);
+                                })
+                                .map(subject => {
+                                    const assignedAssignments = allAssignments?.filter(a => a.master_id === subject.id) || [];
+                                    return (
                                     <div key={subject.id} className="relative group p-4 rounded-xl border bg-background hover:border-emerald-500/50 hover:shadow-md transition-all duration-300 overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => handleDeleteMaster(subject.id, subject.name)} className="text-muted-foreground hover:text-destructive">
+                                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                            <button onClick={() => handleEditMaster(subject)} className="p-1 hover:bg-emerald-50 rounded-md text-muted-foreground hover:text-emerald-600 transition-colors">
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button onClick={() => handleDeleteMaster(subject.id, subject.name)} className="p-1 hover:bg-red-50 rounded-md text-muted-foreground hover:text-destructive transition-colors">
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
                                         <h3 className="font-bold text-sm pr-4 truncate">{subject.name.toUpperCase()}</h3>
-                                        <div className="flex items-center justify-between mt-1">
+                                        <div className="flex  gap-1.5 mt-1.5">
                                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{subject.code?.toUpperCase() || 'No Code'}</p>
-                                            {assignedClassesCount > 0 && (
-                                                <Badge variant="secondary" className="h-4 px-1 text-[8px] font-black bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                                                    {assignedClassesCount} Classes
-                                                </Badge>
-                                            )}
+                                            <div className="flex flex-wrap gap-1">
+                                                {assignedAssignments.map((a, i) => (
+                                                    <Badge key={i} variant="secondary" className="h-4 px-1 text-[7px] font-black bg-emerald-500/10 text-emerald-600 border-emerald-500/20 uppercase whitespace-nowrap">
+                                                        {a.classes?.name}-{a.classes?.section}
+                                                    </Badge>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -441,14 +521,14 @@ export function SubjectsSetup() {
                                     </h3>
                                     <p className="text-sm text-muted-foreground mt-1 font-medium">Dynamically link books to specific classes.</p>
                                 </div>
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     className="font-bold border-blue-500/20 hover:bg-blue-500/5 text-blue-600 dark:text-blue-400 shrink-0 h-9"
-                                    onClick={() => window.print()}
-                                    disabled={!allAssignments?.length}
+                                    onClick={() => setIsPrinting(true)}
+                                    disabled={!allAssignments?.length && !masterPool?.length}
                                 >
-                                    <Printer className="h-4 w-4 mr-1 sm:mr-2" /> 
+                                    <Printer className="h-4 w-4 mr-1 sm:mr-2" />
                                     <span className="hidden sm:inline">Print Report</span>
                                     <span className="sm:hidden">Print</span>
                                 </Button>
@@ -457,7 +537,7 @@ export function SubjectsSetup() {
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="font-black text-[10px] uppercase tracking-widest text-muted-foreground block">1. Choose Target Class</label>
-                                    <select 
+                                    <select
                                         className="w-full h-11 bg-background border-2 border-blue-500/10 rounded-xl px-4 font-bold text-sm outline-none focus:border-blue-500/40 transition-all dark:bg-muted/10 dark:text-foreground cursor-pointer appearance-none"
                                         value={selectedClassId}
                                         onChange={(e) => setSelectedClassId(e.target.value)}
@@ -472,8 +552,8 @@ export function SubjectsSetup() {
                                     if (!o) setSelectedMasterIds([]);
                                 }}>
                                     <DialogTrigger asChild>
-                                        <Button 
-                                            disabled={!selectedClassId} 
+                                        <Button
+                                            disabled={!selectedClassId}
                                             className="w-full h-12 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20"
                                         >
                                             <Plus className="h-4 w-4 mr-2" /> Pick from Collection
@@ -484,29 +564,31 @@ export function SubjectsSetup() {
                                             <DialogTitle>Assign Subjects to {classes?.find(c => c.id === selectedClassId)?.name}</DialogTitle>
                                             <DialogDescription>Select the subjects you want to teach in this class.</DialogDescription>
                                         </DialogHeader>
-                                        
+
                                         <div className="flex-1 overflow-y-auto py-4">
                                             <div className="grid grid-cols-2 gap-2">
                                                 {masterPool?.map(m => {
-                                                    const isLocalAssigned = classSubjects?.some(cs => cs.master_id === m.id || cs.name === m.name);
-                                                    const others = allAssignments?.filter(a => (a.master_id === m.id || a.name === m.name) && a.class_id !== selectedClassId);
+                                                    const isLocalAssigned = classSubjects?.some(cs => cs.master_id === m.id);
+                                                    const others = allAssignments?.filter(a => a.master_id === m.id && a.class_id !== selectedClassId);
                                                     const isGloballyAssigned = !!others?.length;
                                                     const isUnavailable = isLocalAssigned || isGloballyAssigned;
 
                                                     return (
-                                                        <div 
-                                                            key={m.id} 
-                                                            onClick={() => !isUnavailable && setSelectedMasterIds(prev => 
+                                                        <div
+                                                            key={m.id}
+                                                            onClick={() => !isUnavailable && setSelectedMasterIds(prev =>
                                                                 prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
                                                             )}
-                                                            className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-3 ${
-                                                                isUnavailable ? 'opacity-50 cursor-not-allowed bg-muted border-transparent shadow-inner' :
+                                                            className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-3 ${isUnavailable ? 'opacity-50 cursor-not-allowed bg-muted border-transparent shadow-inner' :
                                                                 selectedMasterIds.includes(m.id) ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-transparent bg-muted/30 hover:bg-muted/50'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <Checkbox checked={selectedMasterIds.includes(m.id) || isLocalAssigned || isGloballyAssigned} disabled={isUnavailable} />
                                                             <div className="min-w-0">
-                                                                <p className="font-bold text-xs truncate">{m.name}</p>
+                                                                <p className="font-bold text-xs truncate">
+                                                                    {m.name}
+                                                                    {m.code && <span className="ml-2 text-[10px] text-muted-foreground">({m.code})</span>}
+                                                                </p>
                                                                 {isLocalAssigned ? (
                                                                     <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter block font-mono">In this Class</span>
                                                                 ) : others && others.length > 0 ? (
@@ -546,7 +628,7 @@ export function SubjectsSetup() {
                                 </div>
                             ) : isClassLoading ? (
                                 <div className="space-y-3">
-                                    {[1,2,3].map(i => <div key={i} className="h-16 bg-muted/20 animate-pulse rounded-xl" />)}
+                                    {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted/20 animate-pulse rounded-xl" />)}
                                 </div>
                             ) : !classSubjects?.length ? (
                                 <div className="h-full flex flex-col items-center justify-center text-center p-10 bg-blue-50/10 rounded-2xl border-2 border-dashed border-blue-500/10">
@@ -555,32 +637,32 @@ export function SubjectsSetup() {
                                 </div>
                             ) : (
                                 <div className="grid gap-3 sm:grid-cols-2">
-                                     <div className="col-span-full border-b pb-2 mb-2 flex items-center justify-between">
+                                    <div className="col-span-full border-b pb-2 mb-2 flex items-center justify-between">
                                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Active Curriculum</span>
                                         <Badge variant="secondary" className="font-bold text-[10px]">{classSubjects.length} Subjects</Badge>
-                                     </div>
-                                     {classSubjects.map(sub => (
-                                         <div key={sub.id} className="flex items-center justify-between p-4 rounded-xl border bg-background/50 hover:bg-background transition-colors shadow-sm">
-                                             <div className="flex items-center gap-3">
-                                                 <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                                     <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                                                 </div>
-                                                  <div>
-                                                      <p className="font-bold text-sm tracking-tight text-foreground uppercase">{sub.name.toUpperCase()}</p>
-                                                      <p className="text-[10px] font-medium text-muted-foreground uppercase">{sub.code?.toUpperCase() || 'NO-CODE'}</p>
-                                                  </div>
-                                             </div>
-                                             <button 
-                                                 onClick={() => {
-                                                     setDeleteItem({ id: sub.id, name: sub.name, type: 'assignment' });
-                                                     setIsDeleteDialogOpen(true);
-                                                 }}
-                                                 className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-muted-foreground hover:text-destructive transition-colors"
-                                              >
-                                                  <Trash2 className="h-4 w-4" />
-                                              </button>
-                                         </div>
-                                     ))}
+                                    </div>
+                                    {classSubjects.map(sub => (
+                                        <div key={sub.id} className="flex items-center justify-between p-4 rounded-xl border bg-background/50 hover:bg-background transition-colors shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm tracking-tight text-foreground uppercase">{sub.name.toUpperCase()}</p>
+                                                    <p className="text-[10px] font-medium text-muted-foreground uppercase">{sub.code?.toUpperCase() || 'NO-CODE'}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setDeleteItem({ id: sub.id, name: sub.name, type: 'assignment' });
+                                                    setIsDeleteDialogOpen(true);
+                                                }}
+                                                className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-muted-foreground hover:text-destructive transition-colors"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -596,15 +678,15 @@ export function SubjectsSetup() {
                         </div>
                         <AlertDialogTitle className="font-black">Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-medium">
-                            {deleteItem?.type === 'master' 
+                            {deleteItem?.type === 'master'
                                 ? `This will permanently delete ${deleteItem.name.toUpperCase()} from the global collection. Existing assignments won't be deleted but won't refer to this pool item anymore.`
                                 : `This will remove ${deleteItem?.name.toUpperCase()} from this class's active curriculum.`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-4 gap-2">
                         <AlertDialogCancel className="font-bold rounded-xl border-2">Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={confirmDelete} 
+                        <AlertDialogAction
+                            onClick={confirmDelete}
                             className="font-bold rounded-xl bg-destructive hover:bg-destructive/90"
                         >
                             {deleteMaster.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Delete"}
@@ -613,8 +695,14 @@ export function SubjectsSetup() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Hidden Print Content */}
-            {allAssignments && <CurriculumReport assignments={allAssignments} />}
+            {/* Hidden Print Content - Portal Based for Perfect PDF Generation */}
+            <CurriculumReport
+                open={isPrinting}
+                onClose={() => setIsPrinting(false)}
+                assignments={allAssignments || []}
+                masterPool={masterPool || []}
+                filterClassId={selectedClassId}
+            />
         </div>
     );
 }

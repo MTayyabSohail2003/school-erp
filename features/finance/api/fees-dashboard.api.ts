@@ -107,18 +107,22 @@ export const feesDashboardApi = {
         // Final values
         const finalFines = extraData?.fines || 0;
         const finalDiscount = extraData?.discount || 0;
-        const totalWithExtras = totalDue + finalFines - finalDiscount;
+        const arrears = extraData?.arrears || 0;
         
-        // Status logic
+        // Cumulative Payment Calculation
+        const newTotalPaid = currentPaidAmount + paymentAmount;
+        const totalLiability = totalDue + arrears + finalFines - finalDiscount;
+        
+        // Status logic based on TOTAL paid to date for this record
         let status: ChallanStatus = 'PENDING';
-        if (paymentAmount >= totalWithExtras) {
+        if (newTotalPaid >= totalLiability) {
             status = 'PAID';
-        } else if (paymentAmount > 0) {
+        } else if (newTotalPaid > 0) {
             status = 'PARTIAL';
         }
 
         const payload: Partial<FeeChallan> = {
-            paid_amount: paymentAmount,
+            paid_amount: newTotalPaid,
             status,
             fines: finalFines,
             discount: finalDiscount,

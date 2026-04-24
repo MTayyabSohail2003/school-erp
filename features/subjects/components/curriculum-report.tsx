@@ -1,58 +1,103 @@
 'use client';
 
-import React from 'react';
-import { type SubjectAssignmentWithClass } from '../api/subjects.api';
+import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
+import { type Subject, type SubjectAssignmentWithClass } from '../api/subjects.api';
 
 interface CurriculumReportProps {
+    open: boolean;
+    onClose: () => void;
     assignments: SubjectAssignmentWithClass[];
+    masterPool?: Subject[];
+    filterClassId?: string | null;
 }
 
-export function CurriculumReport({ assignments }: CurriculumReportProps) {
-    // Group subjects by class
-    const grouped = assignments.reduce((acc, curr) => {
-        const classKey = `${curr.classes?.name || 'Unknown'} - ${curr.classes?.section || 'Unknown'}`;
-        if (!acc[classKey]) acc[classKey] = [];
-        acc[classKey].push(curr);
-        return acc;
-    }, {} as Record<string, SubjectAssignmentWithClass[]>);
+export function CurriculumReport({ open, onClose, assignments = [], masterPool = [], filterClassId }: CurriculumReportProps) {
+    const [mounted, setMounted] = useState(false);
 
-    return (
-        <div className="hidden print:block p-8 bg-white text-black min-h-screen">
-            {/* Report Header */}
-            <div className="flex justify-between items-center border-b-2 border-primary pb-6 mb-8">
-                <div>
-                    <h1 className="text-3xl font-black uppercase tracking-tighter">Academic Curriculum Report</h1>
-                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">School Management System | Dynamic Assessment</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Generated On</p>
-                    <p className="font-bold text-sm tracking-tight">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                </div>
-            </div>
+    useEffect(() => {
+        setMounted(true);
+        if (open) {
+            const timer = setTimeout(() => {
+                window.print();
+                onClose();
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+    }, [open, onClose]);
 
-            {/* Table */}
-            <div className="space-y-6">
-                <table className="w-full border-collapse border-2 border-black/10">
-                    <thead className="bg-[#f8f8f8]">
-                        <tr>
-                            <th className="border-2 border-black/10 p-3 text-left font-black uppercase text-[10px] tracking-widest w-1/4 text-slate-950">Class & Section</th>
-                            <th className="border-2 border-black/10 p-3 text-left font-black uppercase text-[10px] tracking-widest text-slate-950">Active Subjects/Books</th>
+    if (!mounted || !open) return null;
+
+    // Grouping logic
+    const groupedData: Record<string, { className: string, section: string, subjects: { name: string, code: string | null }[] }> = {};
+    const dataToProcess = filterClassId 
+        ? assignments.filter(a => a.class_id === filterClassId)
+        : assignments;
+
+    if (dataToProcess.length > 0) {
+        dataToProcess.forEach(curr => {
+            const classKey = curr.class_id || (curr.classes?.name + curr.classes?.section) || 'pool';
+            if (!groupedData[classKey]) {
+                groupedData[classKey] = {
+                    className: curr.classes?.name || 'Academic',
+                    section: curr.classes?.section || 'Pool',
+                    subjects: []
+                };
+            }
+            groupedData[classKey].subjects.push({ name: curr.name, code: curr.code });
+        });
+    } else if (masterPool.length > 0 && !filterClassId) {
+        groupedData['master'] = {
+            className: 'Master Collection',
+            section: 'Inventory',
+            subjects: masterPool.map(m => ({ name: m.name, code: m.code }))
+        };
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] bg-white text-black overflow-auto print:static print:inset-auto print:z-0">
+            <div className="max-w-[210mm] mx-auto p-12 bg-white print:p-8 print:w-full">
+                {/* STYLED FOR PURE BLACK & WHITE PRINTING */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', border: '3px solid black', marginBottom: '25px' }}>
+                    <div style={{ width: '60%', padding: '25px', borderRight: '3px solid black', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '55px', height: '55px', border: '3px solid black', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg viewBox="0 0 24 24" style={{ width: '35px', color: 'black' }} fill="none" stroke="currentColor" strokeWidth="3">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 style={{ fontSize: '28px', fontWeight: '900', color: 'black', margin: 0, textTransform: 'uppercase', letterSpacing: '-1px' }}>AR-SCHOOL SYSTEM</h1>
+                            <p style={{ margin: '3px 0 0 0', fontSize: '11px', fontWeight: '800', color: '#000', textTransform: 'uppercase' }}>Official Academic Planning Department</p>
+                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '700', color: '#333' }}>Knowledge Campus, Sector-B, Islamabad | Tel: +92 51 1234567</p>
+                        </div>
+                    </div>
+                    <div style={{ width: '40%', padding: '25px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+                        <h2 style={{ fontSize: '20px', fontWeight: '900', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>Curriculum List</h2>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '12px', fontWeight: '800' }}>Academic Session: 2024-2025</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11px', fontWeight: '800' }}>Date: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                    </div>
+                </div>
+
+                {/* Professional B&W Table */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black' }}>
+                    <thead>
+                        <tr style={{ backgroundColor: 'black' }}>
+                            <th style={{ border: '2px solid black', padding: '12px', color: 'white', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', width: '20%' }}>Class Group</th>
+                            <th style={{ border: '2px solid black', padding: '12px', color: 'white', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', width: '15%' }}>Section</th>
+                            <th style={{ border: '2px solid black', padding: '12px', color: 'white', fontSize: '13px', fontWeight: '900', textTransform: 'uppercase', textAlign: 'left', paddingLeft: '30px' }}>Assigned Subjects / Books</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {Object.entries(grouped).map(([className, subjects]) => (
-                            <tr key={className} className="hover:bg-muted/5 transition-colors">
-                                <td className="border-2 border-black/10 p-4 font-black text-sm uppercase align-top text-slate-950">
-                                    {className}
-                                </td>
-                                <td className="border-2 border-black/10 p-4 align-top">
-                                    <div className="grid grid-cols-3 gap-x-6 gap-y-2">
-                                        {subjects.map(s => (
-                                            <div key={s.id} className="flex items-center gap-2">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-black print:bg-black" />
-                                                <span className="font-extrabold text-xs uppercase text-black print:text-black">
-                                                    {s.name} <span className="text-[9px] text-gray-700 font-black ml-1 print:text-gray-900">({s.code || 'N/A'})</span>
-                                                </span>
+                        {Object.values(groupedData).map((row, idx) => (
+                            <tr key={idx}>
+                                <td style={{ border: '2px solid black', padding: '15px', fontSize: '13px', fontWeight: '900', textAlign: 'left', textTransform: 'uppercase' }}>{row.className}</td>
+                                <td style={{ border: '2px solid black', padding: '15px', fontSize: '13px', fontWeight: '900', textAlign: 'center' }}>{row.section}</td>
+                                <td style={{ border: '2px solid black', padding: '15px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        {row.subjects.map((sub, sIdx) => (
+                                            <div key={sIdx} style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '16px' }}>•</span>
+                                                <span>{sub.name} <span style={{ fontSize: '9px', fontWeight: '600', opacity: 0.6 }}>[{sub.code || '---'}]</span></span>
                                             </div>
                                         ))}
                                     </div>
@@ -61,42 +106,42 @@ export function CurriculumReport({ assignments }: CurriculumReportProps) {
                         ))}
                     </tbody>
                 </table>
-            </div>
 
-            {/* Footer */}
-            <div className="mt-12 pt-8 border-t border-dashed border-black/20 flex justify-between text-[10px] font-black uppercase tracking-[0.2em] text-gray-900 print:text-black">
-                <p>Confidential Academic Document</p>
-                <p>Property of AR-School ERP System</p>
+                {/* Secure Institutional Footer */}
+                <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '20px 0', borderTop: '2px solid #000' }}>
+                    <div>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Prepared & Verified By:</p>
+                        <div style={{ width: '150px', height: '1px', backgroundColor: 'black', marginTop: '30px' }}></div>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '10px', fontWeight: '800' }}>Head of Academics</p>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: '9px', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase' }}>AR-SCHOOL ERP</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '8px', fontWeight: '700' }}>MANAGEMENT SYSTEM v4.2</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>Confidential Document</p>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>Page 1 of 1</p>
+                    </div>
+                </div>
             </div>
 
             <style jsx global>{`
                 @media print {
-                    @page {
-                        size: A4;
-                        margin: 20mm;
-                    }
-                    body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                    @page { margin: 0; size: A4; }
+                    body > *:not(.fixed) { display: none !important; }
+                    .fixed.inset-0 { 
+                        position: static !important; 
+                        display: block !important; 
                         background: white !important;
-                        color: black !important;
-                    }
-                    .print-text-black {
-                        color: black !important;
-                    }
-                    .print-font-bold {
-                        font-weight: 800 !important;
-                    }
-                    table, th, td {
-                        border-color: black !important;
-                        color: black !important;
+                        padding: 0 !important;
                     }
                     * {
-                        color-adjust: exact !important;
                         -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
                 }
             `}</style>
-        </div>
+        </div>,
+        document.body
     );
 }

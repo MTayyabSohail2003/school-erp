@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useClasses } from '@/features/classes/hooks/use-classes';
@@ -9,22 +9,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
-import { 
-    Filter, 
-    User, 
-    ChevronRight, 
-    Loader2, 
-    Search, 
-    LayoutGrid, 
-    X, 
+import {
+    Filter,
+    User,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Loader2,
+    Search,
+    LayoutGrid,
+    X,
     Info,
     ArrowRight,
+    ArrowRightCircle,
     Calendar,
     School,
     BookOpen,
     Users,
     Plus,
-    Printer
+    Printer,
+    CheckCircle2,
+    Sparkles
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -47,9 +53,13 @@ export function AddResultTab() {
     const [isYearMgmtOpen, setIsYearMgmtOpen] = useState(false);
     const [isPrintClassOpen, setIsPrintClassOpen] = useState(false);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 10;
+
     const { data: classes, isLoading: classesLoading } = useClasses();
     const { data: terms, isLoading: termsLoading } = useGetTerms();
-    
+
     // Resolve the specific Term ID for the current (Year, Name) combination
     const { data: termInstance, isLoading: instanceLoading } = useTermInstance(selectedTermName, selectedYear);
     const selectedTermId = termInstance?.id;
@@ -59,7 +69,7 @@ export function AddResultTab() {
 
     // 1. UNIQUE YEARS: Derived from all existing terms
     const years = Array.from(new Set(terms?.map(t => t.academic_year) ?? [])).sort().reverse();
-    
+
     // 2. GLOBAL TERM NAMES: Unique names across all years
     const globalTermNames = Array.from(new Set(terms?.map(t => t.name) ?? [])).sort();
 
@@ -73,6 +83,18 @@ export function AddResultTab() {
             if (!b.roll_number) return -1;
             return a.roll_number.localeCompare(b.roll_number, undefined, { numeric: true, sensitivity: 'base' });
         });
+
+    // Reset page to 1 whenever filters or search query changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedYear, selectedClass, selectedTermName, searchQuery]);
+
+    const totalResults = filteredStudents.length;
+    const totalPages = Math.ceil(totalResults / PAGE_SIZE);
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = Math.min(startIndex + PAGE_SIZE, totalResults);
+    const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+
     const isFilterSelected = !!selectedClass && !!selectedTermName && !!selectedYear;
 
     const clearFilters = () => {
@@ -98,127 +120,183 @@ export function AddResultTab() {
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="flex flex-col lg:flex-row p-6 items-end gap-5 bg-primary/[0.02]">
-                        <div className="w-full lg:flex-1 space-y-2.5">
-                             <div className="flex items-center justify-between ml-1 leading-none">
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="w-3 h-3 text-primary/40" />
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Academic Year</label>
-                                </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-5 w-5 p-0 rounded-md text-primary hover:bg-primary/10 transition-colors"
-                                    onClick={() => setIsYearMgmtOpen(true)}
-                                >
-                                    <Plus className="w-3 h-3" />
-                                </Button>
-                             </div>
-                             <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                <SelectTrigger className="rounded-2xl border-border/50 bg-background h-14 focus:ring-primary/20 transition-all font-black text-sm shadow-sm hover:border-primary/30 w-full">
-                                    <SelectValue placeholder="All Years" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
-                                    <SelectItem value="ALL" className="rounded-xl font-bold italic">All Years</SelectItem>
-                                    {years.map((year) => (
-                                        <SelectItem key={year} value={year} className="rounded-xl font-bold italic">
-                                            {year}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                             </Select>
-                        </div>
+                    <div className="relative group/filters">
+                        <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover/filters:opacity-100 transition-opacity duration-1000" />
 
-                        <div className="w-full lg:flex-1 space-y-2.5">
-                             <div className="flex items-center justify-between ml-1 leading-none">
-                                <div className="flex items-center gap-2">
-                                    <BookOpen className="w-3 h-3 text-primary/40" />
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Result Term</label>
+                        <div className="flex flex-col xl:flex-row p-8 items-stretch xl:items-end gap-6 bg-gradient-to-b from-primary/[0.03] to-transparent">
+                            {/* Academic Year Filter */}
+                            <div className="flex-1 space-y-3 relative">
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={cn(
+                                            "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                                            selectedYear ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"
+                                        )}>
+                                            {selectedYear ? <CheckCircle2 className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
+                                        </div>
+                                        <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Academic Year</label>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 rounded-lg text-primary hover:bg-primary/10 transition-all hover:rotate-90 duration-300"
+                                        onClick={() => setIsYearMgmtOpen(true)}
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                    </Button>
                                 </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-5 w-5 p-0 rounded-md text-primary hover:bg-primary/10 transition-colors"
-                                    onClick={() => setIsTermMgmtOpen(true)}
-                                >
-                                    <Plus className="w-3 h-3" />
-                                </Button>
-                             </div>
-                              <Select value={selectedTermName} onValueChange={setSelectedTermName}>
-                                <SelectTrigger className="rounded-2xl border-border/50 bg-background h-14 focus:ring-primary/20 transition-all font-black text-sm shadow-sm hover:border-primary/30 w-full">
-                                    <SelectValue placeholder="Select Term" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
-                                    {termsLoading ? (
-                                        <div className="flex items-center justify-center p-4">
-                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                                        </div>
-                                    ) : !selectedYear ? (
-                                        <div className="p-4 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 italic">
-                                            Select Year First
-                                        </div>
-                                    ) : (
-                                        globalTermNames?.map((name) => (
-                                            <SelectItem key={name} value={name} className="rounded-xl font-bold italic">
-                                                {name}
+                                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                    <SelectTrigger className={cn(
+                                        "rounded-[1.25rem] border-border/50 bg-background h-16 px-5 focus:ring-primary/20 transition-all font-black text-sm shadow-sm hover:border-primary/30 w-full group/trigger",
+                                        selectedYear && "border-emerald-500/30 bg-emerald-500/[0.02] shadow-emerald-500/5"
+                                    )}>
+                                        <SelectValue placeholder="Select Session" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl border-border/40 shadow-2xl p-1">
+                                        <SelectItem value="ALL" className="rounded-xl font-bold italic py-3">All Years Archive</SelectItem>
+                                        {years.map((year) => (
+                                            <SelectItem key={year} value={year} className="rounded-xl font-bold italic py-3">
+                                                {year} Session
                                             </SelectItem>
-                                        ))
-                                    )}
-                                </SelectContent>
-                              </Select>
-                        </div>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                        <div className="w-full lg:flex-1 space-y-2.5">
-                             <div className="flex items-center gap-2 ml-1">
-                                <School className="w-3 h-3 text-primary/40" />
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Academic Class</label>
-                             </div>
-                             <Select value={selectedClass} onValueChange={setSelectedClass}>
-                                <SelectTrigger className="rounded-2xl border-border/50 bg-background h-14 focus:ring-primary/20 transition-all font-black text-sm shadow-sm hover:border-primary/30 w-full">
-                                    <SelectValue placeholder="Select Class" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
-                                    {classesLoading ? (
-                                        <div className="flex items-center justify-center p-4">
-                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            {/* visual connector */}
+                            <div className="hidden xl:flex items-center justify-center mb-5 opacity-20">
+                                <ArrowRightCircle className="w-5 h-5 text-muted-foreground" />
+                            </div>
+
+                            {/* Result Term Filter */}
+                            <div className="flex-1 space-y-3 relative">
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className={cn(
+                                            "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                                            selectedTermName ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"
+                                        )}>
+                                            {selectedTermName ? <CheckCircle2 className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
                                         </div>
-                                    ) : (
-                                        classes?.map((cls) => (
-                                            <SelectItem key={cls.id} value={cls.id} className="rounded-xl font-bold italic">
-                                                {cls.name} {cls.section ? `(${cls.section})` : ''}
-                                            </SelectItem>
-                                        ))
-                                    )}
-                                </SelectContent>
-                             </Select>
-                        </div>
-
-                        <div className="flex-none flex items-center gap-3">
-                            {isFilterSelected && (
-                                <Button 
-                                    variant="outline" 
-                                    onClick={clearFilters}
-                                    className="rounded-2xl border-dashed h-14 px-6 gap-3 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30 transition-all font-black uppercase italic tracking-widest text-[10px] border-border/50 shadow-sm"
-                                >
-                                    <X className="w-4 h-4 shrink-0" />
-                                    <span>Reset Filters</span>
-                                </Button>
-                            )}
-                            <div className={cn(
-                                "rounded-2xl border px-6 h-14 flex items-center gap-3 transition-all duration-500 min-w-[180px]",
-                                isFilterSelected 
-                                    ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-600" 
-                                    : "bg-primary/5 border-primary/20 text-primary"
-                            )}>
-                                {isFilterSelected ? <Users className="w-4 h-4 animate-bounce" /> : <Info className="w-4 h-4 animate-pulse" />}
-                                <div className="flex flex-col">
-                                    <p className="text-[10px] font-black uppercase tracking-widest leading-none">
-                                        {isFilterSelected ? 'Results Ready' : 'Discovery Mode'}
-                                    </p>
-                                    <p className="text-[9px] font-bold opacity-60 leading-none mt-1">
-                                        {isFilterSelected ? `${filteredStudents?.length} Students found` : 'Complete selection'}
-                                    </p>
+                                        <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Result Term</label>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 rounded-lg text-primary hover:bg-primary/10 transition-all hover:rotate-90 duration-300"
+                                        onClick={() => setIsTermMgmtOpen(true)}
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                    </Button>
                                 </div>
+                                <Select value={selectedTermName} onValueChange={setSelectedTermName}>
+                                    <SelectTrigger className={cn(
+                                        "rounded-[1.25rem] border-border/50 bg-background h-16 px-5 focus:ring-primary/20 transition-all font-black text-sm shadow-sm hover:border-primary/30 w-full",
+                                        selectedTermName && "border-emerald-500/30 bg-emerald-500/[0.02] shadow-emerald-500/5",
+                                        !selectedYear && "opacity-50 cursor-not-allowed"
+                                    )}>
+                                        <SelectValue placeholder="Select Evaluation" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl border-border/40 shadow-2xl p-1">
+                                        {termsLoading ? (
+                                            <div className="flex items-center justify-center p-6">
+                                                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                            </div>
+                                        ) : !selectedYear ? (
+                                            <div className="p-6 flex flex-col items-center text-center gap-2">
+                                                <div className="h-10 w-10 rounded-full bg-primary/5 flex items-center justify-center">
+                                                    <Calendar className="w-5 h-5 text-primary/30" />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">Select Year First</span>
+                                            </div>
+                                        ) : (
+                                            globalTermNames?.map((name) => (
+                                                <SelectItem key={name} value={name} className="rounded-xl font-bold italic py-3">
+                                                    {name} Examination
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* visual connector */}
+                            <div className="hidden xl:flex items-center justify-center mb-5 opacity-20">
+                                <ArrowRightCircle className="w-5 h-5 text-muted-foreground" />
+                            </div>
+
+                            {/* Academic Class Filter */}
+                            <div className="flex-1 space-y-3 relative">
+                                <div className="flex items-center gap-2.5 px-1 leading-none h-7">
+                                    <div className={cn(
+                                        "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm",
+                                        selectedClass ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"
+                                    )}>
+                                        {selectedClass ? <CheckCircle2 className="w-4 h-4" /> : <School className="w-4 h-4" />}
+                                    </div>
+                                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Academic Class</label>
+                                </div>
+                                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                                    <SelectTrigger className={cn(
+                                        "rounded-[1.25rem] border-border/50 bg-background h-16 px-5 focus:ring-primary/20 transition-all font-black text-sm shadow-sm hover:border-primary/30 w-full",
+                                        selectedClass && "border-emerald-500/30 bg-emerald-500/[0.02] shadow-emerald-500/5",
+                                        !selectedTermName && "opacity-50"
+                                    )}>
+                                        <SelectValue placeholder="Select Grade" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl border-border/40 shadow-2xl p-1">
+                                        {classesLoading ? (
+                                            <div className="flex items-center justify-center p-6">
+                                                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                            </div>
+                                        ) : (
+                                            classes?.map((cls) => (
+                                                <SelectItem key={cls.id} value={cls.id} className="rounded-xl font-bold italic py-3">
+                                                    Grade {cls.name} {cls.section ? `• ${cls.section}` : ''}
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Action Status Hub */}
+                            <div className="flex-none flex flex-row xl:flex-col items-center xl:items-stretch justify-center gap-3 xl:w-[240px] pt-4 xl:pt-0">
+                                <div className={cn(
+                                    "flex-1 rounded-[1.25rem] border p-4 flex items-center gap-4 transition-all duration-700 relative overflow-hidden group/status",
+                                    isFilterSelected
+                                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 shadow-lg shadow-emerald-500/5"
+                                        : "bg-primary/[0.03] border-primary/20 text-primary/80"
+                                )}>
+                                    <div className={cn(
+                                        "h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-500 shadow-inner",
+                                        isFilterSelected ? "bg-emerald-500 text-white rotate-[360deg]" : "bg-primary/10 text-primary"
+                                    )}>
+                                        {isFilterSelected ? <Sparkles className="w-6 h-6 animate-pulse" /> : <Info className="w-6 h-6 animate-pulse" />}
+                                    </div>
+                                    <div className="flex flex-col flex-1 justify-center">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.2em] leading-none mb-1.5">
+                                            {isFilterSelected ? 'Ready to Sync' : 'Selection Flux'}
+                                        </p>
+                                        <p className="text-[10px] font-bold opacity-60 leading-none">
+                                            {isFilterSelected ? `${filteredStudents?.length} active records` : 'Awaiting parameters...'}
+                                        </p>
+                                    </div>
+                                    {isFilterSelected && (
+                                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-emerald-500/50" />
+                                    )}
+                                </div>
+
+                                {isFilterSelected && (
+                                    <Button
+                                        variant="ghost"
+                                        onClick={clearFilters}
+                                        className="rounded-xl h-10 px-4 gap-2.5 hover:bg-destructive/10 hover:text-destructive transition-all font-black uppercase italic tracking-widest text-[10px] text-muted-foreground/40 mt-1"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                        Clear Archive
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -244,13 +322,13 @@ export function AddResultTab() {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                                 <Button
                                     className={cn(
                                         "rounded-xl h-11 px-5 font-bold text-sm gap-2 transition-all shadow-sm",
-                                        (!selectedClass || !selectedTermName || !selectedYear) 
-                                            ? "opacity-50 grayscale cursor-not-allowed" 
+                                        (!selectedClass || !selectedTermName || !selectedYear)
+                                            ? "opacity-50 grayscale cursor-not-allowed"
                                             : "bg-primary text-primary-foreground hover:shadow-md active:scale-95"
                                     )}
                                     disabled={!selectedClass || !selectedTermName || !selectedYear}
@@ -263,8 +341,8 @@ export function AddResultTab() {
                                     variant="outline"
                                     className={cn(
                                         "rounded-xl h-11 px-5 font-bold text-sm gap-2 transition-all shadow-sm border-border/60 hover:text-primary",
-                                        (!selectedClass || !selectedTermName || !selectedYear) 
-                                            ? "opacity-50 grayscale cursor-not-allowed" 
+                                        (!selectedClass || !selectedTermName || !selectedYear)
+                                            ? "opacity-50 grayscale cursor-not-allowed"
                                             : "hover:shadow-md active:scale-95"
                                     )}
                                     disabled={!selectedClass || !selectedTermName || !selectedYear}
@@ -280,7 +358,7 @@ export function AddResultTab() {
                         </div>
                     </div>
                 </CardHeader>
-                
+
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <Table>
@@ -332,7 +410,7 @@ export function AddResultTab() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredStudents.map((student, idx) => (
+                                        paginatedStudents.map((student, idx) => (
                                             <motion.tr
                                                 layout
                                                 key={student.id}
@@ -343,7 +421,7 @@ export function AddResultTab() {
                                                 className="group hover:bg-muted/40 transition-colors border-b-border/50"
                                             >
                                                 <TableCell className="py-4 pl-6 font-mono font-bold text-muted-foreground/60">
-                                                    {(idx + 1).toString().padStart(2, '0')}
+                                                    {(startIndex + idx + 1).toString().padStart(2, '0')}
                                                 </TableCell>
                                                 <TableCell className="py-4 pl-6">
                                                     <div className="flex items-center gap-4">
@@ -412,6 +490,81 @@ export function AddResultTab() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {/* Pagination Footer */}
+                    {totalResults > 0 && (
+                        <div className="px-6 py-4 border-t border-border/40 bg-muted/5 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                                    Showing <span className="text-foreground">{startIndex + 1}</span> to <span className="text-foreground">{endIndex}</span> of <span className="text-foreground">{totalResults}</span> students
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 text-muted-foreground transition-all"
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronsLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 text-muted-foreground transition-all"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+
+                                <div className="flex items-center gap-1 mx-2">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                                        .map((p, idx, array) => {
+                                            const showEllipsis = idx > 0 && p !== array[idx - 1] + 1;
+                                            return (
+                                                <div key={p} className="flex items-center gap-1">
+                                                    {showEllipsis && <span className="text-muted-foreground/30 text-xs font-bold px-1">...</span>}
+                                                    <Button
+                                                        variant={currentPage === p ? 'default' : 'ghost'}
+                                                        size="sm"
+                                                        className={cn(
+                                                            "h-8 w-8 p-0 rounded-lg font-black text-xs transition-all duration-300",
+                                                            currentPage === p ? "shadow-lg shadow-primary/20 scale-105" : "text-muted-foreground hover:bg-primary/5"
+                                                        )}
+                                                        onClick={() => setCurrentPage(p)}
+                                                    >
+                                                        {p}
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 text-muted-foreground transition-all"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5 text-muted-foreground transition-all"
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronsRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
         <SidebarProvider style={{ '--sidebar-width': '240px', '--sidebar-width-icon': '64px' } as React.CSSProperties}>
             <AppSidebar />
-            <div className="flex w-full min-w-0 flex-col min-h-screen">
+            <div className="flex w-full min-w-0 flex-col min-h-screen print:hidden">
                 <Header />
                 <AnnouncementBanner />
                 <NotificationToastListener />

@@ -62,7 +62,8 @@ export function EditClassDialog({ isOpen, setIsOpen, classData }: EditClassDialo
 
         const formattedValues = {
             ...values,
-            section: values.section?.trim() || null,
+            name: values.name.trim().toUpperCase(),
+            section: values.section.trim().toUpperCase(),
             is_primary: values.is_primary ?? false,
         };
 
@@ -111,10 +112,11 @@ export function EditClassDialog({ isOpen, setIsOpen, classData }: EditClassDialo
                                         <Input 
                                             placeholder="e.g. 10 or Class 10" 
                                             {...field} 
+                                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                                             onBlur={() => {
-                                                const trimmed = field.value.trim();
+                                                const trimmed = field.value.trim().toUpperCase();
                                                 if (/^\d+$/.test(trimmed)) {
-                                                    field.onChange(`Class ${trimmed}`);
+                                                    field.onChange(`CLASS ${trimmed}`);
                                                 }
                                             }}
                                         />

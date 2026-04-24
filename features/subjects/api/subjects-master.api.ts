@@ -50,5 +50,18 @@ export const subjectsMasterApi = {
             .eq('id', id);
 
         if (error) throw new Error(error.message);
+    },
+
+    updateSubject: async (id: string, name: string, code: string | null): Promise<SubjectMaster> => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+            .from('subjects_master')
+            .update({ name, code })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw new Error(error.message);
+        return data as SubjectMaster;
     }
 };

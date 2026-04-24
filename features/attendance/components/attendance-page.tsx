@@ -46,7 +46,7 @@ export function AttendancePage() {
                     </TabsList>
 
                     <div className="mt-6">
-                        <TabsContent value="students" className="mt-0 outline-none">
+                        <TabsContent value="students" className="mt-0  outline-none">
                             <StudentAttendanceView />
                         </TabsContent>
                         <TabsContent value="staff" className="mt-0 outline-none">
