@@ -240,20 +240,15 @@ export function PayrollPage() {
                                             <tr className="border-b bg-muted/30">
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Staff Name & Notices</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Attendance %</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Base Salary</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Bonus</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Fine</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Net Paid</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Debt (Arrears)</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Status</th>
-                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Method</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Salary & Adjustments</th>
+                                                <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px]">Payout Details</th>
                                                 <th className="px-5 py-3 font-semibold text-muted-foreground uppercase tracking-widest text-[10px] text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
                                             {paginatedStaff?.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={10} className="text-center py-8 text-muted-foreground">No staff found.</td>
+                                                    <td colSpan={5} className="text-center py-8 text-muted-foreground">No staff found.</td>
                                                 </tr>
                                             ) : null}
                                             {(paginatedStaff ?? []).map((teacher: StaffRow, idx: number) => (
@@ -383,97 +378,112 @@ export function PayrollPage() {
                                                             </Tooltip>
                                                         </TooltipProvider>
                                                     </td>
-                                                    <td className="px-5 py-4 font-bold text-foreground">
-                                                        Rs. {Number(teacher.base_salary).toLocaleString()}
-                                                    </td>
-                                                    <td className={`px-5 py-4 font-black ${teacher.bonus > 0 ? 'text-emerald-600 italic' : 'text-muted-foreground/40'}`}>
-                                                        {teacher.bonus > 0 ? `+Rs. ${teacher.bonus.toLocaleString()}` : '-'}
-                                                    </td>
-                                                    <td className={`px-5 py-4 font-black ${teacher.fine > 0 ? 'text-red-600 italic' : 'text-muted-foreground/40'}`}>
-                                                        {teacher.fine > 0 ? `-Rs. ${teacher.fine.toLocaleString()}` : '-'}
-                                                    </td>
                                                     <td className="px-5 py-4">
-                                                        {teacher.net_paid > 0 ? (
-                                                            <TooltipProvider>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild>
-                                                                        <div className="flex flex-col cursor-help group">
-                                                                            <span className="text-sm font-black text-emerald-600">Rs. {teacher.net_paid.toLocaleString()}</span>
-                                                                            <span className="text-[9px] font-black text-muted-foreground/40 group-hover:text-emerald-500 transition-colors uppercase tracking-tighter flex items-center gap-1">
-                                                                                <Receipt className="w-2.5 h-2.5" /> View Breakdown
-                                                                            </span>
-                                                                        </div>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent side="right" className="p-4 bg-zinc-900 border-zinc-800 text-white rounded-2xl shadow-2xl min-w-[200px]">
-                                                                        <div className="space-y-3">
-                                                                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest border-b border-white/10 pb-2">Salary Payout Breakdown</p>
-                                                                            <div className="space-y-1.5">
-                                                                                <div className="flex justify-between text-xs">
-                                                                                    <span className="text-white/50">Base Salary</span>
-                                                                                    <span className="font-bold">Rs. {Number(teacher.base_salary).toLocaleString()}</span>
-                                                                                </div>
-                                                                                {teacher.bonus > 0 && (
-                                                                                    <div className="flex justify-between text-xs">
-                                                                                        <span className="text-emerald-500/70">Monthly Bonus</span>
-                                                                                        <span className="font-bold text-emerald-500">+Rs. {teacher.bonus.toLocaleString()}</span>
-                                                                                    </div>
-                                                                                )}
-                                                                                {teacher.fine > 0 && (
-                                                                                    <div className="flex justify-between text-xs">
-                                                                                        <span className="text-red-500/70">Salary Fine</span>
-                                                                                        <span className="font-bold text-red-500">-Rs. {teacher.fine.toLocaleString()}</span>
-                                                                                    </div>
-                                                                                )}
-                                                                                {teacher.historicalArrears > 0 && (
-                                                                                    <div className="flex justify-between text-xs">
-                                                                                        <span className="text-orange-500/70">Previous Arrears</span>
-                                                                                        <span className="font-bold text-orange-500">+Rs. {teacher.historicalArrears.toLocaleString()}</span>
-                                                                                    </div>
-                                                                                )}
-                                                                                <div className="pt-2 border-t border-white/5 flex justify-between text-sm">
-                                                                                    <span className="font-black text-white/40 uppercase text-[10px] tracking-widest flex items-center gap-2">
-                                                                                        <Landmark className="w-3 h-3" /> Total Payable
+                                                        <div className="flex flex-col items-start">
+                                                            <span className="font-bold text-foreground tracking-tight">Rs. {Number(teacher.base_salary).toLocaleString()}</span>
+                                                            {(teacher.bonus > 0 || teacher.fine > 0) ? (
+                                                                <div className="flex items-center gap-1.5 mt-1.5 text-[9px] font-black uppercase tracking-widest">
+                                                                    {teacher.bonus > 0 && <span className="text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">+Rs. {teacher.bonus.toLocaleString()}</span>}
+                                                                    {teacher.fine > 0 && <span className="text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">-Rs. {teacher.fine.toLocaleString()}</span>}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-muted-foreground/30 mt-1.5 uppercase tracking-widest">No Adjustments</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 min-w-[220px]">
+                                                        <div className="flex items-start gap-4">
+                                                            {/* Right: Amounts */}
+                                                            <div className="flex flex-col min-w-[100px]">
+                                                                {teacher.net_paid > 0 ? (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <div className="flex flex-col cursor-help group items-start">
+                                                                                    <span className="text-sm font-black text-emerald-600 tracking-tight">Rs. {teacher.net_paid.toLocaleString()}</span>
+                                                                                    <span className="text-[9px] font-black text-muted-foreground/40 group-hover:text-emerald-500 transition-colors uppercase tracking-widest flex items-center gap-1 mt-0.5">
+                                                                                        <Receipt className="w-3 h-3" /> Breakdown
                                                                                     </span>
-                                                                                    <span className="font-black text-white/80">Rs. {(Number(teacher.base_salary) + Number(teacher.historicalArrears) + Number(teacher.bonus) - Number(teacher.fine)).toLocaleString()}</span>
                                                                                 </div>
-                                                                                <div className="pt-2 flex justify-between text-sm">
-                                                                                    <span className="font-black text-emerald-500/50 uppercase text-[10px] tracking-widest flex items-center gap-2">
-                                                                                        <Wallet className="w-3 h-3" /> Net Disbursed
-                                                                                    </span>
-                                                                                    <span className="font-black text-emerald-500 underline decoration-2 underline-offset-4">Rs. {teacher.net_paid.toLocaleString()}</span>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="top" className="p-4 bg-zinc-900 border-zinc-800 text-white rounded-2xl shadow-2xl min-w-[200px]">
+                                                                                <div className="space-y-3">
+                                                                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest border-b border-white/10 pb-2">Salary Payout Breakdown</p>
+                                                                                    <div className="space-y-1.5">
+                                                                                        <div className="flex justify-between text-xs">
+                                                                                            <span className="text-white/50">Base Salary</span>
+                                                                                            <span className="font-bold">Rs. {Number(teacher.base_salary).toLocaleString()}</span>
+                                                                                        </div>
+                                                                                        {teacher.bonus > 0 && (
+                                                                                            <div className="flex justify-between text-xs">
+                                                                                                <span className="text-emerald-500/70">Monthly Bonus</span>
+                                                                                                <span className="font-bold text-emerald-500">+Rs. {teacher.bonus.toLocaleString()}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {teacher.fine > 0 && (
+                                                                                            <div className="flex justify-between text-xs">
+                                                                                                <span className="text-red-500/70">Salary Fine</span>
+                                                                                                <span className="font-bold text-red-500">-Rs. {teacher.fine.toLocaleString()}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {teacher.historicalArrears > 0 && (
+                                                                                            <div className="flex justify-between text-xs">
+                                                                                                <span className="text-orange-500/70">Previous Arrears</span>
+                                                                                                <span className="font-bold text-orange-500">+Rs. {teacher.historicalArrears.toLocaleString()}</span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        <div className="pt-2 border-t border-white/5 flex justify-between text-sm">
+                                                                                            <span className="font-black text-white/40 uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                                                                                <Landmark className="w-3 h-3" /> Total Payable
+                                                                                            </span>
+                                                                                            <span className="font-black text-white/80">Rs. {(Number(teacher.base_salary) + Number(teacher.historicalArrears) + Number(teacher.bonus) - Number(teacher.fine)).toLocaleString()}</span>
+                                                                                        </div>
+                                                                                        <div className="pt-2 flex justify-between text-sm">
+                                                                                            <span className="font-black text-emerald-500/50 uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                                                                                <Wallet className="w-3 h-3" /> Net Disbursed
+                                                                                            </span>
+                                                                                            <span className="font-black text-emerald-500 underline decoration-2 underline-offset-4">Rs. {teacher.net_paid.toLocaleString()}</span>
+                                                                                        </div>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            </TooltipProvider>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-muted-foreground/20 italic tracking-widest">Not paid</span>
-                                                        )}
-                                                    </td>
-                                                    <td className={`px-5 py-4 font-bold ${teacher.historicalArrears > 0 ? 'text-orange-600 bg-orange-500/5' : 'text-muted-foreground/40'}`}>
-                                                        Rs. {teacher.historicalArrears.toLocaleString()}
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        {teacher.status === 'PAID' ? (
-                                                            <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 font-black text-[10px] tracking-widest px-3">PAID</Badge>
-                                                        ) : teacher.status === 'PARTIAL' ? (
-                                                            <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 font-black text-[10px] tracking-widest px-3">PARTIAL</Badge>
-                                                        ) : (
-                                                            <Badge variant="outline" className="text-muted-foreground/60 border-muted-foreground/20 font-black text-[10px] tracking-widest px-3">PENDING</Badge>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-5 py-4">
-                                                        {teacher.status !== 'PENDING' ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`h-1.5 w-1.5 rounded-full ${teacher.method === 'BANK' ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'}`} />
-                                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
-                                                                    {teacher.method || 'CASH'}
-                                                                </span>
+                                                                            </TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                ) : (
+                                                                    <span className="text-[10px] font-bold text-muted-foreground/30 italic tracking-widest">Not paid</span>
+                                                                )}
+
+                                                                {teacher.historicalArrears > 0 && (
+                                                                    <div className="flex items-center gap-1.5 mt-1.5">
+                                                                        <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-1 bg-orange-500/10 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                                                            Debt: Rs. {teacher.historicalArrears.toLocaleString()}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-muted-foreground/20 italic tracking-widest">---</span>
-                                                        )}
+
+                                                            {/* Left: Status & Method (Border Separated) */}
+                                                            <div className="flex flex-col items-start gap-1 border-l border-border/40 pl-3">
+                                                                {teacher.status === 'PAID' ? (
+                                                                    <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 font-black text-[9px] tracking-widest px-1.5 py-0">PAID</Badge>
+                                                                ) : teacher.status === 'PARTIAL' ? (
+                                                                    <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 font-black text-[9px] tracking-widest px-1.5 py-0">PARTIAL</Badge>
+                                                                ) : (
+                                                                    <Badge variant="outline" className="text-muted-foreground/50 border-muted-foreground/20 font-black text-[9px] tracking-widest px-1.5 py-0">PENDING</Badge>
+                                                                )}
+
+                                                                {teacher.status !== 'PENDING' ? (
+                                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                                        <div className={`h-1.5 w-1.5 rounded-full ${teacher.method === 'BANK' ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'}`} />
+                                                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/80">
+                                                                            {teacher.method || 'CASH'}
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-[9px] font-bold text-muted-foreground/20 italic tracking-widest mt-0.5">--</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                     <td className="px-5 py-4 text-right transition-all duration-300">
                                                         <div className="flex items-center justify-end gap-2">

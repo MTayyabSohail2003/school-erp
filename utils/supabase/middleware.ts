@@ -31,22 +31,25 @@ export async function updateSession(request: NextRequest) {
     // supabase.auth.getUser(). A simple mistake could make it very hard to debug
     // issues with cross-browser cookies.
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    let user = null;
+    try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+    } catch {
+        // Supabase unreachable (network issue, paused project, invalid key)
+        // Treat as unauthenticated — redirect will handle it below
+    }
 
     // Basic Route Protection
     const pathname = request.nextUrl.pathname;
 
     if (pathname.startsWith('/dashboard') && !user) {
-        // If exploring dashboard and not logged in, redirect to login
         const url = request.nextUrl.clone();
         url.pathname = '/login';
         return NextResponse.redirect(url);
     }
 
     if (pathname === '/login' && user) {
-        // If logged in and visiting login, send to dashboard
         const url = request.nextUrl.clone();
         url.pathname = '/dashboard';
         return NextResponse.redirect(url);
@@ -61,7 +64,6 @@ export async function updateSession(request: NextRequest) {
         url.pathname = '/dashboard';
         return NextResponse.redirect(url);
     }
-
 
     return supabaseResponse;
 }
