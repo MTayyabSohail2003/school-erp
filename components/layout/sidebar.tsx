@@ -56,12 +56,13 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
     {
         label: 'Academics',
         items: [
+
             { name: 'Attendance', href: ROUTES.ATTENDANCE, icon: CalendarDays, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             // { name: 'Leave Requests', href: '/dashboard/attendance/leaves', icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             // { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
             // { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             { name: "Results", href: "/dashboard/results", icon: ClipboardList, exact: false, roles: ['ADMIN'] },
-            { name: 'Academic Sessions', href: ROUTES.ACADEMIC_YEARS, icon: Calendar, exact: false, roles: ['ADMIN'] },
+            // { name: 'Academic Sessions', href: ROUTES.ACADEMIC_YEARS, icon: Calendar, exact: false, roles: ['ADMIN'] },
             { name: 'Subjects & Periods', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
             { name: 'Notice Board', href: ROUTES.TEACHER_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['TEACHER'] },
             { name: 'Notice Board', href: ROUTES.PARENT_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['PARENT'] },
