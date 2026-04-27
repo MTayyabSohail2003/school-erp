@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -33,8 +34,16 @@ const getChartStats = async (): Promise<ChartStats> => {
 // ── Hook ──────────────────────────────────────────────────────────────────
 
 export function useChartStats() {
+    const queryKey = ['chart-stats'] as const;
+    
+    // Invalidate charts on key data changes
+    useRealtimeInvalidate({ table: 'student_results', queryKey });
+    useRealtimeInvalidate({ table: 'fee_challans', queryKey });
+    useRealtimeInvalidate({ table: 'attendance', queryKey });
+    useRealtimeInvalidate({ table: 'students', queryKey });
+
     return useQuery({
-        queryKey: ['chart-stats'],
+        queryKey,
         queryFn: getChartStats,
         staleTime: 1000 * 60 * 5, // 5 min cache
     });

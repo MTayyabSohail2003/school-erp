@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Wallet, Edit2, Loader2, Search, Receipt, Trash2, Landmark, AlertCircle, TrendingUp, MessageSquare, RotateCw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Banknote } from 'lucide-react';
+import { Wallet, Edit2, Loader2, Search, Receipt, Trash2, Landmark, AlertCircle, TrendingUp, MessageSquare, RotateCw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Banknote, Calendar } from 'lucide-react';
 
 import { useUpdateSalary } from '../api/use-payroll';
 import { useGetPayrollDashboard, useDeletePayout, useGetHistoricalLedger, usePayrollRealtime } from '../api/use-payroll-ledger';
@@ -25,6 +25,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MonthPicker } from '@/components/ui/month-picker';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Filter } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -275,7 +283,7 @@ export function PayrollPage() {
                                                             </ImagePreviewDialog>
                                                             <div>
                                                                 <p className="font-bold text-foreground text-sm leading-tight tracking-tight">{teacher.full_name}</p>
-                                                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{teacher.email}</p>
+                                                                <p className="text-[10px] text-muted-foreground lowercase tracking-widest">{teacher.email}</p>
                                                             </div>
                                                         </div>
                                                             
@@ -387,7 +395,7 @@ export function PayrollPage() {
                                                                     {teacher.fine > 0 && <span className="text-red-600 bg-red-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">-Rs. {teacher.fine.toLocaleString()}</span>}
                                                                 </div>
                                                             ) : (
-                                                                <span className="text-[9px] font-bold text-muted-foreground/30 mt-1.5 uppercase tracking-widest">No Adjustments</span>
+                                                                <span className="text-[9px] font-black text-muted-foreground/60 mt-1.5 uppercase tracking-widest">No Adjustments</span>
                                                             )}
                                                         </div>
                                                     </td>
@@ -450,7 +458,7 @@ export function PayrollPage() {
                                                                         </Tooltip>
                                                                     </TooltipProvider>
                                                                 ) : (
-                                                                    <span className="text-[10px] font-bold text-muted-foreground/30 italic tracking-widest">Not paid</span>
+                                                                    <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">NOT PAID</span>
                                                                 )}
 
                                                                 {teacher.historicalArrears > 0 && (
@@ -469,7 +477,7 @@ export function PayrollPage() {
                                                                 ) : teacher.status === 'PARTIAL' ? (
                                                                     <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20 font-black text-[9px] tracking-widest px-1.5 py-0">PARTIAL</Badge>
                                                                 ) : (
-                                                                    <Badge variant="outline" className="text-muted-foreground/50 border-muted-foreground/20 font-black text-[9px] tracking-widest px-1.5 py-0">PENDING</Badge>
+                                                                    <Badge variant="outline" className="text-muted-foreground/80 border-muted-foreground/40 font-black text-[9px] tracking-widest px-1.5 py-0">PENDING</Badge>
                                                                 )}
 
                                                                 {teacher.status !== 'PENDING' ? (
@@ -480,7 +488,7 @@ export function PayrollPage() {
                                                                         </span>
                                                                     </div>
                                                                 ) : (
-                                                                    <span className="text-[9px] font-bold text-muted-foreground/20 italic tracking-widest mt-0.5">--</span>
+                                                                    <span className="text-[9px] font-black text-muted-foreground/50 tracking-widest mt-0.5">--</span>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -630,11 +638,35 @@ export function PayrollPage() {
 function HistoricalLedgerTable() {
     const { data: ledgerEntries, isLoading } = useGetHistoricalLedger();
     const queryClient = useQueryClient();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+    const [monthFilter, setMonthFilter] = useState('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10;
+
+    // Reset to page 1 on filter change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, monthFilter]);
+
+    const filteredEntries = (ledgerEntries || []).filter((entry: any) => {
+        const matchesName = entry.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'ALL' || entry.status === statusFilter;
+        const matchesMonth = monthFilter === 'ALL' || entry.month_year === monthFilter;
+        return matchesName && matchesStatus && matchesMonth;
+    });
+
+    const totalPages = Math.ceil(filteredEntries.length / pageSize);
+    const paginatedEntries = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    // Get unique months for the filter dropdown
+    const uniqueMonths = Array.from(new Set((ledgerEntries || []).map((e: any) => e.month_year))) as string[];
+    const sortedMonths = uniqueMonths.sort().reverse();
 
     if (isLoading) {
         return (
             <div className="p-8 space-y-4">
-                {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
             </div>
         );
     }
@@ -672,8 +704,48 @@ function HistoricalLedgerTable() {
                             <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                         </Button>
                     </div>
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Receipt className="w-5 h-5 text-primary" />
+                    <div className="flex items-center gap-4">
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                            <Input 
+                                placeholder="Search staff..." 
+                                className="h-9 w-64 pl-9 bg-background/50 border-border/40 rounded-xl text-xs font-medium focus:ring-primary/20"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="h-9 w-32 bg-background/50 border-border/40 rounded-xl text-xs font-black uppercase tracking-widest">
+                                <Filter className="w-3 h-3 mr-2 text-primary/60" />
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border/40 bg-card">
+                                <SelectItem value="ALL" className="text-[10px] font-black uppercase tracking-widest">All Status</SelectItem>
+                                <SelectItem value="PAID" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Paid Only</SelectItem>
+                                <SelectItem value="PARTIAL" className="text-[10px] font-black uppercase tracking-widest text-orange-600">Partial</SelectItem>
+                                <SelectItem value="PENDING" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Pending</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={monthFilter} onValueChange={setMonthFilter}>
+                            <SelectTrigger className="h-9 w-40 bg-background/50 border-border/40 rounded-xl text-xs font-black uppercase tracking-widest">
+                                <Calendar className="w-3 h-3 mr-2 text-primary/60" />
+                                <SelectValue placeholder="Filter Month" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border/40 bg-card">
+                                <SelectItem value="ALL" className="text-[10px] font-black uppercase tracking-widest">All History</SelectItem>
+                                {sortedMonths.map(m => (
+                                    <SelectItem key={m} value={m} className="text-[10px] font-black uppercase tracking-widest">
+                                        {format(new Date(m + '-01'), 'MMMM yyyy')}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <Receipt className="w-5 h-5 text-primary" />
+                        </div>
                     </div>
                 </div>
             </CardHeader>
@@ -690,7 +762,7 @@ function HistoricalLedgerTable() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {ledgerEntries.map((entry) => (
+                        {paginatedEntries.map((entry: any) => (
                             <TableRow key={entry.id} className="hover:bg-muted/30 transition-all group border-b-border/20">
                                 <TableCell className="py-4 px-6">
                                     <div className="flex items-center gap-3">
@@ -765,6 +837,70 @@ function HistoricalLedgerTable() {
                         ))}
                     </TableBody>
                 </Table>
+            </div>
+
+            {/* Premium Industry Level Pagination 🚀 */}
+            <div className="bg-muted/30 border-t border-border/40 px-6 py-4 flex items-center justify-between">
+                <div className="flex flex-col">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Audit Telemetry</p>
+                    <p className="text-xs font-bold text-muted-foreground/80">
+                        Showing <span className="text-primary">{filteredEntries.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span>
+                        {' - '}
+                        <span className="text-primary">{Math.min(filteredEntries.length, currentPage * pageSize)}</span>
+                        {' of '}
+                        <span className="text-primary">{filteredEntries.length}</span> Records
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 mr-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mr-2">Page</p>
+                        <span className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-black text-primary">
+                            {currentPage}
+                        </span>
+                        <span className="text-[10px] font-black text-muted-foreground/40 mx-1">/</span>
+                        <span className="text-xs font-bold text-muted-foreground/60">{totalPages || 1}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-l border-border/40 pl-4">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl border-border/40 bg-background/50 hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                        >
+                            <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl border-border/40 bg-background/50 hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl border-border/40 bg-background/50 hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage >= totalPages || totalPages === 0}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl border-border/40 bg-background/50 hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-30"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage >= totalPages || totalPages === 0}
+                        >
+                            <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
             </div>
         </Card>
     );

@@ -85,6 +85,7 @@ export function StudentResultsDialog({ open, onOpenChange, student, termId, clas
                 term_id: termId,
                 student_id: student.id,
                 subject_id: subject.id,
+                class_id: classId,
                 obtained_marks: subjectMarks.obtained,
                 total_marks: subjectMarks.total,
                 grade: grade,

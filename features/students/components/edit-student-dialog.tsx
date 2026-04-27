@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -119,6 +119,39 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
             });
         }
     }, [student, form]);
+    
+    // Dynamic Roll Number generation based on Class prefix
+    const watchedClassId = form.watch('class_id');
+    const prevClassIdRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!watchedClassId || !classes) return;
+        
+        // Initialize prevClassId on first load to prevent overwriting existing valid roll on mount
+        if (!prevClassIdRef.current && student && watchedClassId === student.class_id) {
+            prevClassIdRef.current = watchedClassId;
+            return;
+        }
+
+        // Only trigger if class actually changed
+        if (watchedClassId === prevClassIdRef.current) return;
+
+        const selectedClass = classes.find(c => c.id === watchedClassId);
+        if (selectedClass) {
+            const classNum = selectedClass.name.match(/\d+/)?.[0] || selectedClass.name;
+            const section = selectedClass.section || 'A';
+            const prefix = `C${classNum}-${section}-`.toUpperCase().replace(/\s+/g, '');
+            
+            const currentRoll = form.getValues('roll_number') || '';
+            const existingParts = currentRoll.split('-');
+            const existingSuffix = existingParts.length > 1 ? existingParts[existingParts.length - 1] : currentRoll;
+            
+            // Generate new roll number preserving the suffix (student number) if it exists
+            form.setValue('roll_number', prefix + existingSuffix);
+        }
+
+        prevClassIdRef.current = watchedClassId;
+    }, [watchedClassId, classes, form, student]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'b_form_url' | 'photo_url') => {
         const file = e.target.files?.[0];
@@ -202,8 +235,8 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 border-none shadow-2xl rounded-3xl bg-[#0a0f18]/95 backdrop-blur-xl [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary">
+                <DialogHeader className="p-6 pb-2">
                     <DialogTitle>Edit Student Record</DialogTitle>
                     <DialogDescription>
                         Update details for <strong>{student?.full_name}</strong>. Document vault files are not changed here.
@@ -211,7 +244,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-8 pt-4">
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -441,7 +474,7 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                             )}
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-4">
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border/40">
                             <Button
                                 type="button"
                                 variant="outline"

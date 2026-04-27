@@ -41,16 +41,10 @@ export const payrollApi = {
         if (!profileId) throw new Error("No profile found for this teacher. Please create a staff profile first.");
         const supabase = createClient();
         
-        // 1. Update the global base salary for future/fallback
-        const { error: profileError } = await supabase
-            .from('teacher_profiles')
-            .update({ monthly_salary: salary })
-            .eq('id', profileId);
-
-        if (profileError) throw new Error(profileError.message);
-
-        // 2. 🚀 INDUSTRY LEVEL: Snapshot for the specifically selected month
-        // This ensures the selected month and future months see this salary, but past months keep their ledger records
+        // 🚀 INDUSTRY LEVEL TIMELINE PROTECTION
+        // If a specific month is selected (Payroll View), we ONLY snapshot that month in the ledger.
+        // This ensures the selected month + future months inherit this rate, while 
+        // past unsnapped months securely fall back to the unmodified global profile rate.
         if (monthYear && teacherId) {
             const { error: ledgerError } = await supabase
                 .from('staff_payroll_ledger')
@@ -65,6 +59,14 @@ export const payrollApi = {
                 });
 
             if (ledgerError) throw new Error(ledgerError.message);
+        } else {
+            // ONLY update the global profile if we're not targeting a specific timeline month
+            const { error: profileError } = await supabase
+                .from('teacher_profiles')
+                .update({ monthly_salary: salary })
+                .eq('id', profileId);
+
+            if (profileError) throw new Error(profileError.message);
         }
     }
 };

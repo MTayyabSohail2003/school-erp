@@ -18,6 +18,7 @@ export const resultEntrySchema = z.object({
     total_marks: z.number().min(1, 'Total marks must be at least 1'),
     grade: z.string().min(1, 'Grade is required'),
     percentage: z.number().min(0).max(100),
+    class_id: z.string().uuid().optional(),
 });
 
 export type ResultEntry = z.infer<typeof resultEntrySchema>;
@@ -33,6 +34,7 @@ export type ResultWithDetails = ResultEntry & {
         users?: { full_name: string } 
     };
     subjects: { name: string };
+    classes?: { name: string; section?: string };
 };
 
 export const GRADE_THRESHOLDS = [

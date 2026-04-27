@@ -11,12 +11,13 @@ export const studentsApi = {
             .from('students')
             .select('*, classes(name, section), users!students_parent_id_fkey(full_name)');
         
-        if (options?.status) {
+        if (options?.status && options.status !== 'ALL') {
             query = query.eq('status', options.status);
-        } else {
-            // Default to ACTIVE for backward compatibility unless specified
+        } else if (!options?.status) {
+            // Default to ACTIVE for backward compatibility
             query = query.eq('status', 'ACTIVE');
         }
+        // If options.status === 'ALL', no status filter is applied
 
         if (options?.parentId) {
             query = query.eq('parent_id', options.parentId);

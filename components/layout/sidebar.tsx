@@ -8,7 +8,7 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone, LayoutGrid } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone, LayoutGrid, RefreshCcw } from 'lucide-react';
 import { UPLOAD_LIMITS } from '@/constants/config';
 import {
     Sidebar,
@@ -48,6 +48,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
         label: 'People',
         items: [
             { name: 'Students', href: ROUTES.STUDENTS, icon: Users, exact: false, roles: ['ADMIN', 'TEACHER'] },
+            // { name: 'Promotion History', href: ROUTES.PROMOTION_HISTORY, icon: RefreshCcw, exact: false, roles: ['ADMIN'] },
             { name: 'Staff & Teachers', href: ROUTES.STAFF, icon: Briefcase, exact: false, roles: ['ADMIN'] },
             { name: 'Parents', href: '/dashboard/parents', icon: User, exact: false, roles: ['ADMIN'] },
         ],
@@ -60,6 +61,7 @@ export const navGroups: { label: string; items: NavItem[] }[] = [
             // { name: 'Exams', href: ROUTES.EXAMS, icon: BookOpen, exact: false, roles: ['ADMIN', 'TEACHER'] },
             // { name: 'Mark Sheet', href: ROUTES.MARKS, icon: ClipboardList, exact: false, roles: ['ADMIN', 'TEACHER', 'PARENT'] },
             { name: "Results", href: "/dashboard/results", icon: ClipboardList, exact: false, roles: ['ADMIN'] },
+            { name: 'Academic Sessions', href: ROUTES.ACADEMIC_YEARS, icon: Calendar, exact: false, roles: ['ADMIN'] },
             { name: 'Subjects & Periods', href: '/academics', icon: BookOpen, exact: false, roles: ['ADMIN'] },
             { name: 'Notice Board', href: ROUTES.TEACHER_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['TEACHER'] },
             { name: 'Notice Board', href: ROUTES.PARENT_NOTICE_BOARD, icon: Megaphone, exact: false, roles: ['PARENT'] },

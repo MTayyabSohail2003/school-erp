@@ -21,4 +21,6 @@ export const ROUTES = {
     TEACHER_NOTICE_BOARD: '/dashboard/notice-board', // teacher notice board
     PARENT_NOTICE_BOARD: '/parent/notice-board',     // parent notice board
     FEE: '/dashboard/fees',
+    ACADEMIC_YEARS: '/dashboard/academics/years',
+    PROMOTION_HISTORY: '/dashboard/students/promotion-history',
 } as const;

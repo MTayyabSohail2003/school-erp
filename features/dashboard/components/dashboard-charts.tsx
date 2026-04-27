@@ -3,13 +3,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar,
-    PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+    AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { useChartStats } from '../api/use-chart-stats';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, BarChart2, PieChart as PieIcon, Activity, BookOpen } from 'lucide-react';
+import { TrendingUp, BarChart2, PieChart as PieIcon, Activity } from 'lucide-react';
 
 // ── Shared style constants ─────────────────────────────────────────────────
 
@@ -197,30 +196,6 @@ function FeeStatusDonut({ data }: { data: { name: string; value: number; color: 
     );
 }
 
-// ── Chart 5: Subject Radar ───────────────────────────────────────────────────
-
-function SubjectRadarChart({ data }: { data: { subject: string; average: number; highest: number }[] }) {
-    if (!data?.length) return <EmptyState msg="No exam marks recorded yet." />;
-    return (
-        <ResponsiveContainer width="100%" height={270}>
-            <RadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-                <PolarGrid stroke="var(--border)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} />
-                <defs>
-                    <linearGradient id="radarGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                    </linearGradient>
-                </defs>
-                <Radar name="Class Average" dataKey="average" stroke="#6366f1" fill="url(#radarGrad)" fillOpacity={0.3} strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} />
-                <Radar name="Highest Score" dataKey="highest" stroke="#10b981" fill="#10b981" fillOpacity={0.08} strokeWidth={2} strokeDasharray="5 3" />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-                <Tooltip {...TT} formatter={((v: number) => [`${v}%`, undefined]) as any} />
-            </RadarChart>
-        </ResponsiveContainer>
-    );
-}
 
 // ── Empty State ──────────────────────────────────────────────────────────────
 
@@ -299,17 +274,6 @@ export function DashboardCharts() {
                 </div>
             </div>
 
-            {/* Row 3 — Subject Radar */}
-            <ChartCard
-                icon={BookOpen}
-                title="Subject Performance"
-                description="Class average vs. highest score per subject across all recorded exams"
-                gradient="from-rose-500 to-pink-600"
-                glow="shadow-rose-500/40"
-                isLoading={isLoading}
-            >
-                <SubjectRadarChart data={data?.subjectPerformance ?? []} />
-            </ChartCard>
         </div>
     );
 }

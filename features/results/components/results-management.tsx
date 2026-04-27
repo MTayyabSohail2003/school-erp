@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, LayoutGrid, ListFilter } from 'lucide-react';
 import { AddResultTab } from './add-result-tab';
+import { ViewResultsTab } from './view-results-tab';
 
 export function ResultsManagement() {
     const [activeTab, setActiveTab] = useState('add');
@@ -42,12 +43,7 @@ export function ResultsManagement() {
                 </TabsContent>
 
                 <TabsContent value="view" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
-                    <Card className="border-dashed border-2 bg-muted/20">
-                        <CardContent className="h-48 flex items-center justify-center flex-col gap-2 text-muted-foreground">
-                            <LayoutGrid className="h-8 w-8 opacity-20" />
-                            <p className="font-bold text-sm uppercase tracking-widest opacity-40 italic">Result Viewer coming soon</p>
-                        </CardContent>
-                    </Card>
+                    <ViewResultsTab />
                 </TabsContent>
             </Tabs>
         </div>

@@ -135,7 +135,7 @@ export function AdminDashboard({ profile }: { profile: { full_name?: string; rol
                         <div className="flex items-center gap-3 mt-1.5">
                             <p className="text-sm text-white/60">{format(today, 'EEEE, MMMM dd, yyyy')}</p>
                             <div className="h-4 w-[1px] bg-white/10" />
-                            <button 
+                            <button
                                 onClick={() => refetchStats()}
                                 disabled={isRefetching}
                                 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40 hover:text-white transition-colors disabled:opacity-50"

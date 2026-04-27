@@ -358,8 +358,8 @@ export function AddStudentDialog() {
                     Add New Student
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 border-none shadow-2xl rounded-3xl bg-[#0a0f18]/95 backdrop-blur-xl [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-primary/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-primary">
+                <DialogHeader className="p-6 pb-2">
                     <DialogTitle>Register Student</DialogTitle>
                     <DialogDescription>
                         Step {step} of 3: {step === 1 ? 'Personal Information' : step === 2 ? 'Academic & Guardian' : 'Document Vault'}
@@ -375,7 +375,7 @@ export function AddStudentDialog() {
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4 pt-4">
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-6 p-8 pt-4">
 
                         {/* STEP 1: Personal Info */}
                         {step === 1 && (

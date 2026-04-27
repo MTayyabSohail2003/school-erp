@@ -4,7 +4,7 @@ import { type ResultEntry } from '../schemas/results.schema';
 import { toast } from 'sonner';
 import { useRealtimeInvalidate } from '@/hooks/use-realtime-invalidate';
 
-const resultsKeys = {
+export const resultsKeys = {
     all: ['results'] as const,
     terms: ['exam-terms'] as const,
     students: (classId: string) => ['results', 'students', classId] as const,
@@ -125,5 +125,27 @@ export function useTermInstance(name?: string, year?: string) {
         queryKey: resultsKeys.termInstance(name || '', year || ''),
         queryFn: () => resultsApi.getTermInstance(name!, year!),
         enabled: !!name && !!year && year !== 'ALL',
+    });
+}
+
+export function useGetMetadataUsage() {
+    return useQuery({
+        queryKey: ['results', 'metadata-usage'],
+        queryFn: resultsApi.getMetadataUsage,
+    });
+}
+
+export function useGetAllResultsByStudent(studentId: string) {
+    return useQuery({
+        queryKey: ['results', 'all-student-results', studentId],
+        queryFn: () => resultsApi.getAllResultsByStudent(studentId),
+        enabled: !!studentId,
+    });
+}
+
+export function useArchiveStudents(classId?: string, status?: string) {
+    return useQuery({
+        queryKey: ['results', 'archive-students', classId, status],
+        queryFn: () => resultsApi.getArchiveStudents(classId, status),
     });
 }

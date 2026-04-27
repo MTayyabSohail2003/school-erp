@@ -10,6 +10,7 @@ export type AttendanceStatus = keyof typeof ATTENDANCE_STATUS;
 
 export const attendanceRecordSchema = z.object({
     student_id: z.string().uuid(),
+    class_id: z.string().uuid(),
     record_date: z.string().min(1),
     status: z.enum(['PRESENT', 'ABSENT', 'LEAVE']),
     marked_by: z.string().uuid().optional(),
@@ -21,6 +22,7 @@ export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
 export type AttendanceWithStudent = {
     id: string;
     student_id: string;
+    class_id: string;
     record_date: string;
     status: AttendanceStatus;
     marked_by: string | null;

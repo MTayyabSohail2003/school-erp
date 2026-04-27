@@ -121,6 +121,12 @@ export function PayStaffModal({
                 return;
             }
 
+            if (status === 'PARTIAL' && !values.paid_notes?.trim()) {
+                toast.error("Validation Error: Please provide a reason for the partial payment.");
+                form.setError('paid_notes', { type: 'manual', message: 'Reason is required for partial payments.' });
+                return;
+            }
+
             await recordPayout.mutateAsync({
                 teacher_id: staff.id,
                 month_year: monthYear,
@@ -147,53 +153,56 @@ export function PayStaffModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] sm:max-w-[620px] p-0 overflow-hidden border-none shadow-2xl rounded-[1.8rem] sm:rounded-[2.2rem] bg-zinc-50 dark:bg-zinc-950 flex flex-col h-[90dvh] max-h-[90dvh]">
-                <div className="bg-emerald-500/5 p-4 sm:p-6 border-b border-emerald-500/10 shrink-0">
-                    <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                        <ImagePreviewDialog
-                            src={staff.avatar_url}
-                            title={staff.full_name}
-                            description={`Staff Profile - ${format(parseISO(`${monthYear}-01`), 'MMMM yyyy')}`}
-                        >
-                            <Avatar className="h-10 w-10 sm:h-16 sm:w-16 border-2 border-emerald-500/20 transition-transform hover:scale-105 duration-300 shadow-xl shadow-emerald-500/10 cursor-zoom-in shrink-0">
-                                <AvatarImage src={staff.avatar_url} className="object-cover" />
-                                <AvatarFallback className="bg-emerald-500/10 text-emerald-600 font-black text-xs sm:text-xl">
-                                    {staff.full_name?.charAt(0)}
-                                </AvatarFallback>
-                            </Avatar>
-                        </ImagePreviewDialog>
-                        <DialogHeader className="p-0 space-y-0.5 text-left">
-                            <DialogTitle className="text-xl sm:text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">Process Payout</DialogTitle>
-                            <DialogDescription className="text-emerald-500/60 font-black flex items-center gap-2 text-[10px] sm:text-sm">
-                                <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                {format(parseISO(`${monthYear}-01`), 'MMMM yyyy')} • {staff.full_name}
-                            </DialogDescription>
-                        </DialogHeader>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-2">
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/40">Payable Amount</p>
-                            <p className="text-3xl sm:text-5xl font-black text-emerald-600 tracking-tighter">
-                                Rs. <span className="tabular-nums">{netLiability.toLocaleString()}</span>
-                            </p>
+            <DialogContent className="w-[98vw] sm:max-w-4xl p-0 border-none shadow-2xl rounded-[1.8rem] sm:rounded-[2.2rem] bg-zinc-50 dark:bg-zinc-950 flex flex-col overflow-hidden max-h-[95dvh] sm:max-h-[90vh] gap-0">
+                <div className="bg-emerald-500/5 p-4 sm:p-5 border-b border-emerald-500/10 shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <ImagePreviewDialog
+                                src={staff.avatar_url}
+                                title={staff.full_name}
+                                description={`Staff Profile - ${format(parseISO(`${monthYear}-01`), 'MMMM yyyy')}`}
+                            >
+                                <Avatar className="h-10 w-10 sm:h-12 sm:w-12 border-2 border-emerald-500/20 transition-transform hover:scale-105 duration-300 shadow-xl shadow-emerald-500/10 cursor-zoom-in shrink-0">
+                                    <AvatarImage src={staff.avatar_url} className="object-cover" />
+                                    <AvatarFallback className="bg-emerald-500/10 text-emerald-600 font-black text-xs sm:text-lg">
+                                        {staff.full_name?.charAt(0)}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </ImagePreviewDialog>
+                            <DialogHeader className="p-0 space-y-0 text-left">
+                                <DialogTitle className="text-lg sm:text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">Process Payout</DialogTitle>
+                                <DialogDescription className="text-emerald-500/60 font-black flex items-center gap-1.5 text-[10px] sm:text-xs">
+                                    <Calendar className="w-3 h-3" />
+                                    {format(parseISO(`${monthYear}-01`), 'MMM yyyy')} • {staff.full_name}
+                                </DialogDescription>
+                            </DialogHeader>
                         </div>
-                        
-                        {staff.historicalArrears > 0 && (
-                            <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl px-4 py-2 flex items-center gap-2 animate-pulse">
-                                <Landmark className="w-4 h-4 text-orange-600" />
-                                <div>
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-orange-600/60 leading-none">Unpaid Arrears</p>
-                                    <p className="text-sm font-black text-orange-600">Rs. {staff.historicalArrears.toLocaleString()}</p>
+
+                        <div className="flex flex-row items-center sm:text-right gap-4 justify-between sm:justify-end">
+                            {staff.historicalArrears > 0 && (
+                                <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-1.5 flex items-center gap-2 animate-pulse text-left h-fit shrink-0">
+                                    <Landmark className="w-4 h-4 text-orange-600" />
+                                    <div>
+                                        <p className="text-[8px] font-black uppercase tracking-widest text-orange-600/60 leading-none mb-0.5">Unpaid Arrears</p>
+                                        <p className="text-xs font-black text-orange-600 leading-none">Rs. {staff.historicalArrears.toLocaleString()}</p>
+                                    </div>
                                 </div>
+                            )}
+
+                            <div className="space-y-0 text-right shrink-0">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600/40">Payable Amount</p>
+                                <p className="text-2xl sm:text-4xl font-black text-emerald-600 tracking-tighter leading-none mt-1">
+                                    <span className="text-lg sm:text-xl mr-1">Rs.</span>
+                                    <span className="tabular-nums">{netLiability.toLocaleString()}</span>
+                                </p>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden min-h-0">
-                        <ScrollArea className="flex-1 w-full h-full pb-6 pt-4 sm:pt-5">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+                        <div className="w-full flex-1 overflow-y-auto min-h-0 pb-6 pt-4 sm:pt-5 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-emerald-500/20 [&::-webkit-scrollbar-track]:bg-transparent">
                             <div className="space-y-3 sm:space-y-4 px-4 sm:px-8">
                                 {/* Professional Financial Breakdown 📊 */}
                                 <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-emerald-500/[0.03] border border-emerald-500/10 space-y-3">
@@ -319,7 +328,7 @@ export function PayStaffModal({
                                             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                                                 <FormItem className="space-y-1.5 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-orange-500/5 border border-orange-500/10">
                                                     <FormLabel className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400 flex items-center gap-2">
-                                                        <AlertCircle className="w-3 h-3" /> Partial Payment Reason
+                                                        <AlertCircle className="w-3 h-3" /> Partial Payment Reason <span className="text-red-500 font-bold ml-1 text-sm leading-none">*</span>
                                                     </FormLabel>
                                                     <FormControl>
                                                         <Textarea {...field} placeholder="Why is the full amount not being paid?" className="resize-none h-12 sm:h-16 bg-transparent border-none p-0 px-1 focus-visible:ring-0 font-medium text-xs sm:text-sm" />
@@ -400,8 +409,8 @@ export function PayStaffModal({
                                     />
                                 )}
                             </div>
-                        </ScrollArea>
-                        <div className="p-3 sm:p-5 border-t bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl shrink-0 mt-auto">
+                        </div>
+                        <div className="p-3 sm:p-5 border-t border-border/10 bg-zinc-50 dark:bg-zinc-950 shrink-0">
                             <Button
                                 type="submit"
                                 disabled={recordPayout.isPending}

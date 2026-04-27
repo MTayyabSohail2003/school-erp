@@ -97,8 +97,7 @@ export function Header() {
 
                 <ThemeToggle />
 
-                {/* Notifications bell — live from Supabase */}
-                <NotificationBell />
+
 
                 {/* Vertical Divider */}
                 <div className="h-8 w-px bg-border/50 hidden sm:block mx-1"></div>

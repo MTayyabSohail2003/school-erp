@@ -106,7 +106,7 @@ export async function bulkRegisterStudentsAction(data: BulkStudentFormData) {
                 .select('roll_number')
                 .in('roll_number', rollNumbers)
                 .in('status', ['ACTIVE', 'INACTIVE']),
-            bForms.length > 0 
+            bForms.length > 0
                 ? supabase.from('students')
                     .select('b_form_id')
                     .in('b_form_id', bForms)
@@ -197,7 +197,7 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
             // Bulk update to GRADUATED
             const { error: gradError } = await supabase
                 .from('students')
-                .update({ 
+                .update({
                     status: 'GRADUATED',
                     academic_year: data.new_academic_year
                 })
@@ -252,7 +252,7 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
 
                 const { error: promoError } = await supabase
                     .from('students')
-                    .update({ 
+                    .update({
                         class_id: data.destination_class_id,
                         academic_year: data.new_academic_year,
                         status: 'ACTIVE',
@@ -308,12 +308,12 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
 
         revalidatePath('/dashboard/students');
         revalidatePath('/dashboard/finance');
-        
-        return { 
-            success: true, 
-            message: data.is_graduation 
-                ? `Successfully graduated ${data.student_ids.length} students.` 
-                : `Successfully promoted ${data.student_ids.length} students.` 
+
+        return {
+            success: true,
+            message: data.is_graduation
+                ? `Successfully graduated ${data.student_ids.length} students.`
+                : `Successfully promoted ${data.student_ids.length} students.`
         };
 
     } catch (error: Error | unknown) {
@@ -339,14 +339,14 @@ export async function batchPromoteAllAction(data: BatchPromoteData) {
         });
 
         if (rpcError) throw rpcError;
-        
+
         // result is returned as dynamic JSONB, we cast it to our expected shape
-        const response = result as { 
-            success: boolean; 
-            total_promoted: number; 
-            total_graduated: number; 
-            total_repeated: number; 
-            error?: string 
+        const response = result as {
+            success: boolean;
+            total_promoted: number;
+            total_graduated: number;
+            total_repeated: number;
+            error?: string
         };
 
         if (!response.success) {
@@ -356,9 +356,9 @@ export async function batchPromoteAllAction(data: BatchPromoteData) {
         revalidatePath('/dashboard/students');
         revalidatePath('/dashboard/finance');
 
-        return { 
-            success: true, 
-            message: `Batch complete: ${response.total_promoted} promoted, ${response.total_graduated} graduated, ${response.total_repeated} repeating.` 
+        return {
+            success: true,
+            message: `Batch complete: ${response.total_promoted} promoted, ${response.total_graduated} graduated, ${response.total_repeated} repeating.`
         };
 
     } catch (error: Error | unknown) {
@@ -441,9 +441,9 @@ export async function bulkUpdateClassFeesAction(classId: string, newFee: number,
         revalidatePath('/dashboard/students');
         revalidatePath('/dashboard/finance');
 
-        return { 
-            success: true, 
-            message: `Updated fees for ${studentIds.length} students and synchronized pending records.` 
+        return {
+            success: true,
+            message: `Updated fees for ${studentIds.length} students and synchronized pending records.`
         };
 
     } catch (error: Error | unknown) {

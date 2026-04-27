@@ -21,12 +21,12 @@ export const attendanceApi = {
 
         if (studentsError) throw new Error(studentsError.message);
 
-        // Get existing attendance records for this date
+        // Get existing attendance records for this date AND this class
         const { data: records, error: recordsError } = await supabase
             .from('attendance')
             .select('*, students(full_name, roll_number)')
             .eq('record_date', date)
-            .in('student_id', (students ?? []).map((s) => s.id));
+            .eq('class_id', classId);
 
         if (recordsError) throw new Error(recordsError.message);
 

@@ -211,7 +211,7 @@ export function AddResultTab() {
                                             </div>
                                         ) : (
                                             globalTermNames?.map((name) => (
-                                                <SelectItem key={name} value={name} className="rounded-xl font-bold italic py-3">
+                                                <SelectItem key={name} value={name} className="rounded-xl font-bold italic py-3 uppercase">
                                                     {name} Examination
                                                 </SelectItem>
                                             ))

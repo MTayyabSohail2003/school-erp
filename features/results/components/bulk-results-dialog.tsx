@@ -98,6 +98,7 @@ export function BulkResultsDialog({ open, onOpenChange, termId, classId }: BulkR
                     term_id: termId,
                     student_id: studentId,
                     subject_id: subjectId,
+                    class_id: classId,
                     obtained_marks: marks.obtained,
                     total_marks: marks.total,
                     grade: grade,

@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useGetTerms, useCreateTerm, useUpdateTerm, useDeleteTerm } from '../hooks/use-results';
+import { useGetTerms, useCreateTerm, useUpdateTerm, useDeleteTerm, useGetMetadataUsage, resultsKeys } from '../hooks/use-results';
+import { resultsApi } from '../api/results.api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -13,9 +16,20 @@ import {
     Calendar, 
     Check,
     X,
-    CalendarDays
+    CalendarDays,
+    Save
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface YearManagementDialogProps {
     open: boolean;
@@ -24,8 +38,38 @@ interface YearManagementDialogProps {
 
 export function YearManagementDialog({ open, onOpenChange }: YearManagementDialogProps) {
     const { data: terms, isLoading } = useGetTerms();
+    const queryClient = useQueryClient();
     const createTerm = useCreateTerm();
-    const deleteTerm = useDeleteTerm();
+    
+    const { data: usage } = useGetMetadataUsage();
+
+    const deleteByYear = useMutation({
+        mutationFn: (year: string) => resultsApi.deleteTermsByYear(year),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: resultsKeys.terms });
+            toast.success('Academic year deleted successfully');
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Failed to delete year');
+        }
+    });
+
+    const [editingYear, setEditingYear] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState('');
+    const [yearToDelete, setYearToDelete] = useState<string | null>(null);
+
+    const renameYear = useMutation({
+        mutationFn: ({ oldYear, newYear }: { oldYear: string, newYear: string }) => 
+            resultsApi.updateAcademicYear(oldYear, newYear),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: resultsKeys.terms });
+            toast.success('Session renamed successfully across all associated terms!');
+            setEditingYear(null);
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Failed to rename session');
+        }
+    });
 
     const [isAdding, setIsAdding] = useState(false);
     const [newYear, setNewYear] = useState('');
@@ -36,8 +80,6 @@ export function YearManagementDialog({ open, onOpenChange }: YearManagementDialo
     const handleAddYear = () => {
         if (!newYear || newYear.length < 4) return;
         
-        // Industry practice: When adding a year without a term, 
-        // we create a placeholder 'ANNUAL' term to register the year in our system
         createTerm.mutate({
             name: 'Annual / Initial',
             academic_year: newYear,
@@ -48,6 +90,24 @@ export function YearManagementDialog({ open, onOpenChange }: YearManagementDialo
                 setIsAdding(false);
             }
         });
+    };
+
+    const isYearUsed = (year: string) => {
+        const relatedIds = terms?.filter(t => t.academic_year === year).map(t => t.id) ?? [];
+        return relatedIds.some(id => usage?.includes(id));
+    };
+
+    const handleStartEdit = (year: string) => {
+        setEditingYear(year);
+        setEditValue(year);
+    };
+
+    const handleSaveEdit = (oldYear: string) => {
+        if (!editValue || editValue === oldYear) {
+            setEditingYear(null);
+            return;
+        }
+        renameYear.mutate({ oldYear, newYear: editValue.toUpperCase().trim() });
     };
 
     return (
@@ -115,24 +175,95 @@ export function YearManagementDialog({ open, onOpenChange }: YearManagementDialo
                                     key={year} 
                                     className="flex items-center justify-between p-4 rounded-2xl border bg-card hover:border-indigo-500/30 transition-all group"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
                                             <Calendar className="w-5 h-5 text-indigo-400" />
                                         </div>
-                                        <div>
-                                            <p className="font-black text-sm tracking-widest uppercase italic">{year}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground opacity-60 uppercase">Active Session</p>
-                                        </div>
+                                        {editingYear === year ? (
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <Input 
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    className="h-9 rounded-xl border-indigo-500/30 font-black uppercase italic"
+                                                    autoFocus
+                                                />
+                                                <Button size="icon" className="h-9 w-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 shrink-0" onClick={() => handleSaveEdit(year)} disabled={renameYear.isPending}>
+                                                    {renameYear.isPending ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Save className="h-4 w-4 text-white" />}
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl shrink-0" onClick={() => setEditingYear(null)}>
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <p className="font-black text-sm tracking-widest uppercase italic">{year}</p>
+                                                <p className="text-[9px] font-bold text-muted-foreground opacity-60 uppercase">Active Session</p>
+                                            </div>
+                                        )}
                                     </div>
-                                    <Badge variant="outline" className="rounded-lg border-indigo-100 bg-indigo-50/30 text-indigo-600 font-bold text-[10px]">
-                                        Validated
-                                    </Badge>
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {editingYear !== year && (
+                                            <>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 rounded-lg hover:bg-indigo-500/10 text-indigo-600"
+                                                    onClick={() => handleStartEdit(year)}
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5" />
+                                                </Button>
+                                                {!isYearUsed(year) && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-destructive"
+                                                        onClick={() => setYearToDelete(year)}
+                                                        disabled={deleteByYear.isPending}
+                                                    >
+                                                        {deleteByYear.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                                    </Button>
+                                                )}
+                                            </>
+                                        )}
+                                        <Badge variant="outline" className="rounded-lg border-indigo-100 bg-indigo-50/30 text-indigo-600 font-bold text-[10px] shrink-0">
+                                            {isYearUsed(year) ? 'In Use' : 'Validated'}
+                                        </Badge>
+                                    </div>
                                 </div>
                             ))
                         )}
                     </div>
                 </div>
             </DialogContent>
+
+            <AlertDialog open={!!yearToDelete} onOpenChange={(open) => !open && setYearToDelete(null)}>
+                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm font-medium">
+                            This will permanently delete the <strong className="text-foreground">"{yearToDelete}"</strong> session and remove all its associated result terms. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel className="rounded-xl font-bold" disabled={deleteByYear.isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (yearToDelete) {
+                                    deleteByYear.mutate(yearToDelete, {
+                                        onSuccess: () => setYearToDelete(null)
+                                    });
+                                }
+                            }}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl font-bold"
+                            disabled={deleteByYear.isPending}
+                        >
+                            {deleteByYear.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                            Delete Session
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 }

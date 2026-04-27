@@ -129,6 +129,7 @@ export function StudentAttendanceView() {
         // Build a record for every student that has a status set
         const records = Object.entries(statusMap).map(([studentId, status]) => ({
             student_id: studentId,
+            class_id: selectedClassId,
             record_date: selectedDate,
             status,
             marked_by: profile?.id,
