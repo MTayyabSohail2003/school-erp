@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import { Wallet, Edit2, Loader2, Search, Receipt, Trash2, Landmark, AlertCircle,
 
 import { useUpdateSalary } from '../api/use-payroll';
 import { useGetPayrollDashboard, useDeletePayout, useGetHistoricalLedger, usePayrollRealtime } from '../api/use-payroll-ledger';
+import { ExportPayrollButton } from './export-payroll-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Check, User, CheckCircle, Clock } from 'lucide-react';
@@ -189,12 +190,15 @@ export function PayrollPage() {
                             <p className="text-sm text-muted-foreground">Manage teacher salaries and record monthly payouts</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-lg border">
-                        <span className="text-sm font-medium text-muted-foreground px-2 whitespace-nowrap hidden sm:inline-block">Viewing</span>
-                        <MonthPicker 
-                            value={selectedMonth} 
-                            onChange={setSelectedMonth} 
-                        />
+                    <div className="flex items-center gap-3">
+                        <ExportPayrollButton monthYear={selectedMonth} />
+                        <div className="flex items-center gap-2 bg-muted/40 p-1.5 rounded-lg border">
+                            <span className="text-sm font-medium text-muted-foreground px-2 whitespace-nowrap hidden sm:inline-block">Viewing</span>
+                            <MonthPicker 
+                                value={selectedMonth} 
+                                onChange={setSelectedMonth} 
+                            />
+                        </div>
                     </div>
                 </div>
 

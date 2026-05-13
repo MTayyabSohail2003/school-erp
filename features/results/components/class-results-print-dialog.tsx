@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Loader2, Printer, ArrowLeft, School } from 'lucide-react';
 import { calculateGradeAndPercentage } from '../schemas/results.schema';
+import { SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE } from '@/constants/school-identity';
 
 interface ClassResultsPrintDialogProps {
     open: boolean;
@@ -203,13 +204,15 @@ export function ClassResultsPrintDialog({
                     `}} />
                     
                     <div className="border-[4px] border-black p-6 bg-white min-h-[A4]">
-                        <div className="border-b-4 border-black pb-4 mb-6 text-center">
-                            <h1 className="text-3xl font-black uppercase tracking-tight leading-none mb-1">AR SCHOOL ERP</h1>
-                            <h2 className="text-xl font-bold uppercase tracking-widest italic opacity-80 leading-tight">Class Performance Broadsheet</h2>
-                            <div className="mt-4 inline-block border-2 border-black px-6 py-2">
-                                <p className="text-xs font-black uppercase tracking-[0.2em]">Class: {classNameStr} | Term: {termName}</p>
-                            </div>
+                    <div className="border-b-4 border-black pb-4 mb-6 text-center">
+                        <h1 className="text-3xl font-black uppercase tracking-tight leading-none mb-1">{SCHOOL_NAME}</h1>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">{SCHOOL_ADDRESS}</p>
+                        <p className="text-[10px] font-black text-slate-700 tracking-[0.3em] mb-4">{SCHOOL_PHONE}</p>
+                        <h2 className="text-xl font-bold uppercase tracking-widest italic opacity-80 leading-tight">Class Performance Broadsheet</h2>
+                        <div className="mt-4 inline-block border-2 border-black px-6 py-2">
+                            <p className="text-xs font-black uppercase tracking-[0.2em]">Class: {classNameStr} | Term: {termName}</p>
                         </div>
+                    </div>
 
                         <table className="w-full border-collapse border border-black text-sm">
                             <thead>

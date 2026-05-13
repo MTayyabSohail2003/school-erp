@@ -37,14 +37,16 @@ export async function updateStaffAction(userId: string, data: StaffUpdateData) {
 
         if (userError) throw new Error(`User Update Error: ${userError.message}`);
 
-        // 2. Update Auth metadata in case we rely on it elsewhere
+        // 2. Optional: Update Auth metadata if account exists
         const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
             user_metadata: {
                 full_name: parsed.full_name,
             }
         });
 
-        if (authError) throw new Error(`Auth Update Error: ${authError.message}`);
+        if (authError && !authError.message.includes('User not found')) {
+            console.warn('Optional Staff Auth update failed:', authError.message);
+        }
 
         // 3. Update public.teacher_profiles
         const { error: profileError } = await supabaseAdmin
@@ -64,8 +66,8 @@ export async function updateStaffAction(userId: string, data: StaffUpdateData) {
 
         return { success: true, message: 'Teacher successfully updated.' };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Update Staff Action Error:', error);
-        return { success: false, error: error.message || 'An unexpected error occurred.' };
+        return { success: false, error: (error as Error).message || 'An unexpected error occurred.' };
     }
 }

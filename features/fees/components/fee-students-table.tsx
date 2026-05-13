@@ -144,9 +144,9 @@ export function FeeStudentsTable({ data, isLoading, onCollectFee }: FeeStudentsT
                             className={cn(
                                 "group bg-card transition-all duration-500 border rounded-2xl overflow-hidden",
                                 isOpen ? "shadow-2xl border-primary/20 bg-card/80 backdrop-blur-xl accent-bar-active" : "hover:border-primary/20 hover:shadow-md border-border/50",
-                                challan.status === 'UNPAID' ? "border-l-4 border-l-amber-500/30" : 
-                                challan.status === 'PARTIAL' ? "border-l-4 border-l-amber-500" : 
-                                "border-l-4 border-l-emerald-500"
+                                challan.status === 'UNPAID' ? "border-l-4 border-l-amber-500/30" :
+                                    challan.status === 'PARTIAL' ? "border-l-4 border-l-amber-500" :
+                                        "border-l-4 border-l-emerald-500"
                             )}
                         >
                             <CollapsibleTrigger asChild>
@@ -364,9 +364,9 @@ export function FeeStudentsTable({ data, isLoading, onCollectFee }: FeeStudentsT
                                                                 <span className="text-[10px] font-black uppercase tracking-widest">Attendance</span>
                                                             </div>
                                                             <p className="text-xl font-black italic tracking-tighter text-primary flex items-center gap-3">
-                                                                {(challan.attendance?.percentage || 0).toFixed(1)}% 
+                                                                {(challan.attendance?.percentage || 0).toFixed(1)}%
                                                                 <span className="text-[10px] not-italic font-bold text-primary/40 text-xs">Present</span>
-                                                                
+
                                                                 {/* Dynamic Status Indicator (Trifecta Logic) */}
                                                                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-500">
                                                                     {isPaid ? (
@@ -419,7 +419,7 @@ export function FeeStudentsTable({ data, isLoading, onCollectFee }: FeeStudentsT
                                                         <div className="p-4 bg-muted/20 border border-border/30 rounded-xl flex gap-3">
                                                             <AlertCircle className="w-4 h-4 text-muted-foreground/40 mt-0.5 shrink-0" />
                                                             <p className="text-[11px] font-medium text-muted-foreground/80 italic leading-relaxed">
-                                                                <span className="font-black text-foreground/40 uppercase not-italic mr-2">Admin Note:</span>
+                                                                <span className="font-black text-foreground/40 uppercase not-italic mr-2">Admin note:</span>
                                                                 {challan.arrears_note || challan.paid_notes}
                                                             </p>
                                                         </div>
@@ -520,10 +520,10 @@ export function FeeStudentsTable({ data, isLoading, onCollectFee }: FeeStudentsT
             )}
 
             {/* Print Portal */}
-            <FeePrintReceipt 
-                open={!!printingChallan} 
-                challan={printingChallan} 
-                onClose={() => setPrintingChallan(null)} 
+            <FeePrintReceipt
+                open={!!printingChallan}
+                challan={printingChallan}
+                onClose={() => setPrintingChallan(null)}
             />
         </div>
     );

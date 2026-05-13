@@ -15,7 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, UserPlus, Loader2 } from 'lucide-react';
+import { UserPlus, Loader2 } from 'lucide-react';
 
 export function AddParentDialog() {
     const [open, setOpen] = useState(false);
@@ -25,8 +25,7 @@ export function AddParentDialog() {
     const [formData, setFormData] = useState({
         full_name: '',
         email: '',
-        phone_number: '',
-        password: ''
+        phone_number: ''
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +40,7 @@ export function AddParentDialog() {
             toast.success(res.message);
             queryClient.invalidateQueries({ queryKey: ['parents'] });
             setOpen(false);
-            setFormData({ full_name: '', email: '', phone_number: '', password: '' });
+            setFormData({ full_name: '', email: '', phone_number: '' });
         } catch (error: unknown) {
             toast.error((error as Error).message || 'Failed to create parent.');
         } finally {
@@ -61,7 +60,7 @@ export function AddParentDialog() {
                 <DialogHeader>
                     <DialogTitle>Register Parent</DialogTitle>
                     <DialogDescription>
-                        Create a new parent account. They will use the email and password to log in.
+                        Create a new parent profile record in the system.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -94,17 +93,6 @@ export function AddParentDialog() {
                             placeholder="0300 1234567"
                             value={formData.phone_number}
                             onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Initial Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            placeholder="Min 6 characters"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
                     <div className="pt-4 flex justify-end gap-2 text-right">

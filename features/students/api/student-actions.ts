@@ -12,19 +12,26 @@ export async function registerStudentAction(data: StudentFormData) {
 
     try {
         // 1. Duplicate Prevention (Roll Number & B-Form ID)
-        const { data: existingStudent, error: checkError } = await supabase
+        let query = supabase
             .from('students')
             .select('id, roll_number, b_form_id')
-            .or(`roll_number.eq.${data.roll_number},b_form_id.eq.${data.b_form_id}`)
-            .in('status', ['ACTIVE', 'INACTIVE'])
-            .maybeSingle();
+            .in('status', ['ACTIVE', 'INACTIVE']);
+
+        // Only check B-Form duplicate if it's provided
+        if (data.b_form_id && data.b_form_id.trim() !== '') {
+            query = query.or(`roll_number.eq.${data.roll_number},b_form_id.eq.${data.b_form_id}`);
+        } else {
+            query = query.eq('roll_number', data.roll_number);
+        }
+
+        const { data: existingStudent, error: checkError } = await query.maybeSingle();
 
         if (checkError) return { success: false, error: 'Database verification failed.' };
         if (existingStudent) {
             if (existingStudent.roll_number === data.roll_number) {
                 return { success: false, error: `Student with Roll Number ${data.roll_number} already exists.` };
             }
-            if (existingStudent.b_form_id === data.b_form_id) {
+            if (data.b_form_id && existingStudent.b_form_id === data.b_form_id) {
                 return { success: false, error: `Student with B-Form ID ${data.b_form_id} already exists.` };
             }
         }
@@ -293,16 +300,40 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
                 const dueDate = new Date();
                 dueDate.setDate(10);
 
-                const challans = data.student_ids.map(id => ({
-                    student_id: id,
-                    fee_structure_id: feeStructure.id,
-                    month_year: currentMonth,
-                    amount_due: feeStructure.monthly_fee,
-                    due_date: dueDate.toISOString().split('T')[0],
-                    status: 'PENDING'
-                }));
+                // DYNAMIC PROMOTION SCENARIO: Handle existing challans for the current month
+                for (const studentId of data.student_ids) {
+                    const { data: existing } = await supabase
+                        .from('fee_challans')
+                        .select('id, status')
+                        .eq('student_id', studentId)
+                        .eq('month_year', currentMonth)
+                        .maybeSingle();
 
-                await supabase.from('fee_challans').insert(challans);
+                    if (existing) {
+                        // If it exists and is PENDING, we update it to the new class fee structure
+                        if (existing.status === 'PENDING') {
+                            await supabase
+                                .from('fee_challans')
+                                .update({
+                                    fee_structure_id: feeStructure.id,
+                                    amount_due: feeStructure.monthly_fee
+                                })
+                                .eq('id', existing.id);
+                        }
+                        // If PAID or PARTIAL, we do NOTHING. This is the "Pure Dynamic" requirement
+                        // to ensure already collected fees aren't "cleared" or overwritten for the new class.
+                    } else {
+                        // If no challan exists for this month yet, create a fresh one
+                        await supabase.from('fee_challans').insert({
+                            student_id: studentId,
+                            fee_structure_id: feeStructure.id,
+                            month_year: currentMonth,
+                            amount_due: feeStructure.monthly_fee,
+                            due_date: dueDate.toISOString().split('T')[0],
+                            status: 'PENDING'
+                        });
+                    }
+                }
             }
         }
 

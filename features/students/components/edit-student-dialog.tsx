@@ -52,7 +52,7 @@ const editStudentSchema = z.object({
     photo_url: z.string().url().optional().nullable(),
     date_of_birth: z.string().refine((d) => !isNaN(Date.parse(d)), { message: 'Invalid date' }),
     class_id: z.string().min(1, 'Select a valid class'),
-    b_form_id: z.string().min(5, 'B-Form ID is required for verification'),
+    b_form_id: z.string().optional().nullable().or(z.literal('')),
     monthly_fee: z.number().min(0, { message: 'Monthly fee is required and must be 0 or positive' }),
 });
 
@@ -293,10 +293,10 @@ export function EditStudentDialog({ isOpen, setIsOpen, student }: EditStudentPro
                                 name="b_form_id"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>B-Form ID</FormLabel>
+                                        <FormLabel>B-Form ID (Optional)</FormLabel>
                                         <FormControl>
                                             <Input 
-                                                placeholder="35201XXXXXXXX" 
+                                                placeholder="35201XXXXXXXX (Optional)" 
                                                 {...field} 
                                                 onChange={(e) => {
                                                     const val = e.target.value.replace(/\D/g, '');

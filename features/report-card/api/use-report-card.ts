@@ -1,9 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { reportCardApi } from './report-card.api';
 
-export const useGetReportCard = (studentId: string, examId: string) =>
-    useQuery({
-        queryKey: ['report-card', studentId, examId] as const,
-        queryFn: () => reportCardApi.getStudentReportCard(studentId, examId),
-        enabled: Boolean(studentId && examId),
+export const reportCardKeys = {
+    all: ['report-card'] as const,
+    card: (studentId: string, termId: string) =>
+        [...reportCardKeys.all, studentId, termId] as const,
+};
+
+export function useGetReportCard(studentId: string, termId: string) {
+    return useQuery({
+        queryKey: reportCardKeys.card(studentId, termId),
+        queryFn: () => reportCardApi.getStudentReportCard(studentId, termId),
+        enabled: !!studentId && !!termId,
     });
+}

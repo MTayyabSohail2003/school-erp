@@ -56,7 +56,8 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from '@/components/ui/drawer';
-import { AlertCircle, FileText, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Users } from 'lucide-react';
+import { AlertCircle, FileText, GraduationCap, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { EditStudentDialog } from './edit-student-dialog';
@@ -79,6 +80,7 @@ export function StudentsTable() {
     const { data: profile, isLoading: profileLoading } = useAuthProfile();
     const isTeacher = profile?.role === 'TEACHER';
     const isParent = profile?.role === 'PARENT';
+    const router = useRouter();
 
     // Fetch managed classes for teacher to filter students
     const { data: teacherClassesData } = useTeacherClasses();
@@ -317,6 +319,18 @@ export function StudentsTable() {
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit Record
                                 </DropdownMenuItem>
+                                {/* Certificate only available for graduated students */}
+                                {student.status === 'GRADUATED' && (
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/dashboard/students/${student.id}/certificate`);
+                                        }}
+                                    >
+                                        <GraduationCap className="mr-2 h-4 w-4 text-yellow-600" />
+                                        View Certificate
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     className="text-red-600 focus:text-red-600"

@@ -57,7 +57,7 @@ function CreateParentForm({
     onCancel: () => void;
 }) {
     const [isLoading, setIsLoading] = useState(false);
-    const [formData, setFormData] = useState({ full_name: '', email: '', phone_number: '', password: '' });
+    const [formData, setFormData] = useState({ full_name: '', email: '', phone_number: '' });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,13 +91,9 @@ function CreateParentForm({
                     <FormLabel className="text-xs">Email</FormLabel>
                     <Input className="h-8 text-xs" type="email" required value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 col-span-2">
                     <FormLabel className="text-xs">Phone Number</FormLabel>
                     <Input className="h-8 text-xs" required value={formData.phone_number} onChange={e => setFormData({ ...formData, phone_number: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                    <FormLabel className="text-xs">Password</FormLabel>
-                    <Input className="h-8 text-xs" type="password" required value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                 </div>
             </div>
             <Button type="button" onClick={handleSubmit} disabled={isLoading} size="sm" className="w-full h-8 text-xs mt-2">
@@ -428,10 +424,10 @@ export function AddStudentDialog() {
                                         name="b_form_id"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>B-Form ID</FormLabel>
+                                                <FormLabel>B-Form ID (Optional)</FormLabel>
                                                 <FormControl>
                                                     <Input 
-                                                        placeholder="35201XXXXXXXX" 
+                                                        placeholder="35201XXXXXXXX (Optional)" 
                                                         {...field} 
                                                         onChange={(e) => {
                                                             const val = e.target.value.replace(/\D/g, '');

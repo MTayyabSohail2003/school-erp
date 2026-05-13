@@ -31,7 +31,6 @@ export function EditParentDialog({ parent }: EditParentDialogProps) {
         full_name: parent.full_name || '',
         email: parent.email || '',
         phone_number: parent.phone_number || '',
-        password: '',
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -66,7 +65,6 @@ export function EditParentDialog({ parent }: EditParentDialogProps) {
                     full_name: parent.full_name || '',
                     email: parent.email || '',
                     phone_number: parent.phone_number || '',
-                    password: '',
                 });
             }
             setOpen(newOpen);
@@ -80,7 +78,7 @@ export function EditParentDialog({ parent }: EditParentDialogProps) {
                 <DialogHeader>
                     <DialogTitle>Edit Parent Profile</DialogTitle>
                     <DialogDescription>
-                        Update contact details or name. Changes to email will affect their login access.
+                        Update contact details or name for this parent.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -113,16 +111,6 @@ export function EditParentDialog({ parent }: EditParentDialogProps) {
                             placeholder="0300 1234567"
                             value={formData.phone_number}
                             onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="edit_password">New Password (Leave empty to keep current)</Label>
-                        <Input
-                            id="edit_password"
-                            type="password"
-                            placeholder="Min 6 characters"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
 

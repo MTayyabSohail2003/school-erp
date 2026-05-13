@@ -10,7 +10,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AR-School ERP — Admin Portal",
+  title: "Al-Fazal Public High School — Admin Portal",
   description: "School Management System — Students, Staff, Attendance, Exams & Fees",
   manifest: "/manifest.webmanifest",
   icons: {

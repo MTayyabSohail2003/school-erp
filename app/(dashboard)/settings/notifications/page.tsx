@@ -3,7 +3,7 @@ import { NotificationTemplateList } from '@/features/notifications/components/no
 import { PageTransition } from '@/components/ui/motion';
 
 export const metadata: Metadata = {
-    title: 'Notification Templates | AR-School ERP',
+    title: 'Notification Templates | Al-Fazal Public High School ERP',
     description: 'System-wide notification registry and configuration.',
 };
 

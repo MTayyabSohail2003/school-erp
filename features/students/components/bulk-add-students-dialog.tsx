@@ -266,7 +266,7 @@ export function BulkAddStudentsDialog() {
                                                     <FormLabel className="text-sm font-semibold">B-Form ID (Opt)</FormLabel>
                                                     <FormControl>
                                                         <Input 
-                                                            placeholder="35201XXXXXXXX" 
+                                                            placeholder="35201XXXXXXXX (Optional)" 
                                                             {...f} 
                                                             className="h-10 border-primary/10" 
                                                             onChange={(e) => {

@@ -208,7 +208,7 @@ export function StaffTable() {
         {
             accessorKey: 'monthly_salary',
             header: 'Salary',
-            cell: ({ row }) => <div className="text-sm hidden lg:block font-medium">${Number(row.getValue('monthly_salary')).toLocaleString()}</div>,
+            cell: ({ row }) => <div className="text-sm hidden lg:block font-medium">Rs. {Number(row.getValue('monthly_salary')).toLocaleString()}</div>,
         },
         {
             accessorKey: 'resume_url',
@@ -429,7 +429,7 @@ export function StaffTable() {
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground uppercase font-semibold">Salary</p>
-                                    <p className="font-medium">${Number(drawerStaff?.monthly_salary || 0).toLocaleString()}</p>
+                                    <p className="font-medium">Rs. {Number(drawerStaff?.monthly_salary || 0).toLocaleString()}</p>
                                 </div>
                             </div>
                             <div>

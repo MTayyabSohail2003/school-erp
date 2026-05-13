@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
     CalendarDays,
     Save,
@@ -69,9 +70,15 @@ const STATUS_CONFIG: Record<AttendanceStatus, { label: string; className: string
 };
 
 export function StudentAttendanceView() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    
     const today = format(new Date(), 'yyyy-MM-dd');
-    const [selectedClassId, setSelectedClassId] = useState('');
-    const [selectedDate, setSelectedDate] = useState(today);
+    
+    // Initialize from URL or default
+    const [selectedClassId, setSelectedClassId] = useState(searchParams.get('classId') || '');
+    const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
 
     // Map of student_id → status (local state before save)
     const [statusMap, setStatusMap] = useState<Record<string, AttendanceStatus>>({});
@@ -86,6 +93,18 @@ export function StudentAttendanceView() {
     const { data: attendanceData, isLoading: attendanceLoading } = useGetAttendance(selectedClassId, selectedDate);
     const upsertMutation = useUpsertAttendance(selectedClassId, selectedDate);
     const { data: profile } = useAuthProfile();
+
+    // Update URL when class or date changes
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (selectedClassId) params.set('classId', selectedClassId);
+        if (selectedDate) params.set('date', selectedDate);
+        
+        const query = params.toString();
+        const url = query ? `${pathname}?${query}` : pathname;
+        
+        router.push(url, { scroll: false });
+    }, [selectedClassId, selectedDate, pathname, router, searchParams]);
 
     // Initialize the statusMap from attendance DB records
     const initializeStatusMap = (data: typeof attendanceData) => {

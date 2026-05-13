@@ -15,28 +15,29 @@ export async function deleteStaffAction(userId: string) {
             };
         }
 
-        const supabaseAdmin = createClient(supabaseAdminUrl, supabaseAdminKey, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-            },
-        });
+        const supabaseAdmin = createClient(supabaseAdminUrl, supabaseAdminKey);
 
-        // Delete from Auth (This will cascade delete from public.users and public.teacher_profiles
-        // if ON DELETE CASCADE is set up correctly in the database schema)
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        // 1. Delete from public.users directly (cascades to teacher_profiles)
+        const { error: dbError } = await supabaseAdmin
+            .from('users')
+            .delete()
+            .eq('id', userId);
 
-        if (error) {
-            // Fallback: Try to delete from the public.users table directly if Auth deletion fails 
-            // (e.g. if the user doesn't exist in Auth but exists in public table for some reason)
-            const { error: dbError } = await supabaseAdmin.from('users').delete().eq('id', userId);
-            if (dbError) throw new Error(dbError.message);
+        if (dbError) {
+            throw new Error(`Failed to delete staff record: ${dbError.message}`);
+        }
+
+        // 2. Attempt to delete from Auth (Optional/Cleanup)
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        
+        if (authError && !authError.message.includes('User not found')) {
+            console.warn('Optional Staff Auth deletion failed:', authError.message);
         }
 
         return { success: true, message: 'Teacher successfully deleted.' };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Delete Staff Action Error:', error);
-        return { success: false, error: error.message || 'An unexpected error occurred.' };
+        return { success: false, error: (error as Error).message || 'An unexpected error occurred.' };
     }
 }

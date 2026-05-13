@@ -49,7 +49,6 @@ export function AddStaffDialog() {
             full_name: '',
             email: '',
             phone_number: '',
-            password: '',
             qualification: '',
             monthly_salary: 0,
             resume_url: null,
@@ -92,10 +91,11 @@ export function AddStaffDialog() {
         try {
             setIsUploading(true);
             const url = await storageApi.uploadDocument(file);
-            form.setValue(fieldName, url as any);
+            form.setValue(fieldName, url as string);
             toast.success('Document uploaded to vault securely.');
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to upload document.');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to upload document.';
+            toast.error(message);
         } finally {
             setIsUploading(false);
         }
@@ -107,10 +107,11 @@ export function AddStaffDialog() {
             const fileName = `staff_photo_${Date.now()}.png`;
             const file = base64ToFile(base64Image, fileName);
             const url = await storageApi.uploadDocument(file, 'documents', 'vault/staff');
-            form.setValue('avatar_url', url as any);
+            form.setValue('avatar_url', url as string);
             toast.success('Photo cropped and uploaded to staff vault.');
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to upload photo.');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to upload photo.';
+            toast.error(message);
         } finally {
             setIsUploading(false);
         }
@@ -148,7 +149,7 @@ export function AddStaffDialog() {
                 <DialogHeader>
                     <DialogTitle>Add New Teacher/Staff</DialogTitle>
                     <DialogDescription>
-                        Create a secure login account and profile for a new teacher.
+                        Create a profile record for a new teacher.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -156,7 +157,7 @@ export function AddStaffDialog() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
                         <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
-                            <h3 className="text-sm font-semibold">Account Details (Login)</h3>
+                            <h3 className="text-sm font-semibold">Basic Information</h3>
                             <FormField
                                 control={form.control}
                                 name="full_name"
@@ -171,34 +172,19 @@ export function AddStaffDialog() {
                                 )}
                             />
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="email"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email Address</FormLabel>
-                                            <FormControl>
-                                                <Input type="email" placeholder="teacher@school.com" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Temporary Password</FormLabel>
-                                            <FormControl>
-                                                <Input type="password" placeholder="******" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email Address</FormLabel>
+                                        <FormControl>
+                                            <Input type="email" placeholder="teacher@school.com" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
 
                         <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
@@ -236,7 +222,7 @@ export function AddStaffDialog() {
                                     name="monthly_salary"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Monthly Salary ($)</FormLabel>
+                                            <FormLabel>Monthly Salary (Rs.)</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     type="number"

@@ -62,12 +62,24 @@ export function TeacherDashboard({ profile }: { profile: { id: string; full_name
     const classFilter = stats?.managingClasses?.[0] ? `?class=${stats.managingClasses[0].id}` : '';
 
     const RADIAN = Math.PI / 180;
-    const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number }) => {
+    interface PieLabelProps {
+        cx?: number;
+        cy?: number;
+        midAngle?: number;
+        innerRadius?: number;
+        outerRadius?: number;
+        percent?: number;
+    }
+
+    const renderLabel = (props: PieLabelProps) => {
+        const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 } = props;
         if (percent < 0.06) return null;
         const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+        const x = cx + r * Math.cos(-midAngle * RADIAN);
+        const y = cy + r * Math.sin(-midAngle * RADIAN);
+
         return (
-            <text x={cx + r * Math.cos(-midAngle * RADIAN)} y={cy + r * Math.sin(-midAngle * RADIAN)}
-                fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight="700">
+            <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight="700">
                 {`${(percent * 100).toFixed(0)}%`}
             </text>
         );
@@ -222,7 +234,7 @@ export function TeacherDashboard({ profile }: { profile: { id: string; full_name
                                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                                     <XAxis dataKey="subject" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
                                     <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-                                    <Tooltip {...ttStyle} formatter={((v: number) => [`${v}%`, 'Average']) as any} />
+                                    <Tooltip {...ttStyle} formatter={(v: number | string | undefined) => [`${v ?? 0}%`, 'Average']} />
                                     <Bar dataKey="average" name="Average %" radius={[6, 6, 0, 0]}>
                                         {(stats?.classSubjectAverages ?? []).map((_, i) => (
                                             <Cell key={i} fill={`hsl(${260 + i * 15}, 70%, ${55 + i * 3}%)`} />

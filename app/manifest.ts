@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'AR-School ERP',
-    short_name: 'AR-School',
+    name: 'Al-Fazal Public High School ERP',
+    short_name: 'Al-Fazal ERP',
     description: 'School Management Enterprise Resource Planning System',
     start_url: '/dashboard',
     display: 'standalone',

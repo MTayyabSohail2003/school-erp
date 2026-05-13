@@ -2,6 +2,7 @@
 
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
 
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageTransition } from '@/components/ui/motion';
 import { Loader } from '@/components/ui/loader';
@@ -12,6 +13,17 @@ import { ParentAttendanceView } from './parent-attendance-view';
 
 export function AttendancePage() {
     const { data: profile, isLoading } = useAuthProfile();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const activeTab = searchParams.get('tab') || 'students';
+
+    const handleTabChange = (value: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('tab', value);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     if (isLoading || !profile) {
         return (
@@ -39,7 +51,11 @@ export function AttendancePage() {
                     <p className="text-sm text-muted-foreground">Manage and overview attendance for all entities</p>
                 </div>
 
-                <Tabs defaultValue="students" className="w-full">
+                <Tabs 
+                    value={activeTab} 
+                    onValueChange={handleTabChange}
+                    className="w-full"
+                >
                     <TabsList className="grid w-full max-w-md grid-cols-2">
                         <TabsTrigger value="students">Student Attendance</TabsTrigger>
                         <TabsTrigger value="staff">Staff Attendance</TabsTrigger>

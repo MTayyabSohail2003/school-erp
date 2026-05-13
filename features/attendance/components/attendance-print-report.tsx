@@ -3,11 +3,19 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Landmark, Users, Calendar, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Landmark } from 'lucide-react';
+import { SCHOOL_NAME } from '@/constants/school-identity';
+
+interface AttendanceStudent {
+    id: string;
+    roll_number: string;
+    full_name: string;
+    status: 'PRESENT' | 'ABSENT' | 'LEAVE' | 'UNMARKED' | string;
+}
 
 interface AttendanceReportProps {
     open: boolean;
-    data: any[];
+    data: AttendanceStudent[];
     onClose: () => void;
     filters: {
         className: string;
@@ -20,15 +28,19 @@ export function AttendancePrintReport({ open, data, onClose, filters }: Attendan
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
-        if (open && data.length > 0) {
+        const timer = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (open && data.length > 0 && mounted) {
             const timer = setTimeout(() => {
                 window.print();
                 onClose();
             }, 800);
             return () => clearTimeout(timer);
         }
-    }, [open, data, onClose]);
+    }, [open, data, onClose, mounted]);
 
     if (!mounted || !open || !data || data.length === 0) return null;
 
@@ -45,7 +57,7 @@ export function AttendancePrintReport({ open, data, onClose, filters }: Attendan
                     <div className="flex items-center gap-3">
                         <Landmark className="w-8 h-8" />
                         <div>
-                            <h1 className="text-2xl font-black uppercase tracking-tighter">AR-School ERP</h1>
+                            <h1 className="text-2xl font-black uppercase tracking-tighter">{SCHOOL_NAME}</h1>
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Daily Attendance Broadsheet</p>
                         </div>
                     </div>

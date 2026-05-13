@@ -5,27 +5,55 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Landmark, Hash, User, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE } from '@/constants/school-identity';
+
+interface ChallanData {
+    id: string;
+    amount_due: number;
+    arrears: number;
+    fines: number;
+    discount: number;
+    paid_amount: number;
+    month_year: string;
+    students: {
+        roll_number: string;
+        full_name: string;
+        classes: {
+            name: string;
+            section: string;
+        };
+    };
+}
 
 interface BulkPrintProps {
     open: boolean;
-    data: any[];
+    data: ChallanData[];
     onClose: () => void;
-    filters: any;
+    filters: {
+        monthYear: string;
+        status: string;
+        classId: string;
+        section: string;
+    };
 }
 
 export function FeeBulkPrint({ open, data, onClose, filters }: BulkPrintProps) {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
-        if (open && data.length > 0) {
+        const timer = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (open && data.length > 0 && mounted) {
             const timer = setTimeout(() => {
                 window.print();
                 onClose();
             }, 800);
             return () => clearTimeout(timer);
         }
-    }, [open, data, onClose]);
+    }, [open, data, onClose, mounted]);
 
     if (!mounted || !open || !data || data.length === 0) return null;
 
@@ -37,8 +65,14 @@ export function FeeBulkPrint({ open, data, onClose, filters }: BulkPrintProps) {
                     <div className="flex items-center gap-3">
                         <Landmark className="w-8 h-8" />
                         <div>
-                            <h1 className="text-2xl font-black uppercase tracking-tighter">AR-School ERP</h1>
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Bulk Fee Collection Broadsheet</p>
+                            <h1 className="text-2xl font-black uppercase tracking-tighter">{SCHOOL_NAME}</h1>
+                            <div className="flex items-center gap-4">
+                                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Bulk Fee Collection Broadsheet</p>
+                                <span className="text-zinc-300">|</span>
+                                <p className="text-[8px] font-medium text-zinc-400 uppercase tracking-widest">{SCHOOL_ADDRESS}</p>
+                                <span className="text-zinc-300">|</span>
+                                <p className="text-[8px] font-black text-zinc-600 tracking-widest">{SCHOOL_PHONE}</p>
+                            </div>
                         </div>
                     </div>
                     <div className="text-right">
@@ -72,14 +106,14 @@ export function FeeBulkPrint({ open, data, onClose, filters }: BulkPrintProps) {
                     <table className="w-full text-[10px]">
                         <thead>
                             <tr className="bg-zinc-900 text-white">
-                                <th className="py-3 px-4 text-left font-black uppercase tracking-widest">Roll No.</th>
-                                <th className="py-3 px-4 text-left font-black uppercase tracking-widest">Student Name</th>
-                                <th className="py-3 px-4 text-left font-black uppercase tracking-widest">Class & Section</th>
-                                <th className="py-3 px-4 text-right font-black uppercase tracking-widest">Monthly Fee</th>
-                                <th className="py-3 px-4 text-right font-black uppercase tracking-widest">Arrears/Fine</th>
-                                <th className="py-3 px-4 text-right font-black uppercase tracking-widest">Grand Total</th>
-                                <th className="py-3 px-4 text-right font-black uppercase tracking-widest">Paid Amount</th>
-                                <th className="py-3 px-3 text-right font-black uppercase tracking-widest bg-zinc-800">Net Balance / Status</th>
+                                <th className="py-3 px-1.5 text-left font-black uppercase tracking-widest">Roll No.</th>
+                                <th className="py-3 px-1.5 text-left font-black uppercase tracking-widest">Student Name</th>
+                                <th className="py-3 px-1.5 text-left font-black uppercase tracking-widest">Class & Section</th>
+                                <th className="py-3 px-1.5 text-right font-black uppercase tracking-widest">Monthly Fee</th>
+                                <th className="py-3 px-1.5 text-right font-black uppercase tracking-widest">Arrears/Fine</th>
+                                <th className="py-3 px-1.5 text-right font-black uppercase tracking-widest">Grand Total</th>
+                                <th className="py-3 px-1.5 text-right font-black uppercase tracking-widest">Paid Amount</th>
+                                <th className="py-3 px-1.5 text-right font-black uppercase tracking-widest bg-zinc-800">Net Balance / Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 italic">
@@ -93,18 +127,18 @@ export function FeeBulkPrint({ open, data, onClose, filters }: BulkPrintProps) {
 
                                 return (
                                     <tr key={challan.id} className={i % 2 === 0 ? 'bg-white' : 'bg-zinc-50'}>
-                                        <td className="py-3 px-4 font-black">{challan.students?.roll_number}</td>
-                                        <td className="py-3 px-4 font-bold not-italic">{challan.students?.full_name}</td>
-                                        <td className="py-3 px-4 font-medium uppercase tracking-tighter">
+                                        <td className="py-3 px-1.5 font-black">{challan.students?.roll_number}</td>
+                                        <td className="py-3 px-1.5 font-bold not-italic">{challan.students?.full_name}</td>
+                                        <td className="py-3 px-1.5 font-medium uppercase tracking-tighter">
                                             {challan.students?.classes?.name} - {challan.students?.classes?.section}
                                         </td>
-                                        <td className="py-3 px-4 text-right font-medium">Rs. {Number(challan.amount_due).toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-right font-medium text-orange-600">
+                                        <td className="py-3 px-1.5 text-right font-medium">Rs. {Number(challan.amount_due).toLocaleString()}</td>
+                                        <td className="py-3 px-1.5 text-right font-medium text-orange-600">
                                             {addons >= 0 ? '+' : ''}Rs. {addons.toLocaleString()}
                                         </td>
-                                        <td className="py-3 px-4 text-right font-black">Rs. {total.toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-right font-black text-emerald-600 italic">Rs. {Number(challan.paid_amount || 0).toLocaleString()}</td>
-                                        <td className="py-3 px-4 text-right font-black text-zinc-900 border-l-2 border-zinc-900 bg-zinc-50/50">
+                                        <td className="py-3 px-1.5 text-right font-black">Rs. {total.toLocaleString()}</td>
+                                        <td className="py-3 px-1.5 text-right font-black text-emerald-600 italic">Rs. {Number(challan.paid_amount || 0).toLocaleString()}</td>
+                                        <td className="py-3 px-1.5 text-right font-black text-zinc-900 border-l-2 border-zinc-900 bg-zinc-50/50">
                                             <div className="flex flex-col items-end">
                                                 {remaining > 0 ? (
                                                     <span className="text-xs">Rs. {remaining.toLocaleString()}</span>

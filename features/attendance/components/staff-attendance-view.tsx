@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
     Briefcase,
     Save,
@@ -55,8 +56,12 @@ const STATUS_CONFIG: Record<AttendanceStatus, { label: string; className: string
 };
 
 export function StaffAttendanceView() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     const today = format(new Date(), 'yyyy-MM-dd');
-    const [selectedDate, setSelectedDate] = useState(today);
+    const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
 
     const [statusMap, setStatusMap] = useState<Record<string, AttendanceStatus>>({});
 
@@ -64,6 +69,17 @@ export function StaffAttendanceView() {
     const { data: attendanceData, isLoading: attendanceLoading } = useGetStaffAttendance(selectedDate);
     const upsertMutation = useUpsertStaffAttendance(selectedDate);
     const { data: profile } = useAuthProfile();
+
+    // Update URL when date changes
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (selectedDate) params.set('date', selectedDate);
+        
+        const query = params.toString();
+        const url = query ? `${pathname}?${query}` : pathname;
+        
+        router.push(url, { scroll: false });
+    }, [selectedDate, pathname, router, searchParams]);
 
     useEffect(() => {
         if (attendanceData) {

@@ -8,7 +8,8 @@ import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/globals';
-import { LayoutDashboard, Users, Wallet, Settings, GraduationCap, Calendar, BookOpen, ChevronRight, ClipboardList, AlertTriangle, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone, LayoutGrid, RefreshCcw } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, GraduationCap, BookOpen, ChevronRight, ClipboardList, CalendarDays, Briefcase, User, Loader2, WalletCards, Megaphone, LayoutGrid } from 'lucide-react';
+import { SCHOOL_SHORT_NAME } from '@/constants/school-identity';
 import { UPLOAD_LIMITS } from '@/constants/config';
 import {
     Sidebar,
@@ -149,7 +150,7 @@ export default function AppSidebar() {
                         open ? 'opacity-100 h-auto translate-y-0' : 'opacity-0 h-0 -translate-y-4 hidden'
                     )}>
                         <span className="font-bold text-xl text-sidebar-foreground whitespace-nowrap tracking-wide">
-                            AR-School ERP
+                            {SCHOOL_SHORT_NAME}
                         </span>
                         <span className="text-[10px] text-muted-foreground font-semibold tracking-widest uppercase mt-0.5">
                             {profile?.role ? `${profile.role.charAt(0) + profile.role.slice(1).toLowerCase()} Portal` : 'School Portal'}

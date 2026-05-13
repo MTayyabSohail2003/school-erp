@@ -209,7 +209,7 @@ export function EditStaffDialog({ isOpen, setIsOpen, staffMember }: EditStaffPro
                             name="monthly_salary"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Monthly Salary ($)</FormLabel>
+                                    <FormLabel>Monthly Salary (Rs.)</FormLabel>
                                     <FormControl>
                                         <Input
                                             type="number"

@@ -3,6 +3,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import { type Subject, type SubjectAssignmentWithClass } from '../api/subjects.api';
+import { SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE } from '@/constants/school-identity';
 
 interface CurriculumReportProps {
     open: boolean;
@@ -66,9 +67,9 @@ export function CurriculumReport({ open, onClose, assignments = [], masterPool =
                             </svg>
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '28px', fontWeight: '900', color: 'black', margin: 0, textTransform: 'uppercase', letterSpacing: '-1px' }}>AR-SCHOOL SYSTEM</h1>
+                            <h1 style={{ fontSize: '28px', fontWeight: '900', color: 'black', margin: 0, textTransform: 'uppercase', letterSpacing: '-1px' }}>{SCHOOL_NAME}</h1>
                             <p style={{ margin: '3px 0 0 0', fontSize: '11px', fontWeight: '800', color: '#000', textTransform: 'uppercase' }}>Official Academic Planning Department</p>
-                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '700', color: '#333' }}>Knowledge Campus, Sector-B, Islamabad | Tel: +92 51 1234567</p>
+                            <p style={{ margin: 0, fontSize: '10px', fontWeight: '700', color: '#333' }}>{SCHOOL_ADDRESS} | Tel: {SCHOOL_PHONE}</p>
                         </div>
                     </div>
                     <div style={{ width: '40%', padding: '25px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
@@ -115,7 +116,7 @@ export function CurriculumReport({ open, onClose, assignments = [], masterPool =
                         <p style={{ margin: '5px 0 0 0', fontSize: '10px', fontWeight: '800' }}>Head of Academics</p>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '9px', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase' }}>AR-SCHOOL ERP</p>
+                        <p style={{ margin: 0, fontSize: '9px', fontWeight: '900', letterSpacing: '4px', textTransform: 'uppercase' }}>{SCHOOL_NAME} ERP</p>
                         <p style={{ margin: '2px 0 0 0', fontSize: '8px', fontWeight: '700' }}>MANAGEMENT SYSTEM v4.2</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>

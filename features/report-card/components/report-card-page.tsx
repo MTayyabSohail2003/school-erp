@@ -1,17 +1,16 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Printer, ChevronLeft, CalendarRange } from 'lucide-react';
-import { format } from 'date-fns';
+import { Printer, ChevronLeft } from 'lucide-react';
 
 import { useGetReportCard } from '../api/use-report-card';
 import { PageTransition } from '@/components/ui/motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE } from '@/constants/school-identity';
 
-// Grade badge colors for screen view (will strip for print to save ink)
 const GRADE_COLORS: Record<string, string> = {
     A: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
     B: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
@@ -23,10 +22,11 @@ const GRADE_COLORS: Record<string, string> = {
 export function ReportCardPage() {
     const params = useParams();
     const router = useRouter();
+    // Route: /students/[studentId]/report-card/[termId]
     const studentId = params.studentId as string;
-    const examId = params.examId as string;
+    const termId = params.termId as string;
 
-    const { data: report, isLoading } = useGetReportCard(studentId, examId);
+    const { data: report, isLoading } = useGetReportCard(studentId, termId);
 
     if (isLoading) {
         return (
@@ -47,16 +47,16 @@ export function ReportCardPage() {
         );
     }
 
-    const { student, exam, marks, summary } = report;
+    const { student, term, results, summary } = report;
 
     return (
         <PageTransition>
             <div className="max-w-4xl mx-auto pb-20">
 
-                {/* ── Screen Only Actions ── */}
+                {/* ── Screen-Only Actions ── */}
                 <div className="flex items-center justify-between mb-8 print:hidden">
                     <Button variant="outline" onClick={() => router.back()} className="gap-2">
-                        <ChevronLeft className="h-4 w-4" /> Back to Marks
+                        <ChevronLeft className="h-4 w-4" /> Back
                     </Button>
                     <Button onClick={() => window.print()} className="gap-2">
                         <Printer className="h-4 w-4" /> Print Report Card
@@ -68,10 +68,19 @@ export function ReportCardPage() {
 
                     {/* Header */}
                     <div className="flex flex-col items-center justify-center text-center mb-10 pb-8 border-b-2">
-                        <img src="/logo.png" alt="School Logo" className="w-20 h-20 object-contain mb-4" />
-                        <h1 className="text-3xl font-black uppercase tracking-wider">Academics Report Card</h1>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter mb-1">{SCHOOL_NAME}</h1>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mb-4">
+                            {SCHOOL_ADDRESS} &bull; {SCHOOL_PHONE}
+                        </p>
+                        
+                        <div className="h-px w-20 bg-primary/20 mb-6" />
+                        
+                        <h2 className="text-2xl font-black uppercase tracking-wider">Academic Report Card</h2>
                         <p className="text-muted-foreground font-medium mt-1 uppercase tracking-widest text-sm">
-                            Session 2026-2027
+                            Session {term.academic_year}
+                        </p>
+                        <p className="text-muted-foreground text-xs mt-1 font-semibold uppercase tracking-widest">
+                            {term.name} Examination
                         </p>
                     </div>
 
@@ -87,11 +96,13 @@ export function ReportCardPage() {
                         </div>
                         <div className="flex items-end justify-between border-b pb-1">
                             <span className="text-muted-foreground font-medium">Class / Section</span>
-                            <span className="font-bold text-base">{student.classes.name} — {student.classes.section}</span>
+                            <span className="font-bold text-base">
+                                {student.classes?.name} — {student.classes?.section}
+                            </span>
                         </div>
                         <div className="flex items-end justify-between border-b pb-1">
-                            <span className="text-muted-foreground font-medium">Exam Session</span>
-                            <span className="font-bold text-base">{exam.title}</span>
+                            <span className="text-muted-foreground font-medium">Exam Term</span>
+                            <span className="font-bold text-base">{term.name}</span>
                         </div>
                     </div>
 
@@ -100,25 +111,53 @@ export function ReportCardPage() {
                         <table className="w-full text-sm border-collapse">
                             <thead>
                                 <tr className="border-b-2 border-primary/20 bg-muted/30">
+                                    <th className="text-left font-bold p-3">#</th>
                                     <th className="text-left font-bold p-3">Subject</th>
                                     <th className="text-center font-bold p-3 w-28">Total Marks</th>
                                     <th className="text-center font-bold p-3 w-28">Obtained</th>
-                                    <th className="text-center font-bold p-3 w-24">Grade</th>
+                                    <th className="text-center font-bold p-3 w-20">%</th>
+                                    <th className="text-center font-bold p-3 w-20">Grade</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
-                                {marks.map((m) => (
-                                    <tr key={m.id}>
-                                        <td className="p-3 font-medium">{m.subjects.name}</td>
-                                        <td className="p-3 text-center text-muted-foreground">{m.total_marks}</td>
-                                        <td className="p-3 text-center font-semibold">{m.marks_obtained}</td>
-                                        <td className="p-3 text-center">
-                                            <Badge className={`print:border-none print:shadow-none print:text-foreground print:bg-transparent ${GRADE_COLORS[m.grade] ?? ''}`}>
-                                                {m.grade}
-                                            </Badge>
+                                {results.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="text-center py-8 text-muted-foreground italic text-sm">
+                                            No results recorded for this term.
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    results.map((r, i) => (
+                                        <tr key={r.id ?? i}>
+                                            <td className="p-3 text-muted-foreground text-xs font-mono">
+                                                {String(i + 1).padStart(2, '0')}
+                                            </td>
+                                            <td className="p-3 font-medium">
+                                                <div className="flex flex-col">
+                                                    <span>{r.subjects?.name}</span>
+                                                    {r.subjects?.code && (
+                                                        <span className="text-[10px] text-muted-foreground font-mono uppercase">
+                                                            {r.subjects.code}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-3 text-center text-muted-foreground">{r.total_marks}</td>
+                                            <td className="p-3 text-center font-semibold">{r.obtained_marks}</td>
+                                            <td className="p-3 text-center text-sm font-bold">
+                                                {Number(r.percentage).toFixed(1)}%
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <Badge className={cn(
+                                                    'print:border-none print:shadow-none print:text-foreground print:bg-transparent',
+                                                    GRADE_COLORS[r.grade] ?? ''
+                                                )}>
+                                                    {r.grade}
+                                                </Badge>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -127,17 +166,40 @@ export function ReportCardPage() {
                     <div className="flex gap-6 mb-16">
                         <div className="flex-1 bg-muted/40 p-5 rounded-xl border flex items-center justify-between">
                             <span className="font-semibold text-muted-foreground">Total Score</span>
-                            <span className="text-xl font-black">{summary.totalObtainedMarks} <span className="text-sm font-medium text-muted-foreground">/ {summary.totalMaxMarks}</span></span>
+                            <span className="text-xl font-black">
+                                {summary.totalObtainedMarks}{' '}
+                                <span className="text-sm font-medium text-muted-foreground">/ {summary.totalMaxMarks}</span>
+                            </span>
                         </div>
                         <div className="flex-1 bg-muted/40 p-5 rounded-xl border flex items-center justify-between">
                             <span className="font-semibold text-muted-foreground">Percentage</span>
-                            <span className="text-xl font-black">{summary.percentage}%</span>
+                            <span className="text-xl font-black">{summary.percentage.toFixed(1)}%</span>
                         </div>
-                        <div className="flex-1 bg-primary/5 p-5 rounded-xl border border-primary/20 flex items-center justify-between">
-                            <span className="font-semibold text-primary">Final Grade</span>
-                            <span className="text-2xl font-black text-primary">
-                                {marks.length > 0 ? (Number(summary.percentage) >= 85 ? 'A' : Number(summary.percentage) >= 70 ? 'B' : Number(summary.percentage) >= 55 ? 'C' : Number(summary.percentage) >= 40 ? 'D' : 'F') : 'N/A'}
+                        <div className={cn(
+                            'flex-1 p-5 rounded-xl border flex items-center justify-between',
+                            summary.isPassed
+                                ? 'bg-primary/5 border-primary/20'
+                                : 'bg-red-500/5 border-red-500/20'
+                        )}>
+                            <span className={cn('font-semibold', summary.isPassed ? 'text-primary' : 'text-red-600')}>
+                                Final Grade
                             </span>
+                            <div className="flex items-center gap-3">
+                                <span className={cn(
+                                    'text-2xl font-black',
+                                    summary.isPassed ? 'text-primary' : 'text-red-600'
+                                )}>
+                                    {summary.finalGrade}
+                                </span>
+                                <Badge className={cn(
+                                    'font-black text-xs border-none',
+                                    summary.isPassed
+                                        ? 'bg-emerald-500 text-white'
+                                        : 'bg-red-500 text-white'
+                                )}>
+                                    {summary.isPassed ? 'PASS' : 'FAIL'}
+                                </Badge>
+                            </div>
                         </div>
                     </div>
 

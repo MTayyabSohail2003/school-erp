@@ -16,13 +16,11 @@ export const staffSchema = z.object({
 
 export type Staff = z.infer<typeof staffSchema>;
 
-// Password is required when creating a new teacher account
+// No password required as we are just saving data now
 export const staffFormSchema = staffSchema.omit({
     id: true,
     user_id: true,
     created_at: true,
-}).extend({
-    password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
 export type StaffFormData = z.infer<typeof staffFormSchema>;

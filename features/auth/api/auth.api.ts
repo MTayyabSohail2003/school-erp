@@ -21,6 +21,7 @@ export const authApi = {
 
     /**
      * Pure function to fetch the current session's custom user profile (Role, etc).
+     * Uses maybeSingle() to return null instead of a 406 when no row is found.
      */
     getProfile: async () => {
         const supabase = createClient();
@@ -32,9 +33,10 @@ export const authApi = {
             .from('users')
             .select('*')
             .eq('id', user.id)
-            .single();
+            .maybeSingle(); // ✅ returns null (not 406) when no row found
 
         if (dbError) throw new Error(dbError.message);
+        if (!profile) throw new Error('Profile not found. Please contact admin.');
 
         return profile;
     },

@@ -13,7 +13,7 @@ export const studentSchema = z.object({
         }, { message: 'Student must be between 2 and 25 years old' }),
     class_id: z.string().min(1, { message: 'Select a valid class' }),
     parent_id: z.string().min(1, { message: 'Select a valid parent' }),
-    b_form_id: z.string().min(5, { message: 'B-Form ID is required for verification' }),
+    b_form_id: z.string().optional().nullable().or(z.literal('')),
     academic_year: z.string().min(4, { message: 'Academic Year is required (e.g. 2025)' }),
     b_form_url: z.string().url().optional().nullable(),
     old_cert_url: z.string().url().optional().nullable(),
@@ -34,9 +34,7 @@ export type StudentFormData = z.infer<typeof studentFormSchema>;
 export const bulkStudentFormSchema = z.object({
     class_id: z.string().min(1, 'Select a valid class'),
     students: z.array(
-        studentFormSchema.omit({ class_id: true, b_form_id: true }).extend({
-            b_form_id: z.string().optional().nullable().or(z.literal(''))
-        })
+        studentFormSchema.omit({ class_id: true })
     ).min(1, 'Add at least one student'),
 });
 

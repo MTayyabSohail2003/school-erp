@@ -1,11 +1,15 @@
 import { createClient } from '@/lib/supabase/client';
-import { type MarkWithDetails } from '@/features/marks/schemas/mark.schema';
+import { calculateGradeAndPercentage } from '@/features/results/schemas/results.schema';
 
 export const reportCardApi = {
-    getStudentReportCard: async (studentId: string, examId: string) => {
+    /**
+     * Fetch a student's full result card for a specific exam term.
+     * Uses the new `exam_results` + `exam_terms` system.
+     */
+    getStudentReportCard: async (studentId: string, termId: string) => {
         const supabase = createClient();
 
-        // 1. Get student info & class
+        // 1. Student info
         const { data: student, error: studentError } = await supabase
             .from('students')
             .select('*, classes(name, section)')
@@ -14,37 +18,40 @@ export const reportCardApi = {
 
         if (studentError) throw new Error(studentError.message);
 
-        // 2. Get exam info
-        const { data: exam, error: examError } = await supabase
-            .from('exams')
+        // 2. Term / exam info (academic_year comes from here)
+        const { data: term, error: termError } = await supabase
+            .from('exam_terms')
             .select('*')
-            .eq('id', examId)
+            .eq('id', termId)
             .single();
 
-        if (examError) throw new Error(examError.message);
+        if (termError) throw new Error(termError.message);
 
-        // 3. Get all marks for this student + exam
-        const { data: marks, error: marksError } = await supabase
-            .from('exam_marks')
-            .select('*, subjects(name)')
+        // 3. Results for this student + term
+        const { data: results, error: resultsError } = await supabase
+            .from('exam_results')
+            .select('*, subjects(name, code), classes(name, section)')
             .eq('student_id', studentId)
-            .eq('exam_id', examId);
+            .eq('term_id', termId)
+            .order('created_at', { ascending: true });
 
-        if (marksError) throw new Error(marksError.message);
+        if (resultsError) throw new Error(resultsError.message);
 
-        // 4. Calculate totals
-        const totalMaxMarks = marks.reduce((sum, m) => sum + m.total_marks, 0);
-        const totalObtainedMarks = marks.reduce((sum, m) => sum + m.marks_obtained, 0);
-        const percentage = totalMaxMarks > 0 ? (totalObtainedMarks / totalMaxMarks) * 100 : 0;
+        // 4. Calculate summary
+        const totalMaxMarks = (results ?? []).reduce((sum, r) => sum + r.total_marks, 0);
+        const totalObtainedMarks = (results ?? []).reduce((sum, r) => sum + r.obtained_marks, 0);
+        const { percentage, grade: finalGrade } = calculateGradeAndPercentage(totalObtainedMarks, totalMaxMarks);
 
         return {
             student,
-            exam,
-            marks: marks as (MarkWithDetails & { subjects: { name: string } })[],
+            term,
+            results: results ?? [],
             summary: {
                 totalMaxMarks,
                 totalObtainedMarks,
-                percentage: percentage.toFixed(1),
+                percentage,
+                finalGrade,
+                isPassed: percentage >= 40,
             },
         };
     },

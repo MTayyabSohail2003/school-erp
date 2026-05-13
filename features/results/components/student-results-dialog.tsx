@@ -10,6 +10,7 @@ import { AlertCircle, BookOpen, Loader2, Save, Printer, ArrowLeft, School, Layou
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SCHOOL_NAME, SCHOOL_ADDRESS, SCHOOL_PHONE } from '@/constants/school-identity';
 
 interface StudentResultsDialogProps {
     open: boolean;
@@ -399,9 +400,9 @@ export function StudentResultsDialog({ open, onOpenChange, student, termId, clas
                                     <School className="w-10 h-10" />
                                 </div>
                                 <div>
-                                    <h1 className="text-3xl font-black uppercase tracking-tight leading-none mb-0.5">AR SCHOOL ERP</h1>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-60">Academic Excellence & Innovation</p>
-                                    <p className="text-[9px] italic">Main Campus, High Street, City Road</p>
+                                    <h1 className="text-3xl font-black uppercase tracking-tight leading-none mb-1">{SCHOOL_NAME}</h1>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{SCHOOL_ADDRESS}</p>
+                                    <p className="text-[9px] font-black tracking-widest mt-1 italic">{SCHOOL_PHONE}</p>
                                 </div>
                             </div>
                             <div className="text-right">

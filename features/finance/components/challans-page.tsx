@@ -8,6 +8,7 @@ import { format, parseISO } from 'date-fns';
 import { useGetChallans, useUpdateChallanStatus } from '../api/use-challans';
 import { ChallanGenerationCard } from './challan-generation-card';
 import { CollectFeeModal } from './collect-fee-modal';
+import { ExportFeesButton } from './export-fees-button';
 import { type ChallanStatus, type FeeChallan } from '../schemas/fee-challan.schema';
 import { TrendingUp, Users, DollarSign, Wallet } from 'lucide-react';
 
@@ -90,6 +91,7 @@ export function ChallansPage() {
                             <p className="text-sm text-muted-foreground">Manage and track student fee payments</p>
                         </div>
                     </div>
+                    <ExportFeesButton monthYear={monthFilter === 'all' ? undefined : monthFilter} />
                 </div>
 
                 {/* Monthly Quick Stats */}
