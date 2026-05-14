@@ -29,9 +29,11 @@ import {
     ChevronsLeft,
     ChevronsRight,
     School,
-    FileText
+    FileText,
+    Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StudentReportCardPrintDialog } from './student-report-card-print-dialog';
 
 type StudentRecord = {
     id: string;
@@ -289,6 +291,25 @@ function StudentResultsArchive({ student, onBack }: { student: StudentRecord; on
     const [termFilter, setTermFilter] = useState<string>('ALL');
     const [archiveClassFilter, setArchiveClassFilter] = useState<string>('ALL');
 
+    // State for print dialog
+    const [printDialogOpen, setPrintDialogOpen] = useState(false);
+    const [selectedPrintData, setSelectedPrintData] = useState<{
+        termResults: ResultRecord[];
+        termName: string;
+        academicYear: string;
+        className: string;
+    } | null>(null);
+
+    const handlePrintClick = (termName: string, year: string, className: string, termResults: ResultRecord[]) => {
+        setSelectedPrintData({
+            termResults,
+            termName,
+            academicYear: year,
+            className
+        });
+        setPrintDialogOpen(true);
+    };
+
     // Group results by academic_year → class_name → term_name
     const grouped = useMemo(() => {
         if (!results) return {};
@@ -509,7 +530,7 @@ function StudentResultsArchive({ student, onBack }: { student: StudentRecord; on
                                             const isPassed = overallPct >= 40;
 
                                             return (
-                                                <div key={termName} className="rounded-2xl border overflow-hidden">
+                                                <div key={termName} className="rounded-2xl border overflow-hidden shadow-sm">
                                                     {/* Term Header */}
                                                     <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-b">
                                                         <div className="flex flex-col">
@@ -534,6 +555,17 @@ function StudentResultsArchive({ student, onBack }: { student: StudentRecord; on
                                                             )}>
                                                                 {isPassed ? 'PASS' : 'FAIL'}
                                                             </Badge>
+
+                                                            {/* Print Button */}
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="rounded-xl h-9 px-4 font-black uppercase text-[10px] tracking-widest gap-2 bg-background shadow-sm hover:bg-primary hover:text-primary-foreground transition-all"
+                                                                onClick={() => handlePrintClick(termName, year, className, termResults)}
+                                                            >
+                                                                <Printer className="w-3.5 h-3.5" />
+                                                                Print Card
+                                                            </Button>
                                                         </div>
                                                     </div>
 
@@ -556,7 +588,7 @@ function StudentResultsArchive({ student, onBack }: { student: StudentRecord; on
                                                                         <TableCell className="py-3 px-6 font-mono text-xs text-muted-foreground/50">{i + 1}</TableCell>
                                                                         <TableCell>
                                                                             <div className="flex flex-col">
-                                                                                <span className="font-bold text-sm">{r.subjects.name}</span>
+                                                                                <span className="font-bold text-sm uppercase tracking-tight">{r.subjects.name}</span>
                                                                                 {r.subjects.code && <span className="text-[9px] font-mono text-muted-foreground/40 uppercase">{r.subjects.code}</span>}
                                                                             </div>
                                                                         </TableCell>
@@ -565,7 +597,7 @@ function StudentResultsArchive({ student, onBack }: { student: StudentRecord; on
                                                                         <TableCell className="text-center font-bold text-sm">{r.percentage.toFixed(1)}%</TableCell>
                                                                         <TableCell className="text-right px-6">
                                                                             <Badge className={cn(
-                                                                                "rounded-lg text-[10px] font-black border-none",
+                                                                                "rounded-lg text-[10px] font-black border-none shadow-sm",
                                                                                 r.percentage >= 85 && "bg-emerald-500 text-white",
                                                                                 r.percentage >= 70 && r.percentage < 85 && "bg-blue-500 text-white",
                                                                                 r.percentage >= 40 && r.percentage < 70 && "bg-orange-500 text-white",
@@ -588,6 +620,19 @@ function StudentResultsArchive({ student, onBack }: { student: StudentRecord; on
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* Student Report Card Print Dialog */}
+            {selectedPrintData && (
+                <StudentReportCardPrintDialog
+                    open={printDialogOpen}
+                    onOpenChange={setPrintDialogOpen}
+                    student={student}
+                    results={selectedPrintData.termResults}
+                    termName={selectedPrintData.termName}
+                    academicYear={selectedPrintData.academicYear}
+                    className={selectedPrintData.className}
+                />
             )}
         </div>
     );
