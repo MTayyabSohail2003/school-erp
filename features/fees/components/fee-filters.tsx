@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { MonthPicker } from '@/components/ui/month-picker';
-import { Search, Printer } from 'lucide-react';
+import { Search, Printer, History } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 
@@ -14,6 +14,7 @@ export interface FeeFiltersState {
     status: string;
     search: string;
     monthYear: string;
+    includePromoted?: boolean;
 }
 
 interface FeeFiltersProps {
@@ -122,6 +123,18 @@ export function FeeFilters({ filters, onChange, onBulkPrint, canPrint }: FeeFilt
                     })}
                 >
                     Reset
+                </Button>
+
+                {/* Include Promoted Toggle */}
+                <Button
+                    variant={filters.includePromoted ? 'default' : 'outline'}
+                    onClick={() => onChange({ ...filters, includePromoted: !filters.includePromoted })}
+                    className={`rounded-xl h-11 px-4 text-[10px] font-black uppercase tracking-widest gap-2 transition-all ${
+                        filters.includePromoted ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'border-2'
+                    }`}
+                >
+                    <History className="w-4 h-4" />
+                    {filters.includePromoted ? 'Historical ON' : 'Include Promoted'}
                 </Button>
 
                 <div className="h-8 w-[2px] bg-border/40 mx-2 hidden lg:block" />

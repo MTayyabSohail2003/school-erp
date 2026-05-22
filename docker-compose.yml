@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  school-erp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: school-erp-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Add all necessary environment variables for production here
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # Email / SMTP configs if any
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+    
+    # Optional: If you want to run this in detached mode easily
+    # command: node server.js

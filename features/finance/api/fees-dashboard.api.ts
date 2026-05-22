@@ -20,37 +20,80 @@ export const feesDashboardApi = {
     getStats: async (monthYear: string, classId?: string): Promise<DashboardStats> => {
         const supabase = createClient();
         
-        // 1. Fetch Students in scope
-        let studentQuery = supabase.from('students').select('id, monthly_fee, created_at').eq('status', 'ACTIVE');
-        if (classId) studentQuery = studentQuery.eq('class_id', classId);
+        // 1. Fetch all existing challans for this month (including their class details)
+        const { data: monthChallans } = await supabase
+            .from('fee_challans')
+            .select(`
+                student_id,
+                amount_due,
+                arrears,
+                fines,
+                discount,
+                paid_amount,
+                fee_structures(class_id),
+                students(created_at, status)
+            `)
+            .eq('month_year', monthYear);
+            
+        let filteredChallans = monthChallans || [];
+        if (classId) {
+            filteredChallans = filteredChallans.filter(c => (c.fee_structures as any)?.class_id === classId);
+        }
         
-        const { data: students } = await studentQuery;
-        if (!students) return { totalStudents: 0, totalFee: 0, totalCollected: 0, totalPending: 0, newStudentsThisMonth: 0 };
+        const challanStudentIds = new Set(filteredChallans.map(c => c.student_id));
 
-        const studentIds = students.map(s => s.id);
+        // 2. Fetch currently ACTIVE students (who might not have a challan yet)
+        let activeStudentQuery = supabase
+            .from('students')
+            .select('id, monthly_fee, created_at')
+            .eq('status', 'ACTIVE');
+            
+        if (classId) {
+            activeStudentQuery = activeStudentQuery.eq('class_id', classId);
+        }
+        const { data: activeStudents } = await activeStudentQuery;
 
-        // 2. Fetch ALL challans for these students up to target month
+        // 3. Combine unique student IDs
+        const allStudentIds = new Set<string>();
+        filteredChallans.forEach(c => allStudentIds.add(c.student_id));
+        activeStudents?.forEach(s => allStudentIds.add(s.id));
+
+        if (allStudentIds.size === 0) {
+            return { totalStudents: 0, totalFee: 0, totalCollected: 0, totalPending: 0, newStudentsThisMonth: 0 };
+        }
+
+        // 4. Fetch all challans up to target month for all these students to compute arrears
         const { data: allChallans } = await supabase
             .from('fee_challans')
             .select('student_id, month_year, amount_due, arrears, fines, discount, paid_amount')
-            .in('student_id', studentIds)
+            .in('student_id', Array.from(allStudentIds))
             .lte('month_year', monthYear);
 
-        // 3. Aggregate
+        const studentDetailsMap = new Map<string, string>();
+        filteredChallans.forEach(c => {
+            if (c.students?.created_at) {
+                studentDetailsMap.set(c.student_id, c.students.created_at);
+            }
+        });
+        activeStudents?.forEach(s => {
+            studentDetailsMap.set(s.id, s.created_at);
+        });
+
+        // 5. Aggregate
         let totalFee = 0;
         let totalCollected = 0;
-        let totalPending = 0;
         let newStudents = 0;
 
-        // Group challans by student to calculate arrears per student
         const challansByStudent = new Map<string, any[]>();
         allChallans?.forEach(c => {
-            if (!challansByStudent.has(c.student_id)) challansByStudent.set(c.student_id, []);
+            if (!challansByStudent.has(c.student_id)) {
+                challansByStudent.set(c.student_id, []);
+            }
             challansByStudent.get(c.student_id)?.push(c);
         });
 
-        students.forEach(student => {
-            const sChallans = challansByStudent.get(student.id) || [];
+        allStudentIds.forEach(studentId => {
+            const sChallans = challansByStudent.get(studentId) || [];
             const targetMonthChallan = sChallans.find(c => c.month_year === monthYear);
             
             // Calculate Historical Arrears (up to month before target)
@@ -62,7 +105,11 @@ export const feesDashboardApi = {
             if (historicalArrears < 0) historicalArrears = 0;
 
             // Current Month Liability
-            const baseFee = targetMonthChallan ? Number(targetMonthChallan.amount_due) : Number(student.monthly_fee || 0);
+            const activeStudent = activeStudents?.find(s => s.id === studentId);
+            const baseFee = targetMonthChallan 
+                ? Number(targetMonthChallan.amount_due) 
+                : Number(activeStudent?.monthly_fee || 0);
+                
             const currentFines = targetMonthChallan ? Number(targetMonthChallan.fines || 0) : 0;
             const currentDiscount = targetMonthChallan ? Number(targetMonthChallan.discount || 0) : 0;
             
@@ -71,14 +118,14 @@ export const feesDashboardApi = {
             totalFee += totalMonthlyLiability;
             totalCollected += targetMonthChallan ? Number(targetMonthChallan.paid_amount || 0) : 0;
 
-            // New students check
-            if (student.created_at.startsWith(monthYear)) {
+            const createdAt = studentDetailsMap.get(studentId);
+            if (createdAt && createdAt.startsWith(monthYear)) {
                 newStudents++;
             }
         });
 
         return {
-            totalStudents: students.length,
+            totalStudents: allStudentIds.size,
             totalFee,
             totalCollected,
             totalPending: totalFee - totalCollected,

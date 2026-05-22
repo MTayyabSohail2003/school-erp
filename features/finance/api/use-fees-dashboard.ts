@@ -26,21 +26,25 @@ export function useFeeAnalytics(months: string[]) {
     });
 }
 
-export function useFeeStudents(monthYear: string, filters?: { classId?: string, section?: string, status?: string, search?: string }) {
+export function useFeeStudents(monthYear: string, filters?: { classId?: string, section?: string, status?: string, search?: string, includePromoted?: boolean }) {
     // We will inline the fetching here since it requires complex filters
     return useQuery({
         queryKey: feesKeys.students(monthYear, filters),
         queryFn: async () => {
             const supabase = createClient();
             
-            // 1. Fetch all ACTIVE students directly
+            // 1. Fetch students — optionally include promoted/graduated
             let studentQuery = supabase
                 .from('students')
                 .select(`
                     id, full_name, roll_number, class_id, monthly_fee, status, photo_url,
                     classes (name, section)
-                `)
-                .eq('status', 'ACTIVE');
+                `);
+            
+            // Only filter by ACTIVE unless includePromoted is on
+            if (!filters?.includePromoted) {
+                studentQuery = studentQuery.eq('status', 'ACTIVE');
+            }
 
             if (filters?.classId && filters.classId !== 'All') {
                 studentQuery = studentQuery.eq('class_id', filters.classId);

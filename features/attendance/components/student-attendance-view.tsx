@@ -16,7 +16,8 @@ import {
     ChevronsLeft,
     ChevronsRight,
     Printer,
-    User
+    User,
+    History,
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,7 @@ import { useGetAttendance } from '../api/use-get-attendance';
 import { useUpsertAttendance } from '../api/use-upsert-attendance';
 import { type AttendanceStatus } from '../schemas/attendance.schema';
 import { useAuthProfile } from '@/features/auth/hooks/use-auth';
-import { useStudentsByClass } from '@/features/students/hooks/use-students-by-class';
+import { useStudentsByClass, type StudentBasic } from '@/features/students/hooks/use-students-by-class';
 import { AttendancePrintReport } from './attendance-print-report';
 
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,9 @@ export function StudentAttendanceView() {
 
     // Map of student_id → status (local state before save)
     const [statusMap, setStatusMap] = useState<Record<string, AttendanceStatus>>({});
+
+    // Historical mode: read-only view including promoted students
+    const [isHistoricalMode, setIsHistoricalMode] = useState(false);
 
     // Pagination & Search States
     const [searchTerm, setSearchTerm] = useState('');
@@ -167,7 +171,22 @@ export function StudentAttendanceView() {
 
     // Derive the students list from attendanceData OR from selected class students
     const { data: allStudents } = useStudentsByClass(selectedClassId);
-    const studentList = allStudents ?? [];
+
+    // Historical mode: build student list from attendance records themselves
+    const historicalStudents: StudentBasic[] = (attendanceData ?? []).map(rec => ({
+        id: rec.student_id,
+        full_name: rec.students?.full_name ?? 'Unknown',
+        roll_number: rec.students?.roll_number ?? '—',
+        photo_url: null,
+    }));
+
+    // Deduplicate by student_id (attendance may have duplicates across refreshes)
+    const uniqueHistorical = Array.from(
+        new Map(historicalStudents.map(s => [s.id, s])).values()
+    );
+
+    // Use historical students when in historical mode, otherwise active students
+    const studentList = isHistoricalMode ? uniqueHistorical : (allStudents ?? []);
 
     const selectedClass = (classes ?? []).find(c => c.id === selectedClassId);
     const selectedClassName = selectedClass ? `${selectedClass.name} - ${selectedClass.section}` : '';
@@ -225,7 +244,7 @@ export function StudentAttendanceView() {
                                 Print Report
                             </Button>
                         )}
-                        {canMark && (
+                        {canMark && !isHistoricalMode && (
                             <Button
                                 onClick={handleSave}
                                 disabled={upsertMutation.isPending || studentList.length === 0}
@@ -272,7 +291,7 @@ export function StudentAttendanceView() {
                                 </Select>
                             </div>
 
-                            {/* Date Selection */}
+                            {/* Date Selection + Historical Toggle */}
                             <div className="space-y-2.5">
                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground pl-1">
                                     Attendance Date
@@ -309,9 +328,43 @@ export function StudentAttendanceView() {
                                     </PopoverContent>
                                 </Popover>
                             </div>
+                            {/* Historical Mode Toggle */}
+                            {selectedClassId && (
+                                <div className="md:col-span-2 flex items-center justify-between gap-4 pt-2 border-t border-border/30">
+                                    <div className="flex items-center gap-3">
+                                        <History className="h-4 w-4 text-amber-500" />
+                                        <div>
+                                            <p className="text-xs font-bold text-foreground">View Historical Records</p>
+                                            <p className="text-[10px] text-muted-foreground">Include promoted/graduated students (read-only)</p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant={isHistoricalMode ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setIsHistoricalMode(prev => !prev)}
+                                        className={cn(
+                                            'rounded-xl px-4 text-[10px] font-black uppercase tracking-widest gap-2 transition-all',
+                                            isHistoricalMode && 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20'
+                                        )}
+                                    >
+                                        <History className="w-3.5 h-3.5" />
+                                        {isHistoricalMode ? 'Historical ON' : 'Off'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Historical Mode Banner */}
+                {isHistoricalMode && selectedClassId && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                        <History className="w-4 h-4 shrink-0" />
+                        <p className="text-xs font-bold">
+                            Historical Mode — Showing all students who had attendance in this class on this date, including promoted/graduated. Editing is disabled.
+                        </p>
+                    </div>
+                )}
 
                 {/* ── Summary Bar ── */}
                 {selectedClassId && studentList.length > 0 && (

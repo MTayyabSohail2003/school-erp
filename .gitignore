@@ -31,7 +31,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
 
 # vercel
 .vercel
@@ -39,3 +38,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Development / Debug Scripts
+query_*.ts
+test_*.ts
+fix_*.ts
+get_*.ts
+*.backup.sql
+school_erp_backup_*.sql
+config.bat
