@@ -1,0 +1,50 @@
+name: Automated Database Backup
+
+on:
+  # Runs every Sunday at Midnight (UTC)
+  schedule:
+    - cron: '0 0 * * 0'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup PostgreSQL Client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Generate Timestamp
+        id: timestamp
+        run: echo "DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Export Database using pg_dump
+        env:
+          # You must add BACKUP_DATABASE_URL to your GitHub Repository Secrets
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Error: BACKUP_DATABASE_URL is not set in GitHub Secrets!"
+            exit 1
+          fi
+          
+          echo "Starting database backup..."
+          
+          # Using --clean --if-exists ensures the dump can be easily restored later
+          # --no-owner ensures it doesn't hardcode specific database users
+          pg_dump "$DATABASE_URL" \
+            --clean \
+            --if-exists \
+            --no-owner \
+            --no-privileges \
+            --file="school_erp_backup_${{ env.DATE }}.sql"
+          
+          echo "Backup completed successfully!"
+
+      - name: Upload Backup as Secure Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ env.DATE }}
+          path: school_erp_backup_${{ env.DATE }}.sql
+          retention-days: 90 # Keeps backups for 90 days completely for free

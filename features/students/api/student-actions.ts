@@ -217,12 +217,13 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
                 student_id: id,
                 from_class_id: data.source_class_id,
                 to_class_id: null,
-                academic_year: data.new_academic_year,
-                action: 'GRADUATION',
-                performed_by: user.id
+                academic_year_to: data.new_academic_year,
+                status: 'GRADUATED',
+                promoted_by: user.id
             }));
 
-            await supabase.from('promotion_history').insert(historyLogs);
+            const { error: historyError } = await supabase.from('promotion_history').insert(historyLogs);
+            if (historyError) throw historyError;
 
         } else {
             if (!data.destination_class_id) throw new Error('Destination class is required for promotion.');
@@ -277,10 +278,12 @@ export async function promoteStudentsAction(data: PromoteStudentsData) {
                 to_class_id: data.destination_class_id,
                 from_academic_year: s.academic_year || 'Unknown',
                 to_academic_year: data.new_academic_year,
-                is_graduation: false
+                is_graduation: data.is_graduation,
+                promoted_by: user.id
             }));
 
-            await supabase.from('promotion_history').insert(historyLogs);
+            const { error: historyError } = await supabase.from('promotion_history').insert(historyLogs);
+            if (historyError) throw historyError;
 
             // 4. Fee Reset: Generate first month's challan for new class AND update student base fee
             const { data: feeStructure } = await supabase

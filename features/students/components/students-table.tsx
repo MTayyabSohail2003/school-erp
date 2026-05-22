@@ -56,11 +56,12 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from '@/components/ui/drawer';
-import { AlertCircle, FileText, GraduationCap, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Users } from 'lucide-react';
+import { AlertCircle, FileText, GraduationCap, MoreHorizontal, Pencil, Trash2, Search, ArrowUpDown, Users, History } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { EditStudentDialog } from './edit-student-dialog';
+import { StudentHistoryDialog } from './student-history-dialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { ImagePreviewDialog } from '@/components/ui/image-preview-dialog';
 import { useDeleteStudent } from '../api/use-delete-student';
@@ -138,6 +139,7 @@ export function StudentsTable() {
     const [studentToEdit, setStudentToEdit] = React.useState<StudentWithRelations | null>(null);
     const [drawerStudent, setDrawerStudent] = React.useState<StudentWithRelations | null>(null);
     const [photoViewerUrl, setPhotoViewerUrl] = React.useState<string | null>(null);
+    const [historyStudent, setHistoryStudent] = React.useState<StudentWithRelations | null>(null);
 
 
 
@@ -315,6 +317,10 @@ export function StudentsTable() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setHistoryStudent(student); }}>
+                                    <History className="mr-2 h-4 w-4" />
+                                    View History
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setStudentToEdit(student); }}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit Record
@@ -826,6 +832,17 @@ export function StudentsTable() {
                     isOpen={!!studentToEdit}
                     setIsOpen={(open) => !open && setStudentToEdit(null)}
                     student={studentToEdit}
+                />
+
+                <StudentHistoryDialog
+                    open={!!historyStudent}
+                    onOpenChange={(open) => !open && setHistoryStudent(null)}
+                    studentId={historyStudent?.id ?? ''}
+                    studentName={historyStudent?.full_name ?? ''}
+                    rollNumber={historyStudent?.roll_number ?? ''}
+                    photoUrl={historyStudent?.photo_url}
+                    currentStatus={historyStudent?.status ?? 'ACTIVE'}
+                    currentClass={historyStudent?.classes ? `${historyStudent.classes.name} ${historyStudent.classes.section}` : undefined}
                 />
 
                 <Dialog open={!!photoViewerUrl} onOpenChange={(open) => !open && setPhotoViewerUrl(null)}>

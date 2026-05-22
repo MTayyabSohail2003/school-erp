@@ -48,6 +48,7 @@ export const resultsApi = {
                     date_of_birth, 
                     photo_url, 
                     class_id,
+                    classes(name, section),
                     users!students_parent_id_fkey(full_name)
                 ),
                 subjects(name),
@@ -196,6 +197,7 @@ export const resultsApi = {
                 date_of_birth, 
                 photo_url, 
                 class_id,
+                classes(name, section),
                 users!students_parent_id_fkey(full_name)
             `)
             .eq('id', studentId)

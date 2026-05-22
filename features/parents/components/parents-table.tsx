@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, Phone, User, Loader2, AlertCircle, Trash2, Search, GraduationCap, ChevronDown } from 'lucide-react';
+import { Mail, Phone, User, Loader2, AlertCircle, Trash2, Search, GraduationCap, ChevronDown, RotateCw } from 'lucide-react';
 
 export function ParentsTable() {
     // 1. Listen for real-time changes to the users table specifically pointing to parents
@@ -45,7 +45,7 @@ export function ParentsTable() {
 
     const deleteMutation = useDeleteParent();
 
-    const { data: parents, isLoading, error } = useGetParents();
+    const { data: parents, isLoading, error, refetch, isFetching } = useGetParents();
 
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,14 +88,26 @@ export function ParentsTable() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 max-w-sm relative">
-                <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />
-                <Input
-                    placeholder="Search by parent or student name..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white"
-                />
+            <div className="flex items-center gap-2 max-w-md">
+                <div className="flex items-center gap-2 relative flex-1">
+                    <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by parent or student name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-white"
+                    />
+                </div>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => refetch()}
+                    disabled={isFetching}
+                    title="Reload data"
+                    className="h-10 w-10 shrink-0 rounded-xl bg-white border hover:bg-zinc-50"
+                >
+                    <RotateCw className={`h-4 w-4 text-muted-foreground ${isFetching ? 'animate-spin' : ''}`} />
+                </Button>
             </div>
 
             <div className="border rounded-md overflow-hidden bg-background shadow-sm">
